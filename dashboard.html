@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShowBox - Billing Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>ShowBox Billing Panel</h1>
+        <div class="user-info">
+            <span id="user-balance"></span>
+            <span id="username-display"></span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Accounts</h3>
+                <div class="value" id="total-accounts">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Your Balance</h3>
+                <div class="value" id="balance-display">£0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Resellers</h3>
+                <div class="value" id="total-resellers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Plans</h3>
+                <div class="value" id="total-plans">0</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('accounts')">Accounts</button>
+            <button class="tab" onclick="switchTab('resellers')">Resellers</button>
+            <button class="tab" onclick="switchTab('plans')">Plans</button>
+            <button class="tab" onclick="switchTab('transactions')">Transactions</button>
+            <button class="tab" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <div class="content">
+            <div id="alert" class="alert"></div>
+
+            <!-- Accounts Tab -->
+            <div id="accounts-tab" class="tab-content active">
+                <div class="section-header">
+                    <h2>Account Management</h2>
+                    <button class="btn-primary" onclick="openModal('addAccountModal')">+ Add Account</button>
+                </div>
+                <table id="accounts-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>MAC Address</th>
+                            <th>Email</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-tbody">
+                        <tr><td colspan="5" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resellers Tab -->
+            <div id="resellers-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Reseller Management</h2>
+                    <button class="btn-primary" onclick="openModal('addResellerModal')">+ Add Reseller</button>
+                </div>
+                <table id="resellers-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Balance</th>
+                            <th>Max Users</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resellers-tbody">
+                        <tr><td colspan="6" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Plans Tab -->
+            <div id="plans-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Plan Management</h2>
+                    <button class="btn-primary" onclick="openModal('addPlanModal')">+ Add Plan</button>
+                </div>
+                <table id="plans-table">
+                    <thead>
+                        <tr>
+                            <th>Plan ID</th>
+                            <th>Currency</th>
+                            <th>Price</th>
+                            <th>Days</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plans-tbody">
+                        <tr><td colspan="5" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Transactions Tab -->
+            <div id="transactions-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Transaction History</h2>
+                </div>
+                <table id="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Currency</th>
+                            <th>Type</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-tbody">
+                        <tr><td colspan="5" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Settings</h2>
+                </div>
+                <form onsubmit="changePassword(event)">
+                    <div class="form-group">
+                        <label>Old Password</label>
+                        <input type="password" id="old-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="new-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="confirm-password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Update Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div id="addAccountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Account</h3>
+                <button class="close-btn" onclick="closeModal('addAccountModal')">&times;</button>
+            </div>
+            <form onsubmit="addAccount(event)" id="addAccountForm">
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" name="username" id="account-username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="text" name="password" id="account-password" required>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" name="phone_number">
+                </div>
+                <div class="form-group">
+                    <label>MAC Address *</label>
+                    <input type="text" name="mac" required placeholder="00:1A:79:xx:xx:xx">
+                </div>
+                <div class="form-group">
+                    <label>Plan</label>
+                    <select name="plan" id="plan-select">
+                        <option value="0">No Plan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Expiry Date (leave empty for auto)</label>
+                    <input type="text" name="expire_billing_date" placeholder="YYYY/MM/DD">
+                </div>
+                <div class="form-group">
+                    <label>Comment</label>
+                    <textarea name="comment" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Reseller Modal -->
+    <div id="addResellerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Reseller</h3>
+                <button class="close-btn" onclick="closeModal('addResellerModal')">&times;</button>
+            </div>
+            <form onsubmit="addReseller(event)">
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email">
+                </div>
+                <div class="form-group">
+                    <label>Max Users (0 = unlimited)</label>
+                    <input type="number" name="max_users" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select name="currency">
+                        <option value="GBP">GBP</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="IRT">IRT (Iranian Toman)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Initial Balance</label>
+                    <input type="number" step="0.01" name="balance" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Assigned Plans</label>
+                    <select name="plans" id="reseller-plans-select" multiple size="8" style="width:100%">
+                        <!-- Plans will be loaded dynamically -->
+                    </select>
+                    <small style="color:#666">Hold Ctrl/Cmd to select multiple plans</small>
+                </div>
+                <div class="form-group">
+                    <label>Theme</label>
+                    <input type="text" name="theme" value="default">
+                </div>
+                <button type="submit" class="btn-primary">Create Reseller</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Plan Modal -->
+    <div id="addPlanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Plan</h3>
+                <button class="close-btn" onclick="closeModal('addPlanModal')">&times;</button>
+            </div>
+            <form onsubmit="addPlan(event)">
+                <div class="form-group">
+                    <label>Plan ID *</label>
+                    <input type="text" name="plan" required>
+                </div>
+                <div class="form-group">
+                    <label>Currency *</label>
+                    <select name="currency">
+                        <option value="GBP">GBP</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="IRT">IRT (Iranian Toman)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Price *</label>
+                    <input type="number" step="0.01" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label>Days *</label>
+                    <input type="number" name="days" required>
+                </div>
+                <button type="submit" class="btn-primary">Create Plan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Adjust Credit Modal -->
+    <div id="adjustCreditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adjust Credit</h3>
+                <button class="close-btn" onclick="closeModal('adjustCreditModal')">&times;</button>
+            </div>
+            <form onsubmit="submitCreditAdjustment(event)">
+                <input type="hidden" id="adjust-reseller-id" name="reseller_id">
+                <div class="form-group">
+                    <label>Reseller</label>
+                    <input type="text" id="adjust-reseller-name" readonly style="background:#f5f5f5">
+                </div>
+                <div class="form-group">
+                    <label>Current Balance</label>
+                    <input type="text" id="adjust-current-balance" readonly style="background:#f5f5f5">
+                </div>
+                <div class="form-group">
+                    <label>Action</label>
+                    <select name="action" id="adjust-action">
+                        <option value="add">Add Credit</option>
+                        <option value="deduct">Deduct Credit</option>
+                        <option value="set">Set Balance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount *</label>
+                    <input type="number" step="0.01" name="amount" id="adjust-amount" required>
+                </div>
+                <button type="submit" class="btn-primary">Update Credit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assign Plans Modal -->
+    <div id="assignPlansModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Assign Plans to Reseller</h3>
+                <button class="close-btn" onclick="closeModal('assignPlansModal')">&times;</button>
+            </div>
+            <form onsubmit="submitPlanAssignment(event)">
+                <input type="hidden" id="assign-reseller-id" name="reseller_id">
+                <div class="form-group">
+                    <label>Reseller</label>
+                    <input type="text" id="assign-reseller-name" readonly style="background:#f5f5f5">
+                </div>
+                <div class="form-group">
+                    <label>Assigned Plans</label>
+                    <select name="plans" id="assign-plans-select" multiple size="10" style="width:100%">
+                        <!-- Plans will be loaded dynamically -->
+                    </select>
+                    <small style="color:#666">Hold Ctrl/Cmd to select multiple plans. Leave empty to allow all plans.</small>
+                </div>
+                <button type="submit" class="btn-primary">Update Plans</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
