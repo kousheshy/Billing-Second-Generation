@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -424,17 +424,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.6.0 - November 2025
+- Version 1.6.1 - November 2025
 
 ---
 
-**Version:** 1.6.0
+**Version:** 1.6.1
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.6.1** (Nov 2025) - Currency validation for plan assignment to resellers
 - **v1.6.0** (Nov 2025) - Reseller admin permissions system with view mode toggle
 - **v1.5.0** (Nov 2025) - Report export functionality with PDF and Excel support
 - **v1.4.0** (Nov 2025) - Interactive reports with clickable report cards
