@@ -1509,6 +1509,267 @@ async function syncAccounts() {
     }
 }
 
+// ===========================
+// Report Export Functions
+// ===========================
+
+/**
+ * Export report data to PDF or Excel
+ */
+function exportReport(reportType, format) {
+    // Get filtered accounts based on report type
+    const filteredAccounts = getFilteredAccountsForReport(reportType);
+
+    if (!filteredAccounts || filteredAccounts.length === 0) {
+        alert('No data to export for this report.');
+        return;
+    }
+
+    // Get report title and filename
+    const reportInfo = getReportInfo(reportType);
+
+    if (format === 'excel') {
+        exportToExcel(filteredAccounts, reportInfo);
+    } else if (format === 'pdf') {
+        exportToPDF(filteredAccounts, reportInfo);
+    }
+}
+
+/**
+ * Get filtered accounts based on report type
+ */
+function getFilteredAccountsForReport(reportType) {
+    const now = new Date();
+    const allAccounts = accountsPagination.allAccounts;
+
+    if (!allAccounts || allAccounts.length === 0) {
+        return [];
+    }
+
+    if (reportType === 'expired-dynamic') {
+        const filterSelect = document.getElementById('expired-filter');
+        let days = parseInt(filterSelect.value);
+
+        if (filterSelect.value === 'custom') {
+            days = parseInt(document.getElementById('expired-custom-days').value) || 30;
+        }
+
+        const startDate = new Date();
+        startDate.setDate(now.getDate() - days);
+
+        return allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= startDate && expirationDate < now;
+        });
+
+    } else if (reportType === 'expiring-dynamic') {
+        const filterSelect = document.getElementById('expiring-filter');
+        let days = parseInt(filterSelect.value);
+
+        if (filterSelect.value === 'custom') {
+            days = parseInt(document.getElementById('expiring-custom-days').value) || 14;
+        }
+
+        const endDate = new Date();
+        endDate.setDate(now.getDate() + days);
+
+        return allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= now && expirationDate <= endDate;
+        });
+
+    } else if (reportType === 'expired-all') {
+        return allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate < now;
+        });
+
+    } else if (reportType === 'expiring-soon') {
+        const twoWeeksFromNow = new Date();
+        twoWeeksFromNow.setDate(now.getDate() + 14);
+
+        return allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= now && expirationDate <= twoWeeksFromNow;
+        });
+
+    } else if (reportType === 'all-accounts') {
+        return allAccounts;
+
+    } else if (reportType === 'active-accounts') {
+        return allAccounts.filter(account => {
+            if (!account.end_date) return true;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= now;
+        });
+
+    } else if (reportType === 'unlimited-plans') {
+        return allAccounts.filter(account => {
+            return !account.end_date || account.end_date === null || account.end_date === '';
+        });
+
+    } else if (reportType === 'expired-last-month-static') {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setDate(now.getDate() - 30);
+
+        return allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= oneMonthAgo && expirationDate < now;
+        });
+    }
+
+    return [];
+}
+
+/**
+ * Get report information (title and filename)
+ */
+function getReportInfo(reportType) {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+
+    const reportMap = {
+        'expired-dynamic': {
+            title: 'Expired & Not Renewed Accounts',
+            filename: `expired_accounts_${dateStr}`
+        },
+        'expiring-dynamic': {
+            title: 'Expiring Accounts in Selected Period',
+            filename: `expiring_accounts_${dateStr}`
+        },
+        'expired-all': {
+            title: 'All Expired Accounts',
+            filename: `all_expired_accounts_${dateStr}`
+        },
+        'expiring-soon': {
+            title: 'Accounts Expiring Soon (Next 2 Weeks)',
+            filename: `expiring_soon_${dateStr}`
+        },
+        'all-accounts': {
+            title: 'All Accounts',
+            filename: `all_accounts_${dateStr}`
+        },
+        'active-accounts': {
+            title: 'Active Accounts',
+            filename: `active_accounts_${dateStr}`
+        },
+        'unlimited-plans': {
+            title: 'Accounts with Unlimited Plans',
+            filename: `unlimited_plans_${dateStr}`
+        },
+        'expired-last-month-static': {
+            title: 'Accounts Expired Last Month',
+            filename: `expired_last_month_${dateStr}`
+        }
+    };
+
+    return reportMap[reportType] || { title: 'Report', filename: `report_${dateStr}` };
+}
+
+/**
+ * Export accounts to Excel format
+ */
+function exportToExcel(accounts, reportInfo) {
+    // Prepare data for Excel
+    const excelData = accounts.map(account => ({
+        'MAC Address': account.mac || '',
+        'Full Name': account.full_name || '',
+        'Phone': account.phone || '',
+        'Status': account.status == 1 ? 'Active' : 'Inactive',
+        'Expiry Date': account.end_date || 'Unlimited',
+        'Reseller': account.reseller_name || 'N/A',
+        'Created': account.created || '',
+        'Account ID': account.id || ''
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    const colWidths = [
+        { wch: 20 }, // MAC Address
+        { wch: 25 }, // Full Name
+        { wch: 15 }, // Phone
+        { wch: 12 }, // Status
+        { wch: 15 }, // Expiry Date
+        { wch: 20 }, // Reseller
+        { wch: 15 }, // Created
+        { wch: 10 }  // Account ID
+    ];
+    worksheet['!cols'] = colWidths;
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Accounts');
+
+    // Generate Excel file and download
+    XLSX.writeFile(workbook, `${reportInfo.filename}.xlsx`);
+}
+
+/**
+ * Export accounts to PDF format
+ */
+function exportToPDF(accounts, reportInfo) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+
+    // Add title
+    doc.setFontSize(18);
+    doc.text(reportInfo.title, 14, 20);
+
+    // Add export date
+    doc.setFontSize(10);
+    const now = new Date();
+    doc.text(`Generated: ${now.toLocaleString()}`, 14, 28);
+    doc.text(`Total Records: ${accounts.length}`, 14, 34);
+
+    // Prepare table data
+    const tableData = accounts.map(account => [
+        account.mac || '',
+        account.full_name || '',
+        account.phone || '',
+        account.status == 1 ? 'Active' : 'Inactive',
+        account.end_date || 'Unlimited',
+        account.reseller_name || 'N/A'
+    ]);
+
+    // Add table
+    doc.autoTable({
+        startY: 40,
+        head: [['MAC Address', 'Full Name', 'Phone', 'Status', 'Expiry Date', 'Reseller']],
+        body: tableData,
+        theme: 'grid',
+        styles: {
+            fontSize: 8,
+            cellPadding: 2
+        },
+        headStyles: {
+            fillColor: [102, 126, 234],
+            textColor: 255,
+            fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+            fillColor: [245, 247, 250]
+        },
+        columnStyles: {
+            0: { cellWidth: 40 },  // MAC Address
+            1: { cellWidth: 50 },  // Full Name
+            2: { cellWidth: 35 },  // Phone
+            3: { cellWidth: 25 },  // Status
+            4: { cellWidth: 35 },  // Expiry Date
+            5: { cellWidth: 40 }   // Reseller
+        }
+    });
+
+    // Save PDF
+    doc.save(`${reportInfo.filename}.pdf`);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     initTheme();

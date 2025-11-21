@@ -1002,11 +1002,13 @@ input[type="number"] {
     padding: var(--spacing-lg);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    grid-template-rows: auto auto;
     gap: var(--spacing-lg);
     transition: all var(--transition-fast);
     cursor: default;
+    position: relative;
 }
 
 .report-card:hover {
@@ -1034,10 +1036,13 @@ input[type="number"] {
     flex-shrink: 0;
     box-shadow: var(--shadow-md);
     transition: all var(--transition-fast);
+    grid-row: 1;
+    grid-column: 1;
 }
 
 .report-details {
-    flex: 1;
+    grid-row: 1;
+    grid-column: 2;
 }
 
 .report-details h3 {
@@ -1088,6 +1093,62 @@ input[type="number"] {
 .report-card.clickable-report:hover .report-value {
     color: var(--primary);
     transform: scale(1.08);
+}
+
+/* Report Export Buttons */
+.report-export-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+    grid-row: 2;
+    grid-column: 1 / -1;
+}
+
+.btn-export {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-export-pdf {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-export-pdf:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-export-pdf:active {
+    transform: translateY(0);
+}
+
+.btn-export-excel {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.btn-export-excel:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-export-excel:active {
+    transform: translateY(0);
 }
 
 /* Sync Section */

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShowBox - Billing Dashboard</title>
     <link rel="stylesheet" href="dashboard.css">
+
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -226,6 +231,10 @@
                             <div class="report-value" id="dynamic-expired-count">0</div>
                             <small id="dynamic-expired-label">Last 30 days</small>
                         </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('expired-dynamic', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('expired-dynamic', 'excel')" title="Export as Excel">📊 Excel</button>
+                        </div>
                     </div>
 
                     <div class="report-card dynamic-card clickable-report" onclick="showReportAccountsList('expiring-dynamic')" title="Click to view list of expiring accounts">
@@ -236,6 +245,10 @@
                             <h3>Expiring in Selected Period</h3>
                             <div class="report-value" id="dynamic-expiring-count">0</div>
                             <small id="dynamic-expiring-label">Next 14 days</small>
+                        </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('expiring-dynamic', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('expiring-dynamic', 'excel')" title="Export as Excel">📊 Excel</button>
                         </div>
                     </div>
                 </div>
@@ -251,6 +264,10 @@
                             <div class="report-value" id="report-total-accounts">0</div>
                             <small>All registered accounts</small>
                         </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('all-accounts', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('all-accounts', 'excel')" title="Export as Excel">📊 Excel</button>
+                        </div>
                     </div>
 
                     <div class="report-card clickable-report" onclick="showReportAccountsList('active-accounts')" title="Click to view all active accounts">
@@ -261,6 +278,10 @@
                             <h3>Active Accounts</h3>
                             <div class="report-value" id="report-active-accounts">0</div>
                             <small>Currently active subscriptions</small>
+                        </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('active-accounts', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('active-accounts', 'excel')" title="Export as Excel">📊 Excel</button>
                         </div>
                     </div>
 
@@ -273,6 +294,10 @@
                             <div class="report-value" id="report-expired-accounts">0</div>
                             <small>Subscriptions that have expired</small>
                         </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('expired-all', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('expired-all', 'excel')" title="Export as Excel">📊 Excel</button>
+                        </div>
                     </div>
 
                     <div class="report-card clickable-report" onclick="showReportAccountsList('expiring-soon')" title="Click to view accounts expiring in next 2 weeks">
@@ -283,6 +308,10 @@
                             <h3>Expiring Soon</h3>
                             <div class="report-value" id="report-expiring-soon">0</div>
                             <small>Expiring in next 2 weeks</small>
+                        </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('expiring-soon', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('expiring-soon', 'excel')" title="Export as Excel">📊 Excel</button>
                         </div>
                     </div>
 
@@ -295,6 +324,10 @@
                             <div class="report-value" id="report-unlimited-accounts">0</div>
                             <small>No expiration date</small>
                         </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('unlimited-plans', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('unlimited-plans', 'excel')" title="Export as Excel">📊 Excel</button>
+                        </div>
                     </div>
 
                     <div class="report-card clickable-report" onclick="showReportAccountsList('expired-last-month-static')" title="Click to view accounts expired in last 30 days">
@@ -305,6 +338,10 @@
                             <h3>Expired Last Month</h3>
                             <div class="report-value" id="report-expired-last-month">0</div>
                             <small>Not renewed in 30 days</small>
+                        </div>
+                        <div class="report-export-buttons">
+                            <button class="btn-export btn-export-pdf" onclick="event.stopPropagation(); exportReport('expired-last-month-static', 'pdf')" title="Export as PDF">📄 PDF</button>
+                            <button class="btn-export btn-export-excel" onclick="event.stopPropagation(); exportReport('expired-last-month-static', 'excel')" title="Export as Excel">📊 Excel</button>
                         </div>
                     </div>
                 </div>
