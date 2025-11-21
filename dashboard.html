@@ -164,23 +164,12 @@
                 </div>
 
                 <!-- Change Password Section -->
-                <div style="margin-bottom: 40px;">
-                    <h3 style="margin-bottom: 20px; color: #333;">Change Password</h3>
-                    <form onsubmit="changePassword(event)">
-                        <div class="form-group">
-                            <label>Old Password</label>
-                            <input type="password" id="old-password" required>
-                        </div>
-                        <div class="form-group">
-                            <label>New Password</label>
-                            <input type="password" id="new-password" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Confirm New Password</label>
-                            <input type="password" id="confirm-password" required>
-                        </div>
-                        <button type="submit" class="btn-primary">Update Password</button>
-                    </form>
+                <div class="settings-item">
+                    <div class="settings-item-content">
+                        <h3>Change Password</h3>
+                        <p>Update your account password</p>
+                    </div>
+                    <button class="btn-primary" onclick="openModal('changePasswordModal')">Change Password</button>
                 </div>
 
                 <!-- Sync Accounts Section (Admin Only) -->
@@ -463,6 +452,31 @@
                 </div>
 
                 <button type="submit" class="btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Password</h3>
+                <button class="close-btn" onclick="closeModal('changePasswordModal')">&times;</button>
+            </div>
+            <form onsubmit="changePassword(event)" id="changePasswordForm">
+                <div class="form-group">
+                    <label>Old Password *</label>
+                    <input type="password" id="old-password" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password *</label>
+                    <input type="password" id="new-password" required>
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password *</label>
+                    <input type="password" id="confirm-password" required>
+                </div>
+                <button type="submit" class="btn-primary">Update Password</button>
             </form>
         </div>
     </div>

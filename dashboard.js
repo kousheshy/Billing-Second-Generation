@@ -882,6 +882,7 @@ async function changePassword(e) {
         if(result.error == 0) {
             showAlert('Password updated successfully!', 'success');
             e.target.reset();
+            closeModal('changePasswordModal');
         } else {
             showAlert(result.err_msg || 'Error updating password', 'error');
         }
