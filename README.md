@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -94,6 +94,22 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Renewal detected when `end_date` is updated to a future date
 - Unlimited plans monitoring
 - Expired last month statistics
+
+### Interactive Reports (v1.4.0)
+- **Clickable Report Cards**: One-click access to detailed account lists
+- **8 Interactive Reports**: All report cards now clickable with tooltips
+- **Smart Filtering**: Click any report to see filtered accounts in Accounts tab
+- **Seamless Navigation**: Auto-switches tabs and applies filters
+- **Enhanced UI**: Hover effects and visual feedback on all report cards
+- **Report Types**:
+  - Total Accounts - View all accounts
+  - Active Accounts - View only active subscriptions
+  - Expired Accounts - View all expired accounts
+  - Expiring Soon - View accounts expiring in next 2 weeks
+  - Unlimited Plans - View accounts with no expiration
+  - Expired Last Month - View accounts expired in last 30 days
+  - Dynamic Expired - View expired accounts based on selected date filter
+  - Dynamic Expiring - View expiring accounts based on selected date filter
 
 ### User Management
 - Admin and reseller roles
@@ -377,17 +393,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.3.0 - November 2025
+- Version 1.4.0 - November 2025
 
 ---
 
-**Version:** 1.3.0
+**Version:** 1.4.0
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.4.0** (Nov 2025) - Interactive reports with clickable report cards
 - **v1.3.0** (Nov 2025) - Enhanced plan management with tariff integration
 - **v1.2.0** (Nov 2025) - Dark mode improvements and legacy data compatibility
 - **v1.1.0** (Nov 2025) - Currency standardization and auto-sync features
