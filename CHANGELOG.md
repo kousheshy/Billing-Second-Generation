@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.1] - 2025-11-22
+
+### Added - Phone Number Support
+
+**Phone Number Integration**
+- Added `phone_number` column to accounts table
+- Phone number field in Add Account and Edit Account forms
+- Phone number sent to Stalker Portal API during account creation
+- Phone number synced from Stalker Portal during account sync (single source of truth)
+- Phone number displayed in accounts table (new column)
+- Phone number included in Excel and PDF export reports
+- New database migration utility: `add_phone_column.php`
+
+**Data Integrity**
+- Stalker Portal is the single source of truth for phone numbers
+- Local database phone numbers are always overwritten during sync
+- If Stalker has no phone number, local database sets to NULL
+- Prevents data inconsistencies between systems
+
+### Fixed
+
+**UI/UX Improvements**
+- Fixed pagination not resetting after account deletion
+- Fixed search term persisting after account deletion
+- Cleared filtered accounts state when accounts are deleted
+- Improved colspan values in table rendering (8 → 9 columns)
+- Better user experience when managing accounts
+
+### Changed
+
+**Database Schema**
+- Updated `add_account.php` to INSERT phone_number field
+- Updated `edit_account.php` to UPDATE phone_number field
+- Updated `sync_accounts.php` to sync phone numbers from Stalker
+- Updated `get_accounts.php` query (implicit - returns all columns)
+- Modified dashboard.js to display phone_number in UI and exports
+- Updated dashboard.html to include phone column in accounts table
+
+---
+
 ## [1.7.0] - 2025-11-22
 
 ### Added - Account-to-Reseller Assignment System
