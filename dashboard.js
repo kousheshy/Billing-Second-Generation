@@ -151,18 +151,12 @@ async function checkAuth() {
             // Show sync section for super admin only
             document.getElementById('sync-section').style.display = 'block';
         } else if(isResellerAdmin) {
-            // Reseller admin: show balance but hide reseller-related items
-            document.getElementById('balance-display').textContent = getCurrencySymbol(result.user.currency_name) + formatBalance(result.user.balance, result.user.currency_name);
+            // Reseller admin: Has same features as super admin
+            document.getElementById('balance-display').style.display = 'none';
+            document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
 
-            // Hide reseller tab and stat card for admin-level resellers
-            document.querySelectorAll('.tab').forEach(tab => {
-                const tabText = tab.textContent.toLowerCase();
-                if(tabText.includes('reseller')) {
-                    tab.style.display = 'none';
-                }
-            });
-
-            document.querySelector('.stat-card:nth-child(3)').style.display = 'none'; // Total Resellers
+            // Show sync section for reseller admins
+            document.getElementById('sync-section').style.display = 'block';
 
             // Show view mode toggle for reseller admins
             document.getElementById('view-mode-toggle').style.display = 'flex';
@@ -205,10 +199,10 @@ async function checkAuth() {
         // Load plans for all users (including observers who need to see them)
         loadPlans();
 
-        if(isSuperAdmin || isObserver) {
-            // Load resellers for super admin and observers
+        if(isSuperAdmin || isResellerAdmin || isObserver) {
+            // Load resellers for super admin, reseller admins, and observers
             loadResellers();
-            // Load tariffs for super admin and observers
+            // Load tariffs for super admin, reseller admins, and observers
             loadTariffs();
         }
 
@@ -756,6 +750,7 @@ function renderAccountsPage() {
             // Check if user is observer
             const isObserver = currentUser && currentUser.is_observer == 1;
             const isSuperAdmin = currentUser && currentUser.super_user == 1;
+            const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
 
             // Check if reseller has delete permission (format: can_edit|can_add|is_reseller_admin|can_delete|reserved)
             const permissions = (currentUser && currentUser.permissions || '0|0|0|0|0').split('|');
@@ -765,7 +760,7 @@ function renderAccountsPage() {
             let deleteButton = '';
             if (isObserver) {
                 deleteButton = `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`;
-            } else if (isSuperAdmin || canDelete) {
+            } else if (isSuperAdmin || isResellerAdmin || canDelete) {
                 deleteButton = `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`;
             } else {
                 deleteButton = `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`;
@@ -775,6 +770,12 @@ function renderAccountsPage() {
             const editButton = isObserver
                 ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit</button>`
                 : `<button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit</button>`;
+
+            // Add Assign Reseller button for admin users (using same pattern as edit/delete buttons)
+            let assignResellerButton = '';
+            if (isSuperAdmin || isResellerAdmin) {
+                assignResellerButton = `<button class="btn-sm btn-assign" onclick="assignReseller('${account.username}', '${account.reseller || ''}')">Assign Reseller</button>`;
+            }
 
             // Format expiration date and determine status
             let expirationCell = '';
@@ -821,24 +822,32 @@ function renderAccountsPage() {
                 creationDate = createDate.toLocaleDateString();
             }
 
+            // Format reseller display
+            const resellerDisplay = account.reseller_name
+                ? account.reseller_name
+                : '<span style="color: #999; font-style: italic;">Not Assigned</span>';
+
             tr.innerHTML = `
                 <td>${account.username || ''}</td>
                 <td>${account.full_name || ''}</td>
                 <td>${account.mac || ''}</td>
                 <td>${account.tariff_plan || ''}</td>
+                <td>${resellerDisplay}</td>
                 <td>${expirationCell}</td>
                 <td>${creationDate}</td>
                 <td>
                     <div class="action-buttons">
                         ${editButton}
                         ${deleteButton}
+                        ${assignResellerButton}
                     </div>
                 </td>
             `;
+
             tbody.appendChild(tr);
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
     }
 
     // Update pagination info
@@ -1327,6 +1336,77 @@ async function deleteAccount(username) {
         }
     } catch(error) {
         showAlert('Error deleting account: ' + error.message, 'error');
+    }
+}
+
+// Assign Reseller
+async function assignReseller(username, currentResellerId) {
+    try {
+        // Open modal
+        const modal = document.getElementById('assignResellerModal');
+        if(!modal) {
+            console.error('Modal not found: assignResellerModal');
+            showAlert('Error: Modal not found', 'error');
+            return;
+        }
+        modal.classList.add('show');
+
+        // Set account username
+        document.getElementById('assign-account-username').value = username;
+        document.getElementById('assign-account-display').value = username;
+
+        // Load resellers list
+        console.log('Fetching resellers...');
+        const response = await fetch('get_resellers.php');
+        const result = await response.json();
+        console.log('Resellers response:', result);
+
+        if(result.error == 0) {
+            const select = document.getElementById('assign-reseller-select');
+            select.innerHTML = '<option value="">-- Not Assigned --</option>';
+
+            result.resellers.forEach(reseller => {
+                const option = document.createElement('option');
+                option.value = reseller.id;
+                option.textContent = `${reseller.name} (${reseller.username})`;
+                if(reseller.id == currentResellerId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            console.log('Resellers loaded successfully');
+        } else {
+            showAlert('Error loading resellers: ' + result.message, 'error');
+        }
+    } catch(error) {
+        console.error('Error in assignReseller:', error);
+        showAlert('Error loading resellers: ' + error.message, 'error');
+    }
+}
+
+// Submit Assign Reseller
+async function submitAssignReseller(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+
+    try {
+        const response = await fetch('assign_reseller.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if(result.error == 0) {
+            showAlert('Reseller assigned successfully!', 'success');
+            closeModal('assignResellerModal');
+            loadAccounts();
+        } else {
+            showAlert('Error: ' + result.err_msg, 'error');
+        }
+    } catch(error) {
+        showAlert('Error assigning reseller: ' + error.message, 'error');
     }
 }
 
@@ -2113,18 +2193,42 @@ function hideObserverActions() {
  * Toggle other permissions based on admin checkbox state
  * Preserves the checkbox states when hiding/showing them
  */
-function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox) {
-    const isAdmin = adminCheckbox.checked;
+function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox) {
+    const isAdmin = adminCheckbox ? adminCheckbox.checked : false;
+    const isObserver = observerCheckbox ? observerCheckbox.checked : false;
 
-    if (isAdmin) {
-        // Hide other permission items when admin is checked (but preserve their state)
+    if (isObserver) {
+        // Observer is checked - hide and uncheck Admin and all other permissions
+        // Observer and Admin are mutually exclusive
+        if (adminCheckbox) {
+            adminCheckbox.closest('.permission-item').style.display = 'none';
+            adminCheckbox.checked = false;
+        }
+        canEditCheckbox.closest('.permission-item').style.display = 'none';
+        canAddCheckbox.closest('.permission-item').style.display = 'none';
+        if (canDeleteCheckbox) {
+            canDeleteCheckbox.closest('.permission-item').style.display = 'none';
+        }
+        // Uncheck all permissions when observer is checked
+        canEditCheckbox.checked = false;
+        canAddCheckbox.checked = false;
+        if (canDeleteCheckbox) canDeleteCheckbox.checked = false;
+    } else if (isAdmin) {
+        // Admin is checked - hide and uncheck Observer and all other permissions
+        // Observer and Admin are mutually exclusive
+        if (observerCheckbox) {
+            observerCheckbox.closest('.permission-item').style.display = 'none';
+            observerCheckbox.checked = false;
+        }
         canEditCheckbox.closest('.permission-item').style.display = 'none';
         canAddCheckbox.closest('.permission-item').style.display = 'none';
         if (canDeleteCheckbox) {
             canDeleteCheckbox.closest('.permission-item').style.display = 'none';
         }
     } else {
-        // Show other permission items when admin is unchecked (state is preserved)
+        // Neither admin nor observer is checked - show all permission items
+        if (adminCheckbox) adminCheckbox.closest('.permission-item').style.display = 'flex';
+        if (observerCheckbox) observerCheckbox.closest('.permission-item').style.display = 'flex';
         canEditCheckbox.closest('.permission-item').style.display = 'flex';
         canAddCheckbox.closest('.permission-item').style.display = 'flex';
         if (canDeleteCheckbox) {
@@ -2138,13 +2242,20 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
  */
 function setupAddResellerPermissions() {
     const adminCheckbox = document.querySelector('#addResellerModal input[name="is_admin"]');
+    const observerCheckbox = document.querySelector('#addResellerModal input[name="is_observer"]');
     const canEditCheckbox = document.querySelector('#addResellerModal input[name="can_edit_accounts"]');
     const canAddCheckbox = document.querySelector('#addResellerModal input[name="can_add_accounts"]');
     const canDeleteCheckbox = document.querySelector('#addResellerModal input[name="can_delete_accounts"]');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox);
+        });
+    }
+
+    if (observerCheckbox) {
+        observerCheckbox.addEventListener('change', function() {
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, this);
         });
     }
 }
@@ -2154,17 +2265,24 @@ function setupAddResellerPermissions() {
  */
 function setupEditResellerPermissions() {
     const adminCheckbox = document.getElementById('edit-is-admin');
+    const observerCheckbox = document.getElementById('edit-is-observer');
     const canEditCheckbox = document.getElementById('edit-can-edit-accounts');
     const canAddCheckbox = document.getElementById('edit-can-add-accounts');
     const canDeleteCheckbox = document.getElementById('edit-can-delete-accounts');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox);
         });
 
         // Initial state check when modal is opened
-        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox);
+        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox);
+    }
+
+    if (observerCheckbox) {
+        observerCheckbox.addEventListener('change', function() {
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, this);
+        });
     }
 }
 

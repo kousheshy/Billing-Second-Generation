@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.6.6-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -135,21 +135,47 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Timestamped Files**: Auto-generated filenames with dates
 - **Export Libraries**: Integrated XLSX.js, jsPDF, and jsPDF-autoTable
 
-### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5)
-- **Three-Tier Permission System**: 
-  - Super Admin: Full system access
-  - Reseller Admin: Admin-level permissions within reseller scope
+### Reseller Assignment (v1.7.0)
+- **Account-to-Reseller Mapping**: Assign any account to any reseller with one click
+- **Assign Reseller Button**: Available on each account row for admins
+- **Modal Interface**: Clean dropdown showing all resellers
+- **Not Assigned Option**: Accounts can be unassigned (set to NULL)
+- **Reseller Column**: View current reseller owner in account table
+- **Bidirectional Updates**: Changes sync between billing panel and local database
+- **Admin & Reseller Admin Access**: Both super admins and reseller admins can assign accounts
+- **Smart Filtering**: Reseller column displays:
+  - Reseller name if assigned
+  - "Not Assigned" in gray italic for unassigned accounts
+- **Permission-Based Visibility**: Assign button only visible to authorized users
+- **Improved Sync Logic**:
+  - New accounts from Stalker sync as "Not Assigned" by default
+  - Manual assignment required for proper reseller ownership
+  - Prevents automatic admin assignment during sync
+
+### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5, v1.7.0)
+- **Three-Tier Permission System**:
+  - Super Admin: Full system access including assign reseller
+  - Reseller Admin: Admin-level permissions within reseller scope (now includes assign reseller)
   - Regular Reseller: Limited permissions based on settings
+- **Full Admin Features for Reseller Admins (v1.7.0)**:
+  - Access to all tabs (Accounts, Resellers, Plans, Reports, Transactions, Settings)
+  - View and manage all resellers
+  - Access tariffs from Stalker Portal
+  - Sync accounts functionality
+  - Assign accounts to resellers
+  - Delete accounts (if permission granted)
 - **Granular Permission Control (v1.6.5)**:
   - Can Edit Accounts: Permission to modify existing accounts
   - Can Add Accounts: Permission to create new accounts
   - Can Delete Accounts: Permission to delete accounts (new in v1.6.5)
   - Admin Permissions: Full admin-level access (hides other checkboxes)
+  - Observer: Read-only access (mutually exclusive with Admin - v1.7.0)
 - **View Mode Toggle**: Reseller admins can switch between:
   - "My Accounts" - View only their own accounts
   - "All Accounts" - View all accounts in the system
 - **Smart UI Adaptation**:
-  - Reseller admins see admin-level interface without reseller tab
+  - Reseller admins see full admin-level interface
+  - All stat cards visible (Total Accounts, Total Resellers, Total Plans)
   - Dynamic report visibility based on view mode
   - Account and plan filtering synchronized with view mode
 - **Edit Reseller Functionality**: Admin can now edit reseller details and permissions
@@ -168,7 +194,7 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Manifest File**: Complete PWA configuration
 - **Push Notification Ready**: Infrastructure for future notifications
 
-### Observer Mode (v1.6.3, Enhanced v1.6.4)
+### Observer Mode (v1.6.3, Enhanced v1.6.4, v1.7.0)
 - **Read-Only Access**: View all data without ability to modify
 - **Four-Tier User System**:
   - Super Admin: Full system access
@@ -187,12 +213,18 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Adjust credits or balances
   - Sync accounts from server
   - Change any settings or configurations
+  - Assign accounts to resellers (new in v1.7.0)
 - **Enhanced UI (v1.6.4)**:
   - Disabled buttons with visual feedback (grayed out)
   - Settings tab completely hidden
   - Reseller column in transactions view
   - Consistent button states across all tables
   - Clear visual distinction between viewing and editing modes
+- **Mutually Exclusive Permissions (v1.7.0)**:
+  - Observer and Admin permissions cannot be selected together
+  - When Observer is checked, all other permissions are hidden and disabled
+  - When Admin is checked, Observer is hidden and disabled
+  - Ensures proper role separation and prevents permission conflicts
 - **Security**: Perfect for auditors, accountants, or monitoring staff
 
 ### User Management
@@ -243,6 +275,7 @@ Current Billing Shahrokh/
 ├── update_reseller.php
 ├── remove_reseller.php
 ├── get_resellers.php
+├── assign_reseller.php    # NEW v1.7.0 - Assign accounts to resellers
 │
 ├── Plan Management APIs:
 ├── add_plan.php
@@ -483,13 +516,23 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.6.6
+**Version:** 1.7.0
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.7.0** (Nov 2025) - Account-to-Reseller assignment system with full admin features for reseller admins
+  - New "Assign Reseller" button on account rows for admins and reseller admins
+  - Reseller column added to accounts table
+  - Modal interface for selecting reseller from dropdown
+  - Accounts sync as "Not Assigned" by default (prevents auto-admin assignment)
+  - Reseller admins now have full admin-level features (all tabs, sync, manage resellers)
+  - Mutually exclusive Observer and Admin permissions (cannot select both)
+  - Enhanced permission system with proper role separation
+  - Backend support for reseller admin account assignment
+  - New `assign_reseller.php` API endpoint
 - **v1.6.6** (Nov 2025) - Stalker Portal reseller integration with bidirectional sync
 - **v1.6.5** (Nov 2025) - Granular delete permissions, dark mode default, sync bug fixes
 - **v1.6.4** (Nov 2025) - Observer Mode UI improvements with disabled buttons and transaction reseller column

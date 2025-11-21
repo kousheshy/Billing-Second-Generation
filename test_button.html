@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Button</title>
+    <style>
+        .btn-assign { background: green; color: white; padding: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Test Assign Button</h1>
+    
+    <button class="btn-assign" data-username="test123" data-reseller="1">Test Assign Button</button>
+
+    <div id="output"></div>
+
+    <script>
+    console.log('Script loaded');
+    
+    function assignReseller(username, resellerId) {
+        console.log('assignReseller called:', username, resellerId);
+        document.getElementById('output').innerHTML = '<p>Function called! Username: ' + username + ', Reseller: ' + resellerId + '</p>';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded');
+        
+        document.addEventListener('click', function(e) {
+            console.log('Click detected on:', e.target);
+            if (e.target && e.target.classList.contains('btn-assign')) {
+                console.log('Button clicked!');
+                e.preventDefault();
+                const username = e.target.dataset.username;
+                const reseller = e.target.dataset.reseller;
+                assignReseller(username, reseller);
+            }
+        });
+        
+        console.log('Event listener added');
+    });
+    </script>
+</body>
+</html>

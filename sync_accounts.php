@@ -126,21 +126,23 @@ try {
         // Determine reseller priority (Stalker is source of truth):
         // 1. Use reseller from Stalker if available
         // 2. Fallback to existing local mapping
-        // 3. Fallback to current user (admin or reseller)
+        // 3. If no mapping exists, leave as NULL (Not Assigned)
         $stalker_reseller = $stalker_user->reseller ?? null;
 
         // DEBUG: Log what Stalker returned for reseller field
         error_log("=== SYNC ACCOUNT: $login ===");
         error_log("Stalker reseller field value: " . ($stalker_reseller !== null ? $stalker_reseller : 'NULL'));
         error_log("Existing local mapping: " . ($existing_resellers[$login] ?? 'NONE'));
-        error_log("Current user ID: " . $user_id);
 
         if($stalker_reseller && is_numeric($stalker_reseller) && $stalker_reseller > 0) {
             $reseller_id = (int)$stalker_reseller;
             error_log("Using Stalker reseller: " . $reseller_id);
+        } else if(isset($existing_resellers[$login])) {
+            $reseller_id = $existing_resellers[$login];
+            error_log("Using existing local mapping: " . $reseller_id);
         } else {
-            $reseller_id = $existing_resellers[$login] ?? $user_id;
-            error_log("Using fallback reseller: " . $reseller_id);
+            $reseller_id = null;  // Not assigned to any reseller
+            error_log("No reseller assignment - setting to NULL (Not Assigned)");
         }
 
         // For resellers: only sync accounts that belong to them

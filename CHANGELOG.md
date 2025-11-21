@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2025-11-22
+
+### Added - Account-to-Reseller Assignment System
+
+**Reseller Assignment Feature**
+- Added "Assign Reseller" button on each account row for admins and reseller admins
+- New reseller column in accounts table showing current owner
+- Modal interface with dropdown to select reseller from list
+- "Not Assigned" option to unassign accounts (sets reseller to NULL)
+- Real-time updates when assigning/reassigning accounts
+- Permission-based button visibility (only for super admin and reseller admin)
+- New `assign_reseller.php` API endpoint for backend processing
+- Updated `get_accounts.php` to include reseller_name via LEFT JOIN
+- Enhanced `sync_accounts.php` to set new accounts as "Not Assigned" by default
+
+**Full Admin Features for Reseller Admins**
+- Reseller admins now have access to all tabs (Accounts, Resellers, Plans, Reports, Transactions, Settings)
+- Sync accounts functionality now available to reseller admins
+- Access to view and manage all resellers
+- Access to tariffs from Stalker Portal
+- All stat cards visible (Total Accounts, Total Resellers, Total Plans)
+- Can assign accounts to resellers
+- Can delete accounts (with proper permission)
+
+**Enhanced Permission System**
+- Observer and Admin permissions are now mutually exclusive
+- When Observer is checked, Admin permission is hidden and unchecked
+- When Admin is checked, Observer permission is hidden and unchecked
+- All other permissions (Edit, Add, Delete) hidden when Observer is checked
+- Prevents permission conflicts and ensures proper role separation
+- Updated `handleAdminPermissionToggle()` function to manage exclusive permissions
+- Event listeners for both Admin and Observer checkboxes in Add/Edit Reseller modals
+
+### Changed
+
+**Permission Handling**
+- Modified `assign_reseller.php` to allow both super admins and reseller admins
+- Updated permission check to include `is_reseller_admin` flag
+- Enhanced frontend button rendering to show assign button for reseller admins
+- Modified `dashboard.js` checkAuth() function to give reseller admins full features
+
+**Sync Behavior**
+- Changed default reseller assignment from current user to NULL for new accounts
+- Prevents automatic admin assignment during sync operations
+- Accounts must be manually assigned to resellers via "Assign Reseller" button
+- Preserves reseller-to-account ownership for existing accounts
+
+**UI/UX Improvements**
+- Reseller column displays reseller name or "Not Assigned" in gray italic
+- Modal opens smoothly with `show` class instead of `active` class (bug fix)
+- Clean dropdown interface showing all available resellers
+- Consistent styling with existing modals
+
+### Fixed
+
+**Modal Opening Issue**
+- Fixed assign reseller modal not opening due to CSS class mismatch
+- Changed from `modal.classList.add('active')` to `modal.classList.add('show')`
+- CSS expects `.modal.show` to display modal
+- Added proper error handling and console logging
+
+**Permission System Bugs**
+- Fixed issue where Observer and Admin could be selected simultaneously
+- Fixed permission checkboxes not hiding properly when Observer was selected
+- Fixed permission states not being preserved correctly
+- Enhanced setupAddResellerPermissions() and setupEditResellerPermissions() functions
+
+---
+
 ## [1.1.0] - 2025-11-21
 
 ### Added - Auto-Sync on Login

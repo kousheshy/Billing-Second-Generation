@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Assign Reseller</title>
+</head>
+<body>
+    <h1>Test Assign Reseller Function</h1>
+    <button onclick="testAssign()">Test Assign Reseller</button>
+    <div id="output"></div>
+
+    <script>
+    async function testAssign() {
+        const output = document.getElementById('output');
+        output.innerHTML = '<h2>Testing...</h2>';
+
+        try {
+            // Test 1: Fetch resellers
+            output.innerHTML += '<p>1. Fetching resellers...</p>';
+            const response = await fetch('get_resellers.php');
+            const result = await response.json();
+            output.innerHTML += '<pre>Response: ' + JSON.stringify(result, null, 2) + '</pre>';
+
+            if(result.error == 0) {
+                output.innerHTML += '<p>✓ Successfully loaded ' + result.resellers.length + ' resellers</p>';
+
+                // Test 2: Try to assign
+                output.innerHTML += '<p>2. Testing assign_reseller.php...</p>';
+                const formData = new FormData();
+                formData.append('username', '9ykn7vfjwj805'); // test account
+                formData.append('reseller_id', result.resellers[0].id); // first reseller
+
+                const assignResponse = await fetch('assign_reseller.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const assignResult = await assignResponse.json();
+                output.innerHTML += '<pre>Assign Response: ' + JSON.stringify(assignResult, null, 2) + '</pre>';
+            } else {
+                output.innerHTML += '<p>✗ Error: ' + result.message + '</p>';
+            }
+        } catch(error) {
+            output.innerHTML += '<p>✗ Error: ' + error.message + '</p>';
+            output.innerHTML += '<pre>' + error.stack + '</pre>';
+        }
+    }
+    </script>
+</body>
+</html>

@@ -49,20 +49,20 @@ try {
     // Regular resellers only see their own
     if($user_info['super_user'] == 1 || $is_observer)
     {
-        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id ORDER BY a.id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id ORDER BY a.id DESC');
         $stmt->execute([]);
     }
     else if($is_reseller_admin && $viewAllAccounts)
     {
         // Reseller admin viewing all accounts
-        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id ORDER BY a.id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id ORDER BY a.id DESC');
         $stmt->execute([]);
     }
     else
     {
         // Regular reseller or reseller admin viewing only their own accounts
         error_log("Getting accounts for reseller - ID: " . $user_info['id'] . ", Username: " . $user_info['username']);
-        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id WHERE a.reseller = ? ORDER BY a.id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id WHERE a.reseller = ? ORDER BY a.id DESC');
         $stmt->execute([$user_info['id']]);
     }
 
