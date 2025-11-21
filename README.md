@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.6.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6.5-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -72,7 +72,7 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - Active/Inactive account monitoring
 - Dynamic date range reports (7, 14, 30, 60, 90, 180, 365 days + custom)
 - Search and pagination (25 accounts per page)
-- Dark/Light theme toggle for comfortable viewing
+- Dark/Light theme toggle (dark mode default in v1.6.5)
 - Multi-currency support (GBP, USD, EUR, IRR) with proper formatting
 
 ### Plan Management (v1.3.0)
@@ -122,14 +122,15 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Timestamped Files**: Auto-generated filenames with dates
 - **Export Libraries**: Integrated XLSX.js, jsPDF, and jsPDF-autoTable
 
-### Reseller Admin Permissions (v1.6.0)
+### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5)
 - **Three-Tier Permission System**: 
   - Super Admin: Full system access
   - Reseller Admin: Admin-level permissions within reseller scope
   - Regular Reseller: Limited permissions based on settings
-- **Granular Permission Control**:
+- **Granular Permission Control (v1.6.5)**:
   - Can Edit Accounts: Permission to modify existing accounts
   - Can Add Accounts: Permission to create new accounts
+  - Can Delete Accounts: Permission to delete accounts (new in v1.6.5)
   - Admin Permissions: Full admin-level access (hides other checkboxes)
 - **View Mode Toggle**: Reseller admins can switch between:
   - "My Accounts" - View only their own accounts
@@ -465,17 +466,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.6.4 - November 2025
+- Version 1.6.5 - November 2025
 
 ---
 
-**Version:** 1.6.4
+**Version:** 1.6.5
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.6.5** (Nov 2025) - Granular delete permissions, dark mode default, sync bug fixes
 - **v1.6.4** (Nov 2025) - Observer Mode UI improvements with disabled buttons and transaction reseller column
 - **v1.6.3** (Nov 2025) - Observer (Read-Only) mode for auditing and monitoring
 - **v1.6.2** (Nov 2025) - Progressive Web App (PWA) support with offline functionality
