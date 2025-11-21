@@ -2264,3 +2264,607 @@
 [Fri Nov 21 13:41:13 2025] [::1]:50992 Closing
 [Fri Nov 21 13:41:13 2025] [::1]:50993 [200]: GET /get_resellers.php
 [Fri Nov 21 13:41:13 2025] [::1]:50993 Closing
+[Fri Nov 21 13:42:55 2025] [::1]:51489 Accepted
+[Fri Nov 21 13:42:56 2025] [::1]:51489 [200]: POST /remove_account.php
+[Fri Nov 21 13:42:56 2025] [::1]:51489 Closing
+[Fri Nov 21 13:42:56 2025] [::1]:51492 Accepted
+[Fri Nov 21 13:42:56 2025] [::1]:51493 Accepted
+[Fri Nov 21 13:42:56 2025] [::1]:51492 [200]: GET /get_accounts.php
+[Fri Nov 21 13:42:56 2025] [::1]:51492 Closing
+[Fri Nov 21 13:42:56 2025] [::1]:51493 [200]: GET /get_user_info.php
+[Fri Nov 21 13:42:56 2025] [::1]:51493 Closing
+[Fri Nov 21 13:42:56 2025] [::1]:51497 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51497 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:43:07 2025] [::1]:51497 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51553 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51553 [200]: GET /logout.php
+[Fri Nov 21 13:43:07 2025] [::1]:51553 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51558 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51559 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51560 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51558 [200]: GET /get_accounts.php
+[Fri Nov 21 13:43:07 2025] [::1]:51558 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51561 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51559 [200]: GET /get_transactions.php
+[Fri Nov 21 13:43:07 2025] [::1]:51559 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51560 [200]: GET /get_plans.php
+[Fri Nov 21 13:43:07 2025] [::1]:51560 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51561 [200]: GET /get_resellers.php
+[Fri Nov 21 13:43:07 2025] [::1]:51561 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51562 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51562 [200]: GET /index.html
+[Fri Nov 21 13:43:07 2025] [::1]:51562 Closing
+[Fri Nov 21 13:43:07 2025] [::1]:51563 Accepted
+[Fri Nov 21 13:43:07 2025] [::1]:51564 Accepted
+[Fri Nov 21 13:43:08 2025] [::1]:51563 [200]: POST /login.php
+[Fri Nov 21 13:43:08 2025] [::1]:51563 Closing
+[Fri Nov 21 13:43:09 2025] [::1]:51564 [200]: GET /dashboard.html
+[Fri Nov 21 13:43:09 2025] [::1]:51577 Accepted
+[Fri Nov 21 13:43:09 2025] [::1]:51564 Closing
+[Fri Nov 21 13:43:09 2025] [::1]:51577 [200]: GET /dashboard.css
+[Fri Nov 21 13:43:09 2025] [::1]:51577 Closing
+[Fri Nov 21 13:43:09 2025] [::1]:51578 Accepted
+[Fri Nov 21 13:43:09 2025] [::1]:51578 [200]: GET /dashboard.js
+[Fri Nov 21 13:43:09 2025] [::1]:51578 Closing
+[Fri Nov 21 13:43:09 2025] [::1]:51579 Accepted
+[Fri Nov 21 13:43:09 2025] [::1]:51579 [200]: GET /get_user_info.php
+[Fri Nov 21 13:43:09 2025] [::1]:51579 Closing
+[Fri Nov 21 13:43:09 2025] [::1]:51580 Accepted
+[Fri Nov 21 13:43:20 2025] [::1]:51580 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:43:20 2025] [::1]:51580 Closing
+[Fri Nov 21 13:43:20 2025] [::1]:51631 Accepted
+[Fri Nov 21 13:43:20 2025] [::1]:51632 Accepted
+[Fri Nov 21 13:43:20 2025] [::1]:51633 Accepted
+[Fri Nov 21 13:43:20 2025] [::1]:51631 [200]: GET /get_accounts.php
+[Fri Nov 21 13:43:20 2025] [::1]:51631 Closing
+[Fri Nov 21 13:43:20 2025] [::1]:51634 Accepted
+[Fri Nov 21 13:43:20 2025] [::1]:51632 [200]: GET /get_transactions.php
+[Fri Nov 21 13:43:20 2025] [::1]:51632 Closing
+[Fri Nov 21 13:43:20 2025] [::1]:51633 [200]: GET /get_plans.php
+[Fri Nov 21 13:43:20 2025] [::1]:51633 Closing
+[Fri Nov 21 13:43:20 2025] [::1]:51634 [200]: GET /get_resellers.php
+[Fri Nov 21 13:43:20 2025] [::1]:51634 Closing
+[Fri Nov 21 13:48:41 2025] [::1]:53711 Accepted
+[Fri Nov 21 13:48:41 2025] [::1]:53711 [200]: GET /dashboard.html
+[Fri Nov 21 13:48:41 2025] [::1]:53711 Closing
+[Fri Nov 21 13:48:41 2025] [::1]:53712 Accepted
+[Fri Nov 21 13:48:41 2025] [::1]:53713 Accepted
+[Fri Nov 21 13:48:41 2025] [::1]:53712 [200]: GET /dashboard.css
+[Fri Nov 21 13:48:41 2025] [::1]:53712 Closing
+[Fri Nov 21 13:48:41 2025] [::1]:53713 [200]: GET /dashboard.js
+[Fri Nov 21 13:48:41 2025] [::1]:53713 Closing
+[Fri Nov 21 13:48:41 2025] [::1]:53714 Accepted
+[Fri Nov 21 13:48:41 2025] [::1]:53714 [200]: GET /get_user_info.php
+[Fri Nov 21 13:48:41 2025] [::1]:53714 Closing
+[Fri Nov 21 13:48:42 2025] [::1]:53715 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53715 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:48:52 2025] [::1]:53715 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53733 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53733 [200]: GET /dashboard.html
+[Fri Nov 21 13:48:52 2025] [::1]:53733 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53771 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53772 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53773 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53771 [200]: GET /get_accounts.php
+[Fri Nov 21 13:48:52 2025] [::1]:53771 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53774 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53772 [200]: GET /get_transactions.php
+[Fri Nov 21 13:48:52 2025] [::1]:53772 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53773 [200]: GET /get_plans.php
+[Fri Nov 21 13:48:52 2025] [::1]:53773 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53775 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53774 [200]: GET /get_resellers.php
+[Fri Nov 21 13:48:52 2025] [::1]:53774 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53776 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53775 [200]: GET /dashboard.css
+[Fri Nov 21 13:48:52 2025] [::1]:53776 [200]: GET /dashboard.js
+[Fri Nov 21 13:48:52 2025] [::1]:53775 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53776 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53777 Accepted
+[Fri Nov 21 13:48:52 2025] [::1]:53777 [200]: GET /get_user_info.php
+[Fri Nov 21 13:48:52 2025] [::1]:53777 Closing
+[Fri Nov 21 13:48:52 2025] [::1]:53778 Accepted
+[Fri Nov 21 13:49:03 2025] [::1]:53778 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:49:03 2025] [::1]:53778 Closing
+[Fri Nov 21 13:49:03 2025] [::1]:53830 Accepted
+[Fri Nov 21 13:49:03 2025] [::1]:53831 Accepted
+[Fri Nov 21 13:49:03 2025] [::1]:53832 Accepted
+[Fri Nov 21 13:49:03 2025] [::1]:53830 [200]: GET /get_accounts.php
+[Fri Nov 21 13:49:03 2025] [::1]:53830 Closing
+[Fri Nov 21 13:49:03 2025] [::1]:53833 Accepted
+[Fri Nov 21 13:49:03 2025] [::1]:53831 [200]: GET /get_transactions.php
+[Fri Nov 21 13:49:03 2025] [::1]:53831 Closing
+[Fri Nov 21 13:49:03 2025] [::1]:53832 [200]: GET /get_plans.php
+[Fri Nov 21 13:49:03 2025] [::1]:53832 Closing
+[Fri Nov 21 13:49:03 2025] [::1]:53833 [200]: GET /get_resellers.php
+[Fri Nov 21 13:49:03 2025] [::1]:53833 Closing
+[Fri Nov 21 13:50:49 2025] [::1]:54330 Accepted
+[Fri Nov 21 13:50:49 2025] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'admin' for key '_users.username' in /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/add_reseller.php:75
+Stack trace:
+#0 /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/add_reseller.php(75): PDOStatement->execute(Array)
+#1 {main}
+  thrown in /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/add_reseller.php on line 75
+[Fri Nov 21 13:50:49 2025] [::1]:54330 [200]: POST /add_reseller.php - Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'admin' for key '_users.username' in /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/add_reseller.php:75
+Stack trace:
+#0 /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/add_reseller.php(75): PDOStatement->execute(Array)
+#1 {main}
+  thrown in /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/add_reseller.php on line 75
+[Fri Nov 21 13:50:49 2025] [::1]:54330 Closing
+[Fri Nov 21 13:50:58 2025] [::1]:54379 Accepted
+[Fri Nov 21 13:50:58 2025] [::1]:54379 [200]: GET /remove_reseller.php?id=7
+[Fri Nov 21 13:50:58 2025] [::1]:54379 Closing
+[Fri Nov 21 13:50:58 2025] [::1]:54380 Accepted
+[Fri Nov 21 13:50:58 2025] [::1]:54380 [200]: GET /get_resellers.php
+[Fri Nov 21 13:50:58 2025] [::1]:54380 Closing
+[Fri Nov 21 13:51:17 2025] [::1]:54469 Accepted
+[Fri Nov 21 13:51:17 2025] [::1]:54469 [200]: POST /add_reseller.php
+[Fri Nov 21 13:51:17 2025] [::1]:54469 Closing
+[Fri Nov 21 13:51:17 2025] [::1]:54470 Accepted
+[Fri Nov 21 13:51:17 2025] [::1]:54470 [200]: GET /get_resellers.php
+[Fri Nov 21 13:51:17 2025] [::1]:54470 Closing
+[Fri Nov 21 13:52:12 2025] [::1]:54776 Accepted
+[Fri Nov 21 13:52:12 2025] [::1]:54779 Accepted
+[Fri Nov 21 13:52:12 2025] [::1]:54776 [200]: GET /dashboard.html
+[Fri Nov 21 13:52:12 2025] [::1]:54776 Closing
+[Fri Nov 21 13:52:12 2025] [::1]:54779 [200]: GET /dashboard.css
+[Fri Nov 21 13:52:12 2025] [::1]:54779 Closing
+[Fri Nov 21 13:52:12 2025] [::1]:54782 Accepted
+[Fri Nov 21 13:52:12 2025] [::1]:54782 [200]: GET /dashboard.js
+[Fri Nov 21 13:52:12 2025] [::1]:54782 Closing
+[Fri Nov 21 13:52:12 2025] [::1]:54783 Accepted
+[Fri Nov 21 13:52:12 2025] [::1]:54783 [200]: GET /get_user_info.php
+[Fri Nov 21 13:52:12 2025] [::1]:54783 Closing
+[Fri Nov 21 13:52:12 2025] [::1]:54784 Accepted
+[Fri Nov 21 13:52:22 2025] [::1]:54784 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:52:22 2025] [::1]:54784 Closing
+[Fri Nov 21 13:52:22 2025] [::1]:54834 Accepted
+[Fri Nov 21 13:52:22 2025] [::1]:54835 Accepted
+[Fri Nov 21 13:52:22 2025] [::1]:54834 [200]: GET /get_accounts.php
+[Fri Nov 21 13:52:22 2025] [::1]:54834 Closing
+[Fri Nov 21 13:52:22 2025] [::1]:54836 Accepted
+[Fri Nov 21 13:52:22 2025] [::1]:54835 [200]: GET /get_transactions.php
+[Fri Nov 21 13:52:22 2025] [::1]:54835 Closing
+[Fri Nov 21 13:52:22 2025] [::1]:54837 Accepted
+[Fri Nov 21 13:52:22 2025] [::1]:54836 [200]: GET /get_plans.php
+[Fri Nov 21 13:52:22 2025] [::1]:54836 Closing
+[Fri Nov 21 13:52:22 2025] [::1]:54837 [200]: GET /get_resellers.php
+[Fri Nov 21 13:52:22 2025] [::1]:54837 Closing
+[Fri Nov 21 13:53:51 2025] [::1]:55362 Accepted
+[Fri Nov 21 13:53:51 2025] [::1]:55362 [200]: GET /dashboard.html
+[Fri Nov 21 13:53:51 2025] [::1]:55362 Closing
+[Fri Nov 21 13:53:51 2025] [::1]:55363 Accepted
+[Fri Nov 21 13:53:51 2025] [::1]:55363 [200]: GET /dashboard.css
+[Fri Nov 21 13:53:51 2025] [::1]:55364 Accepted
+[Fri Nov 21 13:53:51 2025] [::1]:55363 Closing
+[Fri Nov 21 13:53:51 2025] [::1]:55364 [200]: GET /dashboard.js
+[Fri Nov 21 13:53:51 2025] [::1]:55364 Closing
+[Fri Nov 21 13:53:51 2025] [::1]:55365 Accepted
+[Fri Nov 21 13:53:51 2025] [::1]:55365 [200]: GET /get_user_info.php
+[Fri Nov 21 13:53:51 2025] [::1]:55365 Closing
+[Fri Nov 21 13:53:51 2025] [::1]:55366 Accepted
+[Fri Nov 21 13:54:02 2025] [::1]:55366 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:54:02 2025] [::1]:55366 Closing
+[Fri Nov 21 13:54:02 2025] [::1]:55413 Accepted
+[Fri Nov 21 13:54:02 2025] [::1]:55413 [200]: GET /get_accounts.php
+[Fri Nov 21 13:54:02 2025] [::1]:55413 Closing
+[Fri Nov 21 13:54:02 2025] [::1]:55414 Accepted
+[Fri Nov 21 13:54:02 2025] [::1]:55415 Accepted
+[Fri Nov 21 13:54:02 2025] [::1]:55414 [200]: GET /get_transactions.php
+[Fri Nov 21 13:54:02 2025] [::1]:55414 Closing
+[Fri Nov 21 13:54:02 2025] [::1]:55416 Accepted
+[Fri Nov 21 13:54:02 2025] [::1]:55415 [200]: GET /get_plans.php
+[Fri Nov 21 13:54:02 2025] [::1]:55415 Closing
+[Fri Nov 21 13:54:02 2025] [::1]:55416 [200]: GET /get_resellers.php
+[Fri Nov 21 13:54:02 2025] [::1]:55416 Closing
+[Fri Nov 21 13:55:57 2025] [::1]:55617 Accepted
+[Fri Nov 21 13:55:57 2025] [::1]:55618 Accepted
+[Fri Nov 21 13:55:57 2025] [::1]:55617 [200]: GET /dashboard.html
+[Fri Nov 21 13:55:57 2025] [::1]:55617 Closing
+[Fri Nov 21 13:55:57 2025] [::1]:55618 [200]: GET /dashboard.css
+[Fri Nov 21 13:55:57 2025] [::1]:55618 Closing
+[Fri Nov 21 13:55:57 2025] [::1]:55619 Accepted
+[Fri Nov 21 13:55:57 2025] [::1]:55619 [200]: GET /dashboard.js
+[Fri Nov 21 13:55:57 2025] [::1]:55619 Closing
+[Fri Nov 21 13:55:57 2025] [::1]:55620 Accepted
+[Fri Nov 21 13:55:57 2025] [::1]:55620 [200]: GET /get_user_info.php
+[Fri Nov 21 13:55:57 2025] [::1]:55620 Closing
+[Fri Nov 21 13:55:57 2025] [::1]:55621 Accepted
+[Fri Nov 21 13:56:07 2025] [::1]:55621 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:56:07 2025] [::1]:55621 Closing
+[Fri Nov 21 13:56:08 2025] [::1]:55630 Accepted
+[Fri Nov 21 13:56:08 2025] [::1]:55631 Accepted
+[Fri Nov 21 13:56:08 2025] [::1]:55632 Accepted
+[Fri Nov 21 13:56:08 2025] [::1]:55630 [200]: GET /get_accounts.php
+[Fri Nov 21 13:56:08 2025] [::1]:55630 Closing
+[Fri Nov 21 13:56:08 2025] [::1]:55633 Accepted
+[Fri Nov 21 13:56:08 2025] [::1]:55631 [200]: GET /get_transactions.php
+[Fri Nov 21 13:56:08 2025] [::1]:55631 Closing
+[Fri Nov 21 13:56:08 2025] [::1]:55632 [200]: GET /get_plans.php
+[Fri Nov 21 13:56:08 2025] [::1]:55632 Closing
+[Fri Nov 21 13:56:08 2025] [::1]:55633 [200]: GET /get_resellers.php
+[Fri Nov 21 13:56:08 2025] [::1]:55633 Closing
+[Fri Nov 21 13:57:08 2025] [::1]:55769 Accepted
+[Fri Nov 21 13:57:08 2025] [::1]:55769 [200]: GET /dashboard.html
+[Fri Nov 21 13:57:08 2025] [::1]:55770 Accepted
+[Fri Nov 21 13:57:08 2025] [::1]:55769 Closing
+[Fri Nov 21 13:57:08 2025] [::1]:55770 [200]: GET /dashboard.css
+[Fri Nov 21 13:57:08 2025] [::1]:55770 Closing
+[Fri Nov 21 13:57:08 2025] [::1]:55771 Accepted
+[Fri Nov 21 13:57:08 2025] [::1]:55771 [200]: GET /dashboard.js
+[Fri Nov 21 13:57:08 2025] [::1]:55771 Closing
+[Fri Nov 21 13:57:08 2025] [::1]:55772 Accepted
+[Fri Nov 21 13:57:08 2025] [::1]:55772 [200]: GET /get_user_info.php
+[Fri Nov 21 13:57:08 2025] [::1]:55772 Closing
+[Fri Nov 21 13:57:09 2025] [::1]:55773 Accepted
+[Fri Nov 21 13:57:19 2025] [::1]:55773 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:57:19 2025] [::1]:55773 Closing
+[Fri Nov 21 13:57:19 2025] [::1]:55779 Accepted
+[Fri Nov 21 13:57:19 2025] [::1]:55780 Accepted
+[Fri Nov 21 13:57:19 2025] [::1]:55779 [200]: GET /get_accounts.php
+[Fri Nov 21 13:57:19 2025] [::1]:55779 Closing
+[Fri Nov 21 13:57:19 2025] [::1]:55781 Accepted
+[Fri Nov 21 13:57:19 2025] [::1]:55780 [200]: GET /get_transactions.php
+[Fri Nov 21 13:57:19 2025] [::1]:55780 Closing
+[Fri Nov 21 13:57:19 2025] [::1]:55782 Accepted
+[Fri Nov 21 13:57:19 2025] [::1]:55781 [200]: GET /get_plans.php
+[Fri Nov 21 13:57:19 2025] [::1]:55781 Closing
+[Fri Nov 21 13:57:19 2025] [::1]:55782 [200]: GET /get_resellers.php
+[Fri Nov 21 13:57:19 2025] [::1]:55782 Closing
+[Fri Nov 21 13:58:45 2025] [::1]:55903 Accepted
+[Fri Nov 21 13:58:45 2025] [::1]:55903 [200]: GET /dashboard.html
+[Fri Nov 21 13:58:45 2025] [::1]:55903 Closing
+[Fri Nov 21 13:58:45 2025] [::1]:55904 Accepted
+[Fri Nov 21 13:58:45 2025] [::1]:55904 [200]: GET /dashboard.css
+[Fri Nov 21 13:58:45 2025] [::1]:55905 Accepted
+[Fri Nov 21 13:58:45 2025] [::1]:55904 Closing
+[Fri Nov 21 13:58:45 2025] [::1]:55905 [200]: GET /dashboard.js
+[Fri Nov 21 13:58:45 2025] [::1]:55905 Closing
+[Fri Nov 21 13:58:45 2025] [::1]:55906 Accepted
+[Fri Nov 21 13:58:45 2025] [::1]:55906 [200]: GET /get_user_info.php
+[Fri Nov 21 13:58:45 2025] [::1]:55906 Closing
+[Fri Nov 21 13:58:46 2025] [::1]:55907 Accepted
+[Fri Nov 21 13:58:57 2025] [::1]:55907 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:58:57 2025] [::1]:55907 Closing
+[Fri Nov 21 13:58:57 2025] [::1]:55917 Accepted
+[Fri Nov 21 13:58:57 2025] [::1]:55918 Accepted
+[Fri Nov 21 13:58:57 2025] [::1]:55919 Accepted
+[Fri Nov 21 13:58:57 2025] [::1]:55917 [200]: GET /get_accounts.php
+[Fri Nov 21 13:58:57 2025] [::1]:55917 Closing
+[Fri Nov 21 13:58:57 2025] [::1]:55920 Accepted
+[Fri Nov 21 13:58:57 2025] [::1]:55918 [200]: GET /get_transactions.php
+[Fri Nov 21 13:58:57 2025] [::1]:55918 Closing
+[Fri Nov 21 13:58:57 2025] [::1]:55919 [200]: GET /get_plans.php
+[Fri Nov 21 13:58:57 2025] [::1]:55919 Closing
+[Fri Nov 21 13:58:57 2025] [::1]:55920 [200]: GET /get_resellers.php
+[Fri Nov 21 13:58:57 2025] [::1]:55920 Closing
+[Fri Nov 21 13:59:07 2025] [::1]:55930 Accepted
+[Fri Nov 21 13:59:07 2025] [::1]:55930 [200]: POST /adjust_credit.php
+[Fri Nov 21 13:59:07 2025] [::1]:55930 Closing
+[Fri Nov 21 13:59:07 2025] [::1]:55931 Accepted
+[Fri Nov 21 13:59:07 2025] [::1]:55931 [200]: GET /get_resellers.php
+[Fri Nov 21 13:59:07 2025] [::1]:55931 Closing
+[Fri Nov 21 13:59:09 2025] [::1]:55935 Accepted
+[Fri Nov 21 13:59:09 2025] [::1]:55935 [200]: GET /dashboard.html
+[Fri Nov 21 13:59:09 2025] [::1]:55935 Closing
+[Fri Nov 21 13:59:09 2025] [::1]:55936 Accepted
+[Fri Nov 21 13:59:09 2025] [::1]:55937 Accepted
+[Fri Nov 21 13:59:09 2025] [::1]:55936 [200]: GET /dashboard.css
+[Fri Nov 21 13:59:09 2025] [::1]:55937 [200]: GET /dashboard.js
+[Fri Nov 21 13:59:09 2025] [::1]:55936 Closing
+[Fri Nov 21 13:59:09 2025] [::1]:55937 Closing
+[Fri Nov 21 13:59:09 2025] [::1]:55938 Accepted
+[Fri Nov 21 13:59:09 2025] [::1]:55938 [200]: GET /get_user_info.php
+[Fri Nov 21 13:59:09 2025] [::1]:55938 Closing
+[Fri Nov 21 13:59:09 2025] [::1]:55939 Accepted
+[Fri Nov 21 13:59:21 2025] [::1]:55939 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:59:21 2025] [::1]:55939 Closing
+[Fri Nov 21 13:59:21 2025] [::1]:55949 Accepted
+[Fri Nov 21 13:59:21 2025] [::1]:55950 Accepted
+[Fri Nov 21 13:59:21 2025] [::1]:55949 [200]: GET /get_accounts.php
+[Fri Nov 21 13:59:21 2025] [::1]:55949 Closing
+[Fri Nov 21 13:59:21 2025] [::1]:55951 Accepted
+[Fri Nov 21 13:59:21 2025] [::1]:55950 [200]: GET /get_transactions.php
+[Fri Nov 21 13:59:21 2025] [::1]:55950 Closing
+[Fri Nov 21 13:59:21 2025] [::1]:55952 Accepted
+[Fri Nov 21 13:59:21 2025] [::1]:55951 [200]: GET /get_plans.php
+[Fri Nov 21 13:59:21 2025] [::1]:55951 Closing
+[Fri Nov 21 13:59:21 2025] [::1]:55952 [200]: GET /get_resellers.php
+[Fri Nov 21 13:59:21 2025] [::1]:55952 Closing
+[Fri Nov 21 13:59:23 2025] [::1]:55954 Accepted
+[Fri Nov 21 13:59:23 2025] [::1]:55954 [200]: GET /logout.php
+[Fri Nov 21 13:59:23 2025] [::1]:55954 Closing
+[Fri Nov 21 13:59:23 2025] [::1]:55955 Accepted
+[Fri Nov 21 13:59:23 2025] [::1]:55955 [200]: GET /index.html
+[Fri Nov 21 13:59:23 2025] [::1]:55955 Closing
+[Fri Nov 21 13:59:23 2025] [::1]:55956 Accepted
+[Fri Nov 21 13:59:23 2025] [::1]:55957 Accepted
+[Fri Nov 21 13:59:27 2025] [::1]:55956 [200]: POST /login.php
+[Fri Nov 21 13:59:27 2025] [::1]:55956 Closing
+[Fri Nov 21 13:59:28 2025] [::1]:55957 [200]: GET /dashboard.html
+[Fri Nov 21 13:59:28 2025] [::1]:55957 Closing
+[Fri Nov 21 13:59:28 2025] [::1]:55962 Accepted
+[Fri Nov 21 13:59:28 2025] [::1]:55963 Accepted
+[Fri Nov 21 13:59:28 2025] [::1]:55962 [200]: GET /dashboard.css
+[Fri Nov 21 13:59:28 2025] [::1]:55962 Closing
+[Fri Nov 21 13:59:28 2025] [::1]:55963 [200]: GET /dashboard.js
+[Fri Nov 21 13:59:28 2025] [::1]:55963 Closing
+[Fri Nov 21 13:59:28 2025] [::1]:55964 Accepted
+[Fri Nov 21 13:59:29 2025] [::1]:55964 [200]: GET /get_user_info.php
+[Fri Nov 21 13:59:29 2025] [::1]:55964 Closing
+[Fri Nov 21 13:59:29 2025] [::1]:55965 Accepted
+[Fri Nov 21 13:59:41 2025] [::1]:55965 [200]: POST /sync_accounts.php
+[Fri Nov 21 13:59:41 2025] [::1]:55965 Closing
+[Fri Nov 21 13:59:41 2025] [::1]:55985 Accepted
+[Fri Nov 21 13:59:41 2025] [::1]:55986 Accepted
+[Fri Nov 21 13:59:41 2025] [::1]:55987 Accepted
+[Fri Nov 21 13:59:41 2025] [::1]:55985 [200]: GET /get_accounts.php
+[Fri Nov 21 13:59:41 2025] [::1]:55985 Closing
+[Fri Nov 21 13:59:41 2025] [::1]:55986 [200]: GET /get_transactions.php
+[Fri Nov 21 13:59:41 2025] [::1]:55986 Closing
+[Fri Nov 21 13:59:41 2025] [::1]:55987 [200]: GET /get_plans.php
+[Fri Nov 21 13:59:41 2025] [::1]:55987 Closing
+[Fri Nov 21 14:02:22 2025] [::1]:56247 Accepted
+[Fri Nov 21 14:02:22 2025] [::1]:56247 [200]: GET /dashboard.html
+[Fri Nov 21 14:02:22 2025] [::1]:56247 Closing
+[Fri Nov 21 14:02:22 2025] [::1]:56248 Accepted
+[Fri Nov 21 14:02:22 2025] [::1]:56249 Accepted
+[Fri Nov 21 14:02:22 2025] [::1]:56248 [200]: GET /dashboard.css
+[Fri Nov 21 14:02:22 2025] [::1]:56248 Closing
+[Fri Nov 21 14:02:22 2025] [::1]:56249 [200]: GET /dashboard.js
+[Fri Nov 21 14:02:22 2025] [::1]:56249 Closing
+[Fri Nov 21 14:02:22 2025] [::1]:56250 Accepted
+[Fri Nov 21 14:02:22 2025] [::1]:56250 [200]: GET /get_user_info.php
+[Fri Nov 21 14:02:22 2025] [::1]:56250 Closing
+[Fri Nov 21 14:02:22 2025] [::1]:56251 Accepted
+[Fri Nov 21 14:02:32 2025] [::1]:56251 [200]: POST /sync_accounts.php
+[Fri Nov 21 14:02:32 2025] [::1]:56251 Closing
+[Fri Nov 21 14:02:32 2025] [::1]:56256 Accepted
+[Fri Nov 21 14:02:32 2025] [::1]:56257 Accepted
+[Fri Nov 21 14:02:32 2025] [::1]:56258 Accepted
+[Fri Nov 21 14:02:32 2025] [::1]:56256 [200]: GET /get_accounts.php
+[Fri Nov 21 14:02:32 2025] [::1]:56256 Closing
+[Fri Nov 21 14:02:32 2025] [::1]:56257 [200]: GET /get_transactions.php
+[Fri Nov 21 14:02:32 2025] [::1]:56257 Closing
+[Fri Nov 21 14:02:32 2025] [::1]:56258 [200]: GET /get_plans.php
+[Fri Nov 21 14:02:32 2025] [::1]:56258 Closing
+[Fri Nov 21 14:13:10 2025] [::1]:56419 Accepted
+[Fri Nov 21 14:13:10 2025] [::1]:56419 [200]: GET /logout.php
+[Fri Nov 21 14:13:10 2025] [::1]:56419 Closing
+[Fri Nov 21 14:13:10 2025] [::1]:56420 Accepted
+[Fri Nov 21 14:13:10 2025] [::1]:56420 [200]: GET /index.html
+[Fri Nov 21 14:13:10 2025] [::1]:56421 Accepted
+[Fri Nov 21 14:13:10 2025] [::1]:56420 Closing
+[Fri Nov 21 14:13:11 2025] [::1]:56421 [200]: POST /login.php
+[Fri Nov 21 14:13:11 2025] [::1]:56421 Closing
+[Fri Nov 21 14:13:12 2025] [::1]:56422 Accepted
+[Fri Nov 21 14:13:12 2025] [::1]:56422 [200]: GET /dashboard.html
+[Fri Nov 21 14:13:12 2025] [::1]:56422 Closing
+[Fri Nov 21 14:13:12 2025] [::1]:56423 Accepted
+[Fri Nov 21 14:13:12 2025] [::1]:56424 Accepted
+[Fri Nov 21 14:13:12 2025] [::1]:56423 [200]: GET /dashboard.css
+[Fri Nov 21 14:13:12 2025] [::1]:56423 Closing
+[Fri Nov 21 14:13:12 2025] [::1]:56424 [200]: GET /dashboard.js
+[Fri Nov 21 14:13:12 2025] [::1]:56424 Closing
+[Fri Nov 21 14:13:12 2025] [::1]:56425 Accepted
+[Fri Nov 21 14:13:12 2025] [::1]:56425 [200]: GET /get_user_info.php
+[Fri Nov 21 14:13:12 2025] [::1]:56425 Closing
+[Fri Nov 21 14:13:12 2025] [::1]:56426 Accepted
+[Fri Nov 21 14:13:22 2025] [::1]:56426 [200]: POST /sync_accounts.php
+[Fri Nov 21 14:13:22 2025] [::1]:56426 Closing
+[Fri Nov 21 14:13:22 2025] [::1]:56438 Accepted
+[Fri Nov 21 14:13:22 2025] [::1]:56439 Accepted
+[Fri Nov 21 14:13:22 2025] [::1]:56440 Accepted
+[Fri Nov 21 14:13:22 2025] [::1]:56438 [200]: GET /get_accounts.php
+[Fri Nov 21 14:13:22 2025] [::1]:56438 Closing
+[Fri Nov 21 14:13:22 2025] [::1]:56441 Accepted
+[Fri Nov 21 14:13:22 2025] [::1]:56439 [200]: GET /get_transactions.php
+[Fri Nov 21 14:13:22 2025] [::1]:56439 Closing
+[Fri Nov 21 14:13:22 2025] [::1]:56440 [200]: GET /get_plans.php
+[Fri Nov 21 14:13:22 2025] [::1]:56440 Closing
+[Fri Nov 21 14:13:22 2025] [::1]:56441 [200]: GET /get_resellers.php
+[Fri Nov 21 14:13:22 2025] [::1]:56441 Closing
+[Fri Nov 21 14:16:34 2025] [::1]:56728 Accepted
+[Fri Nov 21 14:16:34 2025] [::1]:56729 Accepted
+[Fri Nov 21 14:16:34 2025] [::1]:56728 [200]: GET /dashboard.html
+[Fri Nov 21 14:16:34 2025] [::1]:56728 Closing
+[Fri Nov 21 14:16:34 2025] [::1]:56729 [200]: GET /dashboard.css
+[Fri Nov 21 14:16:34 2025] [::1]:56729 Closing
+[Fri Nov 21 14:16:34 2025] [::1]:56730 Accepted
+[Fri Nov 21 14:16:34 2025] [::1]:56730 [200]: GET /dashboard.js
+[Fri Nov 21 14:16:34 2025] [::1]:56730 Closing
+[Fri Nov 21 14:16:34 2025] [::1]:56731 Accepted
+[Fri Nov 21 14:16:34 2025] [::1]:56731 [200]: GET /get_user_info.php
+[Fri Nov 21 14:16:34 2025] [::1]:56731 Closing
+[Fri Nov 21 14:16:34 2025] [::1]:56732 Accepted
+[Fri Nov 21 14:17:04 2025] [::1]:56732 [500]: POST /sync_accounts.php - Maximum execution time of 30 seconds exceeded in /Users/kambiz/Documents/Visual Studio Projects/Current Billing Shahrokh/sync_accounts.php on line 132
+[Fri Nov 21 14:17:04 2025] [::1]:56732 Closing
+[Fri Nov 21 14:17:04 2025] [::1]:56764 Accepted
+[Fri Nov 21 14:17:04 2025] [::1]:56765 Accepted
+[Fri Nov 21 14:17:04 2025] [::1]:56766 Accepted
+[Fri Nov 21 14:17:04 2025] [::1]:56764 [200]: GET /get_accounts.php
+[Fri Nov 21 14:17:04 2025] [::1]:56764 Closing
+[Fri Nov 21 14:17:04 2025] [::1]:56767 Accepted
+[Fri Nov 21 14:17:04 2025] [::1]:56765 [200]: GET /get_transactions.php
+[Fri Nov 21 14:17:04 2025] [::1]:56765 Closing
+[Fri Nov 21 14:17:04 2025] [::1]:56766 [200]: GET /get_plans.php
+[Fri Nov 21 14:17:04 2025] [::1]:56766 Closing
+[Fri Nov 21 14:17:04 2025] [::1]:56767 [200]: GET /get_resellers.php
+[Fri Nov 21 14:17:04 2025] [::1]:56767 Closing
+[Fri Nov 21 14:18:21 2025] [::1]:56884 Accepted
+[Fri Nov 21 14:18:21 2025] [::1]:56884 [200]: GET /dashboard.html
+[Fri Nov 21 14:18:21 2025] [::1]:56885 Accepted
+[Fri Nov 21 14:18:21 2025] [::1]:56884 Closing
+[Fri Nov 21 14:18:21 2025] [::1]:56885 [200]: GET /dashboard.css
+[Fri Nov 21 14:18:21 2025] [::1]:56886 Accepted
+[Fri Nov 21 14:18:21 2025] [::1]:56885 Closing
+[Fri Nov 21 14:18:21 2025] [::1]:56886 [200]: GET /dashboard.js
+[Fri Nov 21 14:18:21 2025] [::1]:56886 Closing
+[Fri Nov 21 14:20:10 2025] [::1]:56991 Accepted
+[Fri Nov 21 14:20:10 2025] [::1]:56991 [200]: GET /dashboard.html
+[Fri Nov 21 14:20:10 2025] [::1]:56991 Closing
+[Fri Nov 21 14:20:10 2025] [::1]:56992 Accepted
+[Fri Nov 21 14:20:10 2025] [::1]:56993 Accepted
+[Fri Nov 21 14:20:10 2025] [::1]:56992 [200]: GET /dashboard.css
+[Fri Nov 21 14:20:10 2025] [::1]:56992 Closing
+[Fri Nov 21 14:20:10 2025] [::1]:56993 [200]: GET /dashboard.js
+[Fri Nov 21 14:20:10 2025] [::1]:56993 Closing
+[Fri Nov 21 14:20:21 2025] [::1]:56999 Accepted
+[Fri Nov 21 14:20:21 2025] [::1]:56999 [200]: GET /dashboard.html
+[Fri Nov 21 14:20:21 2025] [::1]:57000 Accepted
+[Fri Nov 21 14:20:21 2025] [::1]:56999 Closing
+[Fri Nov 21 14:20:21 2025] [::1]:57000 [200]: GET /dashboard.css
+[Fri Nov 21 14:20:21 2025] [::1]:57001 Accepted
+[Fri Nov 21 14:20:21 2025] [::1]:57001 [200]: GET /dashboard.js
+[Fri Nov 21 14:20:21 2025] [::1]:57000 Closing
+[Fri Nov 21 14:20:21 2025] [::1]:57001 Closing
+[Fri Nov 21 14:21:12 2025] [::1]:57106 Accepted
+[Fri Nov 21 14:21:12 2025] [::1]:57106 [200]: GET /dashboard.html
+[Fri Nov 21 14:21:12 2025] [::1]:57106 Closing
+[Fri Nov 21 14:21:12 2025] [::1]:57107 Accepted
+[Fri Nov 21 14:21:12 2025] [::1]:57108 Accepted
+[Fri Nov 21 14:21:12 2025] [::1]:57107 [200]: GET /dashboard.css
+[Fri Nov 21 14:21:12 2025] [::1]:57108 [200]: GET /dashboard.js
+[Fri Nov 21 14:21:12 2025] [::1]:57107 Closing
+[Fri Nov 21 14:21:12 2025] [::1]:57108 Closing
+[Fri Nov 21 14:45:21 2025] PHP 8.4.14 Development Server (http://localhost:8000) started
+[Fri Nov 21 14:45:43 2025] [::1]:61133 Accepted
+[Fri Nov 21 14:45:43 2025] [::1]:61133 [200]: GET /
+[Fri Nov 21 14:45:43 2025] [::1]:61134 Accepted
+[Fri Nov 21 14:45:43 2025] [::1]:61133 Closing
+[Fri Nov 21 14:45:47 2025] [::1]:61134 [200]: POST /login.php
+[Fri Nov 21 14:45:47 2025] [::1]:61134 Closing
+[Fri Nov 21 14:45:48 2025] [::1]:61135 Accepted
+[Fri Nov 21 14:45:48 2025] [::1]:61135 [200]: GET /dashboard.html
+[Fri Nov 21 14:45:48 2025] [::1]:61135 Closing
+[Fri Nov 21 14:45:48 2025] [::1]:61136 Accepted
+[Fri Nov 21 14:45:48 2025] [::1]:61137 Accepted
+[Fri Nov 21 14:45:48 2025] [::1]:61136 [200]: GET /dashboard.css
+[Fri Nov 21 14:45:48 2025] [::1]:61136 Closing
+[Fri Nov 21 14:45:48 2025] [::1]:61137 [200]: GET /dashboard.js
+[Fri Nov 21 14:45:48 2025] [::1]:61137 Closing
+[Fri Nov 21 14:45:48 2025] [::1]:61138 Accepted
+[Fri Nov 21 14:45:48 2025] [::1]:61138 [200]: GET /get_user_info.php
+[Fri Nov 21 14:45:48 2025] [::1]:61138 Closing
+[Fri Nov 21 14:45:48 2025] [::1]:61139 Accepted
+[Fri Nov 21 14:46:06 2025] [::1]:61139 [200]: POST /sync_accounts.php
+[Fri Nov 21 14:46:06 2025] [::1]:61139 Closing
+[Fri Nov 21 14:46:06 2025] [::1]:61149 Accepted
+[Fri Nov 21 14:46:06 2025] [::1]:61150 Accepted
+[Fri Nov 21 14:46:06 2025] [::1]:61151 Accepted
+[Fri Nov 21 14:46:06 2025] [::1]:61149 [200]: GET /get_accounts.php
+[Fri Nov 21 14:46:06 2025] [::1]:61149 Closing
+[Fri Nov 21 14:46:06 2025] [::1]:61152 Accepted
+[Fri Nov 21 14:46:06 2025] [::1]:61150 [200]: GET /get_transactions.php
+[Fri Nov 21 14:46:06 2025] [::1]:61150 Closing
+[Fri Nov 21 14:46:06 2025] [::1]:61151 [200]: GET /get_plans.php
+[Fri Nov 21 14:46:06 2025] [::1]:61151 Closing
+[Fri Nov 21 14:46:06 2025] [::1]:61152 [200]: GET /get_resellers.php
+[Fri Nov 21 14:46:06 2025] [::1]:61152 Closing
+[Fri Nov 21 14:46:14 2025] [::1]:61153 Accepted
+[Fri Nov 21 14:46:14 2025] [::1]:61153 [200]: GET /dashboard.html
+[Fri Nov 21 14:46:14 2025] [::1]:61153 Closing
+[Fri Nov 21 14:46:14 2025] [::1]:61154 Accepted
+[Fri Nov 21 14:46:14 2025] [::1]:61155 Accepted
+[Fri Nov 21 14:46:14 2025] [::1]:61154 [200]: GET /dashboard.css
+[Fri Nov 21 14:46:14 2025] [::1]:61154 Closing
+[Fri Nov 21 14:46:14 2025] [::1]:61155 [200]: GET /dashboard.js
+[Fri Nov 21 14:46:14 2025] [::1]:61155 Closing
+[Fri Nov 21 14:46:14 2025] [::1]:61156 Accepted
+[Fri Nov 21 14:46:14 2025] [::1]:61156 [200]: GET /get_user_info.php
+[Fri Nov 21 14:46:14 2025] [::1]:61156 Closing
+[Fri Nov 21 14:46:14 2025] [::1]:61157 Accepted
+[Fri Nov 21 14:46:39 2025] [::1]:61157 [200]: POST /sync_accounts.php
+[Fri Nov 21 14:46:39 2025] [::1]:61157 Closing
+[Fri Nov 21 14:46:39 2025] [::1]:61159 Accepted
+[Fri Nov 21 14:46:39 2025] [::1]:61160 Accepted
+[Fri Nov 21 14:46:39 2025] [::1]:61161 Accepted
+[Fri Nov 21 14:46:39 2025] [::1]:61159 [200]: GET /get_accounts.php
+[Fri Nov 21 14:46:39 2025] [::1]:61159 Closing
+[Fri Nov 21 14:46:39 2025] [::1]:61162 Accepted
+[Fri Nov 21 14:46:39 2025] [::1]:61160 [200]: GET /get_transactions.php
+[Fri Nov 21 14:46:39 2025] [::1]:61160 Closing
+[Fri Nov 21 14:46:39 2025] [::1]:61161 [200]: GET /get_plans.php
+[Fri Nov 21 14:46:39 2025] [::1]:61161 Closing
+[Fri Nov 21 14:46:39 2025] [::1]:61162 [200]: GET /get_resellers.php
+[Fri Nov 21 14:46:39 2025] [::1]:61162 Closing
+[Fri Nov 21 14:46:58 2025] [::1]:61163 Accepted
+[Fri Nov 21 14:46:58 2025] [::1]:61163 [200]: GET /get_plans.php
+[Fri Nov 21 14:46:58 2025] [::1]:61163 Closing
+[Fri Nov 21 14:47:41 2025] [::1]:61182 Accepted
+[Fri Nov 21 14:47:41 2025] [::1]:61182 [200]: POST /adjust_credit.php
+[Fri Nov 21 14:47:41 2025] [::1]:61182 Closing
+[Fri Nov 21 14:47:41 2025] [::1]:61183 Accepted
+[Fri Nov 21 14:47:41 2025] [::1]:61183 [200]: GET /get_resellers.php
+[Fri Nov 21 14:47:41 2025] [::1]:61183 Closing
+[Fri Nov 21 14:47:46 2025] [::1]:61184 Accepted
+[Fri Nov 21 14:47:46 2025] [::1]:61184 [200]: POST /assign_plans.php
+[Fri Nov 21 14:47:46 2025] [::1]:61184 Closing
+[Fri Nov 21 14:47:46 2025] [::1]:61185 Accepted
+[Fri Nov 21 14:47:46 2025] [::1]:61185 [200]: GET /get_resellers.php
+[Fri Nov 21 14:47:46 2025] [::1]:61185 Closing
+[Fri Nov 21 14:48:55 2025] [::1]:61204 Accepted
+[Fri Nov 21 14:48:55 2025] [::1]:61204 [200]: POST /add_reseller.php
+[Fri Nov 21 14:48:55 2025] [::1]:61204 Closing
+[Fri Nov 21 14:48:55 2025] [::1]:61205 Accepted
+[Fri Nov 21 14:48:55 2025] [::1]:61205 [200]: GET /get_resellers.php
+[Fri Nov 21 14:48:55 2025] [::1]:61205 Closing
+[Fri Nov 21 14:55:03 2025] [::1]:61271 Accepted
+[Fri Nov 21 14:55:03 2025] [::1]:61271 [200]: GET /dashboard.html
+[Fri Nov 21 14:55:03 2025] [::1]:61271 Closing
+[Fri Nov 21 14:55:03 2025] [::1]:61272 Accepted
+[Fri Nov 21 14:55:03 2025] [::1]:61273 Accepted
+[Fri Nov 21 14:55:03 2025] [::1]:61272 [200]: GET /dashboard.css
+[Fri Nov 21 14:55:03 2025] [::1]:61273 [200]: GET /dashboard.js
+[Fri Nov 21 14:55:03 2025] [::1]:61272 Closing
+[Fri Nov 21 14:55:03 2025] [::1]:61273 Closing
+[Fri Nov 21 14:55:03 2025] [::1]:61274 Accepted
+[Fri Nov 21 14:55:03 2025] [::1]:61274 [200]: GET /get_user_info.php
+[Fri Nov 21 14:55:03 2025] [::1]:61274 Closing
+[Fri Nov 21 14:55:03 2025] [::1]:61275 Accepted
+[Fri Nov 21 14:55:16 2025] [::1]:61275 [200]: POST /sync_accounts.php
+[Fri Nov 21 14:55:16 2025] [::1]:61275 Closing
+[Fri Nov 21 14:55:16 2025] [::1]:61277 Accepted
+[Fri Nov 21 14:55:16 2025] [::1]:61278 Accepted
+[Fri Nov 21 14:55:16 2025] [::1]:61277 [200]: GET /get_accounts.php
+[Fri Nov 21 14:55:16 2025] [::1]:61277 Closing
+[Fri Nov 21 14:55:16 2025] [::1]:61279 Accepted
+[Fri Nov 21 14:55:16 2025] [::1]:61278 [200]: GET /get_transactions.php
+[Fri Nov 21 14:55:16 2025] [::1]:61278 Closing
+[Fri Nov 21 14:55:16 2025] [::1]:61280 Accepted
+[Fri Nov 21 14:55:16 2025] [::1]:61279 [200]: GET /get_plans.php
+[Fri Nov 21 14:55:16 2025] [::1]:61279 Closing
+[Fri Nov 21 14:55:16 2025] [::1]:61280 [200]: GET /get_resellers.php
+[Fri Nov 21 14:55:16 2025] [::1]:61280 Closing
+[Fri Nov 21 14:55:31 2025] [::1]:61284 Accepted
+[Fri Nov 21 14:55:31 2025] [::1]:61284 [200]: GET /logout.php
+[Fri Nov 21 14:55:31 2025] [::1]:61284 Closing
+[Fri Nov 21 14:55:31 2025] [::1]:61285 Accepted
+[Fri Nov 21 14:55:31 2025] [::1]:61285 [200]: GET /index.html
+[Fri Nov 21 14:55:31 2025] [::1]:61285 Closing
+[Fri Nov 21 14:55:31 2025] [::1]:61286 Accepted
+[Fri Nov 21 14:55:31 2025] [::1]:61287 Accepted
+[Fri Nov 21 14:55:34 2025] [::1]:61286 [200]: POST /login.php
+[Fri Nov 21 14:55:34 2025] [::1]:61286 Closing
+[Fri Nov 21 14:55:35 2025] [::1]:61287 [200]: GET /dashboard.html
+[Fri Nov 21 14:55:35 2025] [::1]:61287 Closing
+[Fri Nov 21 14:55:35 2025] [::1]:61288 Accepted
+[Fri Nov 21 14:55:35 2025] [::1]:61289 Accepted
+[Fri Nov 21 14:55:35 2025] [::1]:61288 [200]: GET /dashboard.css
+[Fri Nov 21 14:55:35 2025] [::1]:61289 [200]: GET /dashboard.js
+[Fri Nov 21 14:55:35 2025] [::1]:61288 Closing
+[Fri Nov 21 14:55:35 2025] [::1]:61289 Closing
+[Fri Nov 21 14:55:35 2025] [::1]:61290 Accepted
+[Fri Nov 21 14:55:35 2025] [::1]:61290 [200]: GET /get_user_info.php
+[Fri Nov 21 14:55:35 2025] [::1]:61290 Closing
+[Fri Nov 21 14:55:35 2025] [::1]:61291 Accepted
+[Fri Nov 21 14:55:44 2025] [::1]:61291 [200]: POST /sync_accounts.php
+[Fri Nov 21 14:55:44 2025] [::1]:61291 Closing
+[Fri Nov 21 14:55:44 2025] [::1]:61293 Accepted
+[Fri Nov 21 14:55:44 2025] [::1]:61293 [200]: GET /get_accounts.php
+[Fri Nov 21 14:55:44 2025] [::1]:61293 Closing
+[Fri Nov 21 14:55:44 2025] [::1]:61294 Accepted
+[Fri Nov 21 14:55:44 2025] [::1]:61295 Accepted
+[Fri Nov 21 14:55:44 2025] [::1]:61294 [200]: GET /get_transactions.php
+[Fri Nov 21 14:55:44 2025] [::1]:61294 Closing
+[Fri Nov 21 14:55:44 2025] [::1]:61295 [200]: GET /get_plans.php
+[Fri Nov 21 14:55:44 2025] [::1]:61295 Closing

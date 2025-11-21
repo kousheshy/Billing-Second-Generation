@@ -127,6 +127,7 @@ async function autoSyncAccounts() {
         const response = await fetch('sync_accounts.php', {
             method: 'POST'
         });
+
         const result = await response.json();
 
         if(result.error == 0) {
@@ -166,19 +167,29 @@ function switchTab(tabName) {
 
 // Format currency symbol
 function getCurrencySymbol(currencyName) {
+    // Handle null or undefined currency
+    if(!currencyName) return 'IRR ';
+
     if(currencyName === 'USD') return '$';
     if(currencyName === 'EUR') return '€';
-    if(currencyName === 'IRT') return ''; // No symbol for Iranian Toman
+    if(currencyName === 'IRR') return 'IRR ';
     if(currencyName === 'GBP') return '£';
-    return '£';
+    return currencyName + ' ';
 }
 
 // Format balance with proper thousands separator
 function formatBalance(amount, currencyName) {
-    if(currencyName === 'IRT') {
-        return Number(amount).toLocaleString('en-US');
+    // Handle null, undefined, or empty values
+    const numAmount = amount || 0;
+
+    // Default to IRR if currency is not specified
+    if(!currencyName || currencyName === 'IRR') {
+        // Iranian Rial thousand separator (comma every 3 digits)
+        return Number(numAmount).toLocaleString('en-US');
     }
-    return amount;
+
+    // Format all currencies with proper decimals
+    return Number(numAmount).toFixed(2);
 }
 
 // Generate random string (13 characters with lowercase letters and numbers)
@@ -691,6 +702,9 @@ async function loadResellers() {
 
             result.resellers.forEach(reseller => {
                 const tr = document.createElement('tr');
+                const resellerBalance = reseller.balance || 0;
+                const resellerCurrency = reseller.currency_name || 'IRR';
+
                 tr.innerHTML = `
                     <td>${reseller.name || ''}</td>
                     <td>${reseller.username || ''}</td>
@@ -699,7 +713,7 @@ async function loadResellers() {
                     <td>${reseller.max_users || 'Unlimited'}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn-sm btn-edit" onclick="adjustCredit(${reseller.id}, '${reseller.name}', ${reseller.balance}, '${reseller.currency_name}')">Adjust Credit</button>
+                            <button class="btn-sm btn-edit" onclick="adjustCredit(${reseller.id}, '${reseller.name}', ${resellerBalance}, '${resellerCurrency}')">Adjust Credit</button>
                             <button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}')">Assign Plans</button>
                             <button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>
                         </div>
@@ -736,11 +750,13 @@ async function loadPlans() {
 
             result.plans.forEach(plan => {
                 const tr = document.createElement('tr');
+                const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
                     <td>${plan.name || ''}</td>
                     <td>${plan.currency_id || ''}</td>
-                    <td>${plan.price || 0}</td>
+                    <td>${formattedPrice}</td>
                     <td>${plan.days || 0}</td>
                     <td>
                         <div class="action-buttons">
@@ -753,20 +769,20 @@ async function loadPlans() {
                 // Add to plan select for account creation
                 const option = document.createElement('option');
                 option.value = plan.external_id;
-                option.textContent = `${plan.name || plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
+                option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
                 planSelect.appendChild(option);
 
                 // Add to reseller plan assignment dropdowns with planID-currency format
                 if(resellerPlansSelect) {
                     const resellerOption = document.createElement('option');
                     resellerOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    resellerOption.textContent = `${plan.name || plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
+                    resellerOption.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
                     resellerPlansSelect.appendChild(resellerOption);
                 }
                 if(assignPlansSelect) {
                     const assignOption = document.createElement('option');
                     assignOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    assignOption.textContent = `${plan.name || plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
+                    assignOption.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
                     assignPlansSelect.appendChild(assignOption);
                 }
             });
@@ -793,9 +809,12 @@ async function loadTransactions() {
             result.transactions.forEach(tx => {
                 const tr = document.createElement('tr');
                 const type = tx.type == 1 ? 'Credit' : 'Debit';
+                const currencySymbol = getCurrencySymbol(tx.currency);
+                const formattedAmount = formatBalance(tx.amount, tx.currency);
+
                 tr.innerHTML = `
                     <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
-                    <td>${tx.currency}${tx.amount}</td>
+                    <td>${currencySymbol}${formattedAmount}</td>
                     <td>${tx.currency || ''}</td>
                     <td><span class="badge ${tx.type == 1 ? 'active' : 'inactive'}">${type}</span></td>
                     <td>${tx.details || ''}</td>
@@ -1030,7 +1049,8 @@ async function loadPlansForEdit() {
             result.plans.forEach(plan => {
                 const option = document.createElement('option');
                 option.value = plan.id;
-                option.textContent = `${plan.name} - ${plan.currency_id} ${plan.price} (${plan.days} days)`;
+                const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                option.textContent = `${plan.name} - ${formattedPrice} (${plan.days} days)`;
                 planSelect.appendChild(option);
             });
         }
@@ -1104,7 +1124,10 @@ async function submitEditAccount(e) {
 function adjustCredit(resellerId, resellerName, currentBalance, currencyName) {
     document.getElementById('adjust-reseller-id').value = resellerId;
     document.getElementById('adjust-reseller-name').value = resellerName;
-    document.getElementById('adjust-current-balance').value = getCurrencySymbol(currencyName) + formatBalance(currentBalance, currencyName);
+
+    // Handle null or undefined balance
+    const balance = currentBalance || 0;
+    document.getElementById('adjust-current-balance').value = getCurrencySymbol(currencyName) + formatBalance(balance, currencyName);
     document.getElementById('adjust-amount').value = '';
     openModal('adjustCreditModal');
 }

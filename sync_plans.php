@@ -35,8 +35,8 @@ if($decoded->status == 'OK') {
     foreach ($decoded->results as $plan) {
 
         // Insert/Update plan for each currency
-        $currencies = ['GBP', 'USD', 'EUR', 'IRT'];
-        $prices = ['GBP' => 10, 'USD' => 12, 'EUR' => 11, 'IRT' => 500000]; // Default prices - you can adjust
+        $currencies = ['GBP', 'USD', 'EUR', 'IRR'];
+        $prices = ['GBP' => 10, 'USD' => 12, 'EUR' => 11, 'IRR' => 500000]; // Default prices - you can adjust
 
         foreach($currencies as $currency) {
 

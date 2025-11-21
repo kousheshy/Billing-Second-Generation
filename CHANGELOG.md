@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2025-11-21
+
+### Changed - Currency Standardization
+
+**Currency Code Updates**
+- Standardized Iranian currency code from `IRT` to `IRR` (ISO 4217 standard)
+- Updated all frontend files (dashboard.html, dashboard.js)
+- Updated backend sync script (sync_plans.php)
+- Improved currency symbol display logic with fallback handling
+- Enhanced balance formatting for all currencies
+
+**UI/UX Improvements**
+- Improved stat card value typography for better readability
+- Added proper word wrapping for long values
+- Enhanced font styling with system font stack
+- Adjusted font sizes and spacing for better visual hierarchy
+
+**Bug Fixes**
+- Fixed null/undefined currency handling in JavaScript
+- Added defensive programming for missing balance values
+- Improved number formatting consistency across all currency displays
+- Fixed plan price display in dropdowns and tables
+
+---
+
 ## [1.0.0] - 2025-01-17
 
 ### Initial Release
@@ -284,6 +309,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.1.0 | 2025-11-21 | Currency standardization (IRT→IRR) and UI improvements |
 | 1.0.0 | 2025-01-17 | Initial production release |
 | 0.9.0 | 2025-01-10 | Beta testing phase |
 | 0.5.0 | 2024-12-15 | Alpha release with core features |
