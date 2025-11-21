@@ -38,15 +38,16 @@ try {
     // Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
     $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
     $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+    $is_observer = $user_info['is_observer'] == 1;
 
     // Get view mode preference from request (only for reseller admins)
     // Default to false (My Accounts) for reseller admins
     $viewAllAccounts = isset($_GET['viewAllAccounts']) ? $_GET['viewAllAccounts'] === 'true' : false;
 
-    // Super admins always see all accounts
+    // Super admins and observers always see all accounts
     // Reseller admins can toggle between all accounts and their own
     // Regular resellers only see their own
-    if($user_info['super_user'] == 1)
+    if($user_info['super_user'] == 1 || $is_observer)
     {
         $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id ORDER BY a.id DESC');
         $stmt->execute([]);

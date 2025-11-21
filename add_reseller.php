@@ -67,11 +67,13 @@ try {
     $use_ip_ranges = isset($_POST['use_ip_ranges']) ? $_POST['use_ip_ranges'] : '';
     $plans = isset($_POST['plans']) ? $_POST['plans'] : '';
     $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|1|1';
+    $is_observer = isset($_POST['is_observer']) ? intval($_POST['is_observer']) : 0;
 
     // All resellers are created with super_user = 0
     // Admin-level permissions are stored in permissions string (index 2)
-    $stmt = $pdo->prepare('INSERT INTO _users (username, password, name, email, max_users, balance, theme, ip_ranges, currency_id, plans, super_user, permissions, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $stmt->execute([$username, $password, $name, $email, $max_users, $balance, $theme, $use_ip_ranges, $currency, $plans, 0, $permissions, time()]);
+    // Observer status is stored in is_observer field
+    $stmt = $pdo->prepare('INSERT INTO _users (username, password, name, email, max_users, balance, theme, ip_ranges, currency_id, plans, super_user, is_observer, permissions, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$username, $password, $name, $email, $max_users, $balance, $theme, $use_ip_ranges, $currency, $plans, 0, $is_observer, $permissions, time()]);
 
     echo json_encode(['error' => 0, 'err_msg' => '']);
 

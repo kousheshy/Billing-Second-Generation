@@ -84,12 +84,14 @@ try {
     $use_ip_ranges = isset($_POST['use_ip_ranges']) ? $_POST['use_ip_ranges'] : '';
     $currency = $_POST['currency'];
     $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|1|1';
+    $is_observer = isset($_POST['is_observer']) ? intval($_POST['is_observer']) : 0;
 
     // All resellers remain with super_user = 0
     // Admin-level permissions are stored in permissions string (index 2)
+    // Observer status is stored in is_observer field
     // Note: Plans are NOT updated here - they are managed separately via assign_plans.php
-    $stmt = $pdo->prepare('UPDATE _users SET username=?, password=?, name=?, email=?, max_users=?, theme=?, ip_ranges=?, currency_id=?, super_user=?, permissions=? WHERE id=?');
-    $stmt->execute([$username, $password, $name, $email, $max_users, $theme, $use_ip_ranges, $currency, 0, $permissions, $id]);
+    $stmt = $pdo->prepare('UPDATE _users SET username=?, password=?, name=?, email=?, max_users=?, theme=?, ip_ranges=?, currency_id=?, super_user=?, is_observer=?, permissions=? WHERE id=?');
+    $stmt->execute([$username, $password, $name, $email, $max_users, $theme, $use_ip_ranges, $currency, 0, $is_observer, $permissions, $id]);
 
     echo json_encode(['error' => 0, 'err_msg' => '']);
 

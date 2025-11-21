@@ -35,7 +35,9 @@ try {
     $stmt->execute([$username]);
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if($user_info['super_user'] == 1)
+    $is_observer = $user_info['is_observer'] == 1;
+
+    if($user_info['super_user'] == 1 || $is_observer)
     {
         $stmt = $pdo->prepare('SELECT * FROM _transactions ORDER BY id DESC LIMIT 100');
         $stmt->execute([]);

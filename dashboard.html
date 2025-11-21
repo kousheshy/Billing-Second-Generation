@@ -521,8 +521,15 @@
 
                 <!-- Permissions Section -->
                 <div class="form-group">
-                    <label style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: block;">Permissions</label>
+                    <label style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: block;">User Type & Permissions</label>
                     <div class="permissions-container">
+                        <div class="permission-item permission-observer">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="is_observer" value="1">
+                                <span>Observer (Read-Only Access)</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Can view everything but cannot make any changes</small>
+                        </div>
                         <div class="permission-item permission-admin">
                             <label class="checkbox-label">
                                 <input type="checkbox" name="is_admin" value="1">
@@ -598,8 +605,15 @@
 
                 <!-- Permissions Section -->
                 <div class="form-group">
-                    <label style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: block;">Permissions</label>
+                    <label style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: block;">User Type & Permissions</label>
                     <div class="permissions-container">
+                        <div class="permission-item permission-observer">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-is-observer" name="is_observer" value="1">
+                                <span>Observer (Read-Only Access)</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Can view everything but cannot make any changes</small>
+                        </div>
                         <div class="permission-item permission-admin">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="edit-is-admin" name="is_admin" value="1">

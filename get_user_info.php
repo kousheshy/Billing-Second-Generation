@@ -47,10 +47,13 @@ try {
     // Default to false (My Accounts) for reseller admins
     $viewAllAccounts = isset($_GET['viewAllAccounts']) ? $_GET['viewAllAccounts'] === 'true' : false;
 
+    // Check if user is observer
+    $is_observer = $user_info['is_observer'] == 1;
+
     // Get counts based on user type and view mode
-    if($user_info['super_user'] == 1)
+    if($user_info['super_user'] == 1 || $is_observer)
     {
-        // Super admin always sees all accounts
+        // Super admin and observers always see all accounts
         $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM _accounts');
         $stmt->execute([]);
     }

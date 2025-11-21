@@ -123,12 +123,23 @@ async function checkAuth() {
         // Display user info
         document.getElementById('username-display').textContent = 'Welcome, ' + result.user.name;
 
-        // Check if user is super admin or reseller admin
+        // Check if user is super admin, reseller admin, or observer
         const isSuperAdmin = result.user.super_user == 1;
         const isResellerAdmin = result.user.is_reseller_admin === true || result.user.is_reseller_admin === '1';
+        const isObserver = result.user.is_observer == 1;
 
-        // Hide balance for super admin only
-        if(isSuperAdmin) {
+        // Handle different user types
+        if(isObserver) {
+            // Observer: Can see everything but cannot modify anything
+            document.getElementById('balance-display').style.display = 'none';
+            document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
+
+            // Show all tabs for observers (they can view everything)
+            // But we'll hide all action buttons later
+
+            // Add visual indicator that this is an observer account
+            document.getElementById('username-display').innerHTML = 'Welcome, ' + result.user.name + ' <span style="color: #fbbf24; font-size: 12px;">(Observer)</span>';
+        } else if(isSuperAdmin) {
             document.getElementById('balance-display').style.display = 'none';
             document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
 
@@ -177,21 +188,28 @@ async function checkAuth() {
 
         document.getElementById('total-accounts').textContent = result.total_accounts;
 
-        // Auto-sync accounts on login (for both admin and resellers)
-        await autoSyncAccounts();
+        // Auto-sync accounts on login (for both admin and resellers, but not observers)
+        if(!isObserver) {
+            await autoSyncAccounts();
+        }
 
         // Load initial data based on user type
         loadAccounts();
         loadTransactions();
 
-        // Load plans for ALL users (they need plans to create accounts)
-        // Plans will be filtered by backend based on user type and permissions
+        // Load plans for all users (including observers who need to see them)
         loadPlans();
 
-        if(isSuperAdmin) {
+        if(isSuperAdmin || isObserver) {
+            // Load resellers for super admin and observers
             loadResellers();
-            // Auto-fetch tariffs from server for super admin only
+            // Load tariffs for super admin and observers
             loadTariffs();
+        }
+
+        // Hide all action buttons for observers
+        if(isObserver) {
+            hideObserverActions();
         }
 
         // Hide loading overlay after everything is loaded
@@ -1156,12 +1174,14 @@ async function addReseller(e) {
     const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
+    const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
     // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
     const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|1|1`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
+    formData.set('is_observer', isObserver); // Add is_observer to form data
 
     try {
         const response = await fetch('add_reseller.php', {
@@ -1288,6 +1308,9 @@ async function editReseller(resellerId) {
                 document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
                 document.getElementById('edit-is-admin').checked = permissions[2] === '1';
 
+                // Set observer checkbox
+                document.getElementById('edit-is-observer').checked = reseller.is_observer == 1;
+
                 // Open modal
                 openModal('editResellerModal');
 
@@ -1311,12 +1334,14 @@ async function updateReseller(e) {
     const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
+    const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
     // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
     const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|1|1`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
+    formData.set('is_observer', isObserver); // Add is_observer to form data
     formData.append('use_ip_ranges', '');
     // Don't send plans field - let backend preserve existing plans
     // Plans are managed separately via "Assign Plans" button
@@ -1969,6 +1994,48 @@ function exportToPDF(accounts, reportInfo) {
 // ===========================
 // Permission Management Functions
 // ===========================
+
+/**
+ * Hide all action buttons and controls for observer users
+ * Observers can view everything but cannot modify anything
+ */
+function hideObserverActions() {
+    // Hide all buttons with specific classes
+    const actionsToHide = [
+        '.btn-primary',    // Add buttons
+        '.btn-edit',       // Edit buttons
+        '.btn-delete',     // Delete buttons
+        '.btn-sm',         // Small action buttons
+        '.btn-assign',     // Assign buttons
+        'button[onclick*="add"]',         // Add action buttons
+        'button[onclick*="edit"]',        // Edit action buttons
+        'button[onclick*="delete"]',      // Delete action buttons
+        'button[onclick*="assign"]',      // Assign action buttons
+        'button[onclick*="renew"]',       // Renew action buttons
+        'button[onclick*="Reseller"]',    // Reseller-related buttons
+        'button[onclick*="Account"]',     // Account-related buttons
+        'button[onclick*="Plan"]',        // Plan-related buttons
+        '#sync-section',                  // Sync section
+        '#view-mode-toggle'               // View mode toggle
+    ];
+
+    actionsToHide.forEach(selector => {
+        document.querySelectorAll(selector).forEach(element => {
+            element.style.display = 'none';
+        });
+    });
+
+    // Add a read-only notice banner at the top
+    const content = document.querySelector('.content');
+    if (content) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background: #fbbf24; color: #78350f; padding: 12px 20px; text-align: center; font-weight: 500; margin-bottom: 20px; border-radius: 8px;';
+        banner.textContent = '👁️ Observer Mode: You can view all data but cannot make any changes';
+        content.insertBefore(banner, content.firstChild);
+    }
+
+    console.log('[Observer] All action buttons have been hidden');
+}
 
 /**
  * Toggle other permissions based on admin checkbox state
