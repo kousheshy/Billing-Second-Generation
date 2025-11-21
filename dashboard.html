@@ -48,7 +48,7 @@
             <span id="user-balance"></span>
             <span id="username-display"></span>
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
-                <span id="theme-icon">🌙</span>
+                <span id="theme-icon">☀️</span>
             </button>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
@@ -517,7 +517,7 @@
                 </div>
                 <div class="form-group">
                     <label>Theme</label>
-                    <input type="text" name="theme" value="default">
+                    <input type="text" name="theme" value="dark">
                 </div>
 
                 <!-- Permissions Section -->
@@ -551,6 +551,13 @@
                                 <span>Can Add New Accounts</span>
                             </label>
                             <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to create new accounts</small>
+                        </div>
+                        <div class="permission-item permission-delete">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="can_delete_accounts" value="1">
+                                <span>Can Delete Accounts</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to delete accounts</small>
                         </div>
                     </div>
                 </div>
@@ -601,7 +608,7 @@
                 </div>
                 <div class="form-group">
                     <label>Theme</label>
-                    <input type="text" id="edit-reseller-theme" name="theme" value="default">
+                    <input type="text" id="edit-reseller-theme" name="theme" value="dark">
                 </div>
 
                 <!-- Permissions Section -->
@@ -635,6 +642,13 @@
                                 <span>Can Add New Accounts</span>
                             </label>
                             <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to create new accounts</small>
+                        </div>
+                        <div class="permission-item permission-delete">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-can-delete-accounts" name="can_delete_accounts" value="1">
+                                <span>Can Delete Accounts</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to delete accounts</small>
                         </div>
                     </div>
                 </div>

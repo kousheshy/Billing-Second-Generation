@@ -61,11 +61,13 @@ try {
     else
     {
         // Regular reseller or reseller admin viewing only their own accounts
+        error_log("Getting accounts for reseller - ID: " . $user_info['id'] . ", Username: " . $user_info['username']);
         $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id WHERE a.reseller = ? ORDER BY a.id DESC');
         $stmt->execute([$user_info['id']]);
     }
 
     $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Found " . count($accounts) . " accounts for user " . $user_info['username']);
 
     // Data is now stored locally - no need to fetch from Stalker Portal every time
     // All account data (full_name, tariff_plan, end_date) is already in the local database

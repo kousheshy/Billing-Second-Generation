@@ -63,8 +63,11 @@ function send_request($url, $op, $data)
 
 
 
-$username = $_SESSION['username'];
+$session_username = $_SESSION['username'];
 
+// Log session info
+error_log("=== ADD ACCOUNT REQUEST ===");
+error_log("Session username: " . $session_username);
 
 $host = $ub_db_host;
 $db   = $ub_main_db;
@@ -82,7 +85,7 @@ $opt = [
 $pdo = new PDO($dsn, $user, $pass, $opt);
 
 $stmt = $pdo->prepare('SELECT us.id,us.name,us.email,us.balance,us.permissions,us.max_users,us.super_user,us.currency_id,us.theme,cr.name as currency_name FROM '.$ub_main_db.'._users AS us LEFT OUTER JOIN '.$ub_main_db.'._currencies AS cr ON us.currency_id=cr.id WHERE us.username = ?');
-$stmt->execute([$username]);
+$stmt->execute([$session_username]);
 
 $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -405,6 +408,10 @@ if($decoded->status == 'OK')
 {
 
     $plan_id = ($_POST['plan'] != 0 && isset($plan_info['id'])) ? $plan_info['id'] : null;
+
+    // Log reseller info for debugging
+    error_log("Adding account for reseller - ID: " . $reseller_info['id'] . ", Name: " . $reseller_info['name'] . ", Account Username: " . $username);
+
     $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, reseller, plan, timestamp) VALUES (?,?,?,?,?,?)');
     $stmt->execute([$username, $mac, $email, $reseller_info['id'], $plan_id, time()]);
 

@@ -75,7 +75,7 @@ function toggleTheme() {
 
 // Initialize theme from localStorage
 function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedTheme = localStorage.getItem('theme') || 'dark';
     const themeIcon = document.getElementById('theme-icon');
 
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -757,10 +757,19 @@ function renderAccountsPage() {
             const isObserver = currentUser && currentUser.is_observer == 1;
             const isSuperAdmin = currentUser && currentUser.super_user == 1;
 
-            // Show delete button only for super admin
-            const deleteButton = isSuperAdmin
-                ? `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`
-                : '';
+            // Check if reseller has delete permission (format: can_edit|can_add|is_reseller_admin|can_delete|reserved)
+            const permissions = (currentUser && currentUser.permissions || '0|0|0|0|0').split('|');
+            const canDelete = permissions[3] === '1';
+
+            // Show delete button - disabled for observers and resellers without permission
+            let deleteButton = '';
+            if (isObserver) {
+                deleteButton = `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`;
+            } else if (isSuperAdmin || canDelete) {
+                deleteButton = `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`;
+            } else {
+                deleteButton = `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`;
+            }
 
             // Show edit button for everyone, but disabled for observers
             const editButton = isObserver
@@ -1233,11 +1242,12 @@ async function addReseller(e) {
     // Handle permissions checkboxes
     const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
+    const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|1|1`;
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|reserved
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|1`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -1362,11 +1372,12 @@ async function editReseller(resellerId) {
                 document.getElementById('edit-reseller-currency').value = reseller.currency_id || 'IRR';
                 document.getElementById('edit-reseller-theme').value = reseller.theme || 'default';
 
-                // Parse permissions (format: can_edit|can_add|is_reseller_admin|reserved|reserved)
+                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|reserved)
                 const permissions = (reseller.permissions || '0|0|0|0|0').split('|');
                 document.getElementById('edit-can-edit-accounts').checked = permissions[0] === '1';
                 document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
                 document.getElementById('edit-is-admin').checked = permissions[2] === '1';
+                document.getElementById('edit-can-delete-accounts').checked = permissions[3] === '1';
 
                 // Set observer checkbox
                 document.getElementById('edit-is-observer').checked = reseller.is_observer == 1;
@@ -1393,11 +1404,12 @@ async function updateReseller(e) {
     // Handle permissions checkboxes
     const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
+    const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|1|1`;
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|reserved
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|1`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -2101,17 +2113,23 @@ function hideObserverActions() {
  * Toggle other permissions based on admin checkbox state
  * Preserves the checkbox states when hiding/showing them
  */
-function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox) {
+function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox) {
     const isAdmin = adminCheckbox.checked;
 
     if (isAdmin) {
         // Hide other permission items when admin is checked (but preserve their state)
         canEditCheckbox.closest('.permission-item').style.display = 'none';
         canAddCheckbox.closest('.permission-item').style.display = 'none';
+        if (canDeleteCheckbox) {
+            canDeleteCheckbox.closest('.permission-item').style.display = 'none';
+        }
     } else {
         // Show other permission items when admin is unchecked (state is preserved)
         canEditCheckbox.closest('.permission-item').style.display = 'flex';
         canAddCheckbox.closest('.permission-item').style.display = 'flex';
+        if (canDeleteCheckbox) {
+            canDeleteCheckbox.closest('.permission-item').style.display = 'flex';
+        }
     }
 }
 
@@ -2122,10 +2140,11 @@ function setupAddResellerPermissions() {
     const adminCheckbox = document.querySelector('#addResellerModal input[name="is_admin"]');
     const canEditCheckbox = document.querySelector('#addResellerModal input[name="can_edit_accounts"]');
     const canAddCheckbox = document.querySelector('#addResellerModal input[name="can_add_accounts"]');
+    const canDeleteCheckbox = document.querySelector('#addResellerModal input[name="can_delete_accounts"]');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox);
         });
     }
 }
@@ -2137,14 +2156,15 @@ function setupEditResellerPermissions() {
     const adminCheckbox = document.getElementById('edit-is-admin');
     const canEditCheckbox = document.getElementById('edit-can-edit-accounts');
     const canAddCheckbox = document.getElementById('edit-can-add-accounts');
+    const canDeleteCheckbox = document.getElementById('edit-can-delete-accounts');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox);
         });
 
         // Initial state check when modal is opened
-        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox);
+        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox);
     }
 }
 

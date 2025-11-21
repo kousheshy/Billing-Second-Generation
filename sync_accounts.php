@@ -43,6 +43,14 @@ $is_admin = ($user_info['super_user'] == 1);
 $user_id = $user_info['id'];
 
 try {
+    // IMPORTANT: Get existing account-to-reseller mappings BEFORE deleting accounts
+    $existing_resellers = [];
+    $stmt = $pdo->prepare('SELECT username, reseller FROM _accounts WHERE reseller IS NOT NULL');
+    $stmt->execute();
+    foreach($stmt->fetchAll() as $row) {
+        $existing_resellers[$row['username']] = $row['reseller'];
+    }
+
     // For admins: Delete all accounts
     // For resellers: Delete only their accounts
     if($is_admin) {
@@ -81,14 +89,6 @@ try {
         } elseif(is_object($decoded->results)) {
             $stalker_accounts = [$decoded->results];
         }
-    }
-
-    // Get existing account-to-reseller mappings before sync
-    $existing_resellers = [];
-    $stmt = $pdo->prepare('SELECT username, reseller FROM _accounts WHERE reseller IS NOT NULL');
-    $stmt->execute();
-    foreach($stmt->fetchAll() as $row) {
-        $existing_resellers[$row['username']] = $row['reseller'];
     }
 
     // Process each account

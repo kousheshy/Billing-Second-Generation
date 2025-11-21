@@ -51,16 +51,28 @@ $permissions = explode('|', $user_info['permissions']);
 $id = $_POST['id'];
 
 
-// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+// Check if user is an observer - observers can never delete accounts
+$is_observer = isset($user_info['is_observer']) && $user_info['is_observer'] == 1;
+if($is_observer)
+{
+    $response['error']=1;
+    $response['err_msg']="Observers cannot delete accounts. This is a read-only account.";
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit();
+}
+
+// Parse permissions: can_edit|can_add|is_reseller_admin|can_delete|reserved
 $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
 $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+$can_delete = isset($permissions[3]) && $permissions[3] === '1';
 
-// Only super admins and reseller admins can delete accounts
-if($user_info['super_user']==0 && !$is_reseller_admin)
+// Only super admins, reseller admins, or resellers with delete permission can delete accounts
+if($user_info['super_user']==0 && !$is_reseller_admin && !$can_delete)
 {
-    // Regular resellers are not allowed to delete accounts
+    // Resellers without delete permission are not allowed to delete accounts
     $response['error']=1;
-    $response['err_msg']="Resellers cannot delete accounts. Please contact admin.";
+    $response['err_msg']="You don't have permission to delete accounts. Please contact admin.";
     header('Content-Type: application/json');
     echo json_encode($response);
     exit();
