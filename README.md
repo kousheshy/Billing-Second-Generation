@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -121,12 +121,33 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Timestamped Files**: Auto-generated filenames with dates
 - **Export Libraries**: Integrated XLSX.js, jsPDF, and jsPDF-autoTable
 
+### Reseller Admin Permissions (v1.6.0)
+- **Three-Tier Permission System**: 
+  - Super Admin: Full system access
+  - Reseller Admin: Admin-level permissions within reseller scope
+  - Regular Reseller: Limited permissions based on settings
+- **Granular Permission Control**:
+  - Can Edit Accounts: Permission to modify existing accounts
+  - Can Add Accounts: Permission to create new accounts
+  - Admin Permissions: Full admin-level access (hides other checkboxes)
+- **View Mode Toggle**: Reseller admins can switch between:
+  - "My Accounts" - View only their own accounts
+  - "All Accounts" - View all accounts in the system
+- **Smart UI Adaptation**:
+  - Reseller admins see admin-level interface without reseller tab
+  - Dynamic report visibility based on view mode
+  - Account and plan filtering synchronized with view mode
+- **Edit Reseller Functionality**: Admin can now edit reseller details and permissions
+- **Permission Persistence**: View mode preference saved to localStorage
+- **Enhanced Security**: Permission checks in all PHP backend files
+
 ### User Management
-- Admin and reseller roles
+- Admin and reseller roles with granular permissions
 - Balance management system
 - Secure session-based authentication
 - Password change functionality
-- User-specific permissions (admin can delete, resellers cannot)
+- User-specific permissions (admin and reseller admins can delete, regular resellers cannot)
+- Permission-based UI visibility and feature access
 
 ## Database Schema
 
@@ -403,17 +424,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.5.0 - November 2025
+- Version 1.6.0 - November 2025
 
 ---
 
-**Version:** 1.5.0
+**Version:** 1.6.0
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.6.0** (Nov 2025) - Reseller admin permissions system with view mode toggle
 - **v1.5.0** (Nov 2025) - Report export functionality with PDF and Excel support
 - **v1.4.0** (Nov 2025) - Interactive reports with clickable report cards
 - **v1.3.0** (Nov 2025) - Enhanced plan management with tariff integration
