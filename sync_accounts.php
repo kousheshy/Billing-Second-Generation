@@ -39,20 +39,19 @@ $stmt = $pdo->prepare('SELECT * FROM _users WHERE username = ?');
 $stmt->execute([$username]);
 $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Only super users (admins) can sync accounts
-if($user_info['super_user'] != 1)
-{
-    $response['error'] = 1;
-    $response['err_msg'] = 'Permission denied. Only admins can sync accounts.';
-    header('Content-Type: application/json');
-    echo json_encode($response);
-    exit();
-}
+$is_admin = ($user_info['super_user'] == 1);
+$user_id = $user_info['id'];
 
 try {
-    // Delete all existing accounts from local database
-    $stmt = $pdo->prepare('DELETE FROM _accounts');
-    $stmt->execute();
+    // For admins: Delete all accounts
+    // For resellers: Delete only their accounts
+    if($is_admin) {
+        $stmt = $pdo->prepare('DELETE FROM _accounts');
+        $stmt->execute();
+    } else {
+        $stmt = $pdo->prepare('DELETE FROM _accounts WHERE reseller = ?');
+        $stmt->execute([$user_id]);
+    }
 
     // Use the 'accounts' endpoint to fetch all accounts from Stalker Portal
     $case = 'accounts';
@@ -84,6 +83,14 @@ try {
         }
     }
 
+    // Get existing account-to-reseller mappings before sync
+    $existing_resellers = [];
+    $stmt = $pdo->prepare('SELECT username, reseller FROM _accounts WHERE reseller IS NOT NULL');
+    $stmt->execute();
+    foreach($stmt->fetchAll() as $row) {
+        $existing_resellers[$row['username']] = $row['reseller'];
+    }
+
     // Process each account
     foreach($stalker_accounts as $stalker_user) {
         // Extract login and MAC from the user object
@@ -111,8 +118,16 @@ try {
         // Use current timestamp for creation date
         $created_timestamp = time();
 
-        // Insert account into local database (all accounts are fresh after DELETE)
-        // Default to admin user (ID 1) as reseller for synced accounts
+        // Determine reseller: preserve existing mapping, or assign to current user (admin or reseller)
+        $reseller_id = $existing_resellers[$login] ?? $user_id;
+
+        // For resellers: only sync accounts that belong to them
+        if(!$is_admin && $reseller_id != $user_id) {
+            $skipped_count++;
+            continue;
+        }
+
+        // Insert account into local database
         $stmt = $pdo->prepare('INSERT INTO _accounts (username, email, mac, full_name, tariff_plan, end_date, status, reseller, timestamp) VALUES (?,?,?,?,?,?,?,?,?)');
         $stmt->execute([
             $login,
@@ -122,7 +137,7 @@ try {
             $tariff_plan,
             $end_date,
             $status,
-            1, // Assign to admin user by default
+            $reseller_id,
             $created_timestamp
         ]);
 

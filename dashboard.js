@@ -100,6 +100,9 @@ async function checkAuth() {
 
         document.getElementById('total-accounts').textContent = result.total_accounts;
 
+        // Auto-sync accounts on login (for both admin and resellers)
+        await autoSyncAccounts();
+
         // Load initial data based on user type
         loadAccounts();
         loadTransactions();
@@ -109,9 +112,42 @@ async function checkAuth() {
             loadResellers();
         }
 
+        // Hide loading overlay after everything is loaded
+        hideLoadingOverlay();
+
     } catch(error) {
         console.error('Auth check failed:', error);
         window.location.href = 'index.html';
+    }
+}
+
+// Auto-sync accounts on login
+async function autoSyncAccounts() {
+    try {
+        const response = await fetch('sync_accounts.php', {
+            method: 'POST'
+        });
+        const result = await response.json();
+
+        if(result.error == 0) {
+            console.log('Auto-sync completed:', result.synced, 'accounts synced');
+        } else {
+            console.error('Auto-sync failed:', result.err_msg);
+        }
+    } catch(error) {
+        console.error('Auto-sync error:', error);
+    }
+}
+
+// Hide loading overlay
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if(overlay) {
+        overlay.classList.add('hidden');
+        // Remove from DOM after transition
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 300);
     }
 }
 
