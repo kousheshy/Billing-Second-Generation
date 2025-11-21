@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.6.5-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6.6-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -63,6 +63,19 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Tariff Plans**: Flexible subscription plans with automated expiration tracking
 - **Transaction History**: Complete financial transaction logging
 - **Advanced Analytics**: Comprehensive reports and business intelligence
+
+### Stalker Portal Integration (v1.6.6)
+- **Bidirectional Reseller Sync**: Reseller ownership synced between billing panel and Stalker Portal
+- **Source of Truth**: Stalker Portal is primary source for reseller assignments
+- **Account Creation**: Reseller ID automatically sent to Stalker when creating accounts
+- **Account Updates**: Reseller ownership maintained in Stalker during updates
+- **Smart Sync Logic**: Three-tier priority for reseller assignment:
+  1. Stalker Portal reseller field (primary)
+  2. Existing local database mapping (fallback)
+  3. Current user performing sync (last resort)
+- **Data Integrity**: Prevents reseller reassignment during sync operations
+- **Migration Tools**: Scripts provided for existing deployments
+- **Comprehensive Logging**: Debug output for reseller tracking and troubleshooting
 
 ### Dashboard Features
 - Real-time account statistics with visual cards
@@ -466,17 +479,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.6.5 - November 2025
+- Version 1.6.6 - November 2025
 
 ---
 
-**Version:** 1.6.5
+**Version:** 1.6.6
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.6.6** (Nov 2025) - Stalker Portal reseller integration with bidirectional sync
 - **v1.6.5** (Nov 2025) - Granular delete permissions, dark mode default, sync bug fixes
 - **v1.6.4** (Nov 2025) - Observer Mode UI improvements with disabled buttons and transaction reseller column
 - **v1.6.3** (Nov 2025) - Observer (Read-Only) mode for auditing and monitoring
