@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -74,6 +74,14 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - Dark/Light theme toggle for comfortable viewing
 - Multi-currency support (GBP, USD, EUR, IRR) with proper formatting
 
+### Plan Management (v1.3.0)
+- **Tariff Integration**: Auto-fetch tariffs from Stalker Portal on login
+- **Smart Plan Creation**: Select tariff plans directly from your server
+- **Auto-populated Fields**: Name and duration filled automatically from tariff
+- **Enhanced UI**: Checkbox-based plan assignment for resellers
+- **Multi-currency Pricing**: Set prices per plan for each currency
+- **Cleaner Forms**: Improved number inputs without spinner arrows
+
 ### Reports & Analytics
 - Total accounts overview
 - Active vs expired accounts breakdown
@@ -138,6 +146,8 @@ Current Billing Shahrokh/
 ├── add_plan.php
 ├── remove_plan.php
 ├── get_plans.php
+├── get_tariffs.php      # NEW v1.3.0 - Fetch tariffs from Stalker Portal
+├── sync_plans_web.php   # NEW v1.3.0 - Web-based plan sync
 │
 ├── Other APIs:
 ├── get_transactions.php
@@ -172,15 +182,16 @@ Current Billing Shahrokh/
    - Currency, Theme
 4. Click **Create Reseller**
 
-### Adding a Plan
+### Adding a Plan (Enhanced in v1.3.0)
 1. Go to **Plans** tab
 2. Click **+ Add Plan**
-3. Fill in:
-   - Plan ID
-   - Currency (GBP/USD/EUR)
-   - Price
-   - Duration (days)
-4. Click **Create Plan**
+3. Select a **Tariff Plan** from dropdown (auto-fetched from Stalker Portal)
+4. Plan name and duration are auto-filled
+5. Choose **Currency** (GBP/USD/EUR/IRR)
+6. Enter **Price** for this currency
+7. Click **Create Plan**
+
+**Note**: Plan name and duration can be edited but are pre-populated from the selected tariff.
 
 ### Changing Password
 1. Go to **Settings** tab
@@ -366,11 +377,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.0.0 - January 2025
+- Version 1.3.0 - November 2025
 
 ---
 
-**Version:** 1.0.0
-**Last Updated:** January 2025
+**Version:** 1.3.0
+**Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
+
+## Version History
+
+- **v1.3.0** (Nov 2025) - Enhanced plan management with tariff integration
+- **v1.2.0** (Nov 2025) - Dark mode improvements and legacy data compatibility
+- **v1.1.0** (Nov 2025) - Currency standardization and auto-sync features
+- **v1.0.0** (Jan 2025) - Initial production release
