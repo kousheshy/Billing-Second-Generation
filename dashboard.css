@@ -781,10 +781,17 @@ table tbody tr:last-child td {
 }
 
 .form-group small {
-    color: var(--text-tertiary);
+    color: var(--text-tertiary) !important;
     font-size: 12px;
     margin-top: var(--spacing-xs);
     display: block;
+}
+
+/* Override inline styles for better dark mode support */
+.form-group input[readonly] {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+    cursor: not-allowed;
 }
 
 /* Alerts */

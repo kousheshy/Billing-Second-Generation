@@ -170,6 +170,9 @@ function getCurrencySymbol(currencyName) {
     // Handle null or undefined currency
     if(!currencyName) return 'IRR ';
 
+    // Normalize IRT to IRR (fix for legacy data)
+    if(currencyName === 'IRT') currencyName = 'IRR';
+
     if(currencyName === 'USD') return '$';
     if(currencyName === 'EUR') return '€';
     if(currencyName === 'IRR') return 'IRR ';
@@ -182,13 +185,19 @@ function formatBalance(amount, currencyName) {
     // Handle null, undefined, or empty values
     const numAmount = amount || 0;
 
+    // Normalize IRT to IRR (fix for legacy data)
+    if(currencyName === 'IRT') currencyName = 'IRR';
+
     // Default to IRR if currency is not specified
     if(!currencyName || currencyName === 'IRR') {
-        // Iranian Rial thousand separator (comma every 3 digits)
-        return Number(numAmount).toLocaleString('en-US');
+        // Iranian Rial thousand separator (comma every 3 digits, no decimals)
+        return Number(numAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
     }
 
-    // Format all currencies with proper decimals
+    // Format all other currencies with proper decimals
     return Number(numAmount).toFixed(2);
 }
 
@@ -750,12 +759,14 @@ async function loadPlans() {
 
             result.plans.forEach(plan => {
                 const tr = document.createElement('tr');
+                // Normalize currency display (IRT -> IRR)
+                const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
                 const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
 
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
                     <td>${plan.name || ''}</td>
-                    <td>${plan.currency_id || ''}</td>
+                    <td>${displayCurrency || ''}</td>
                     <td>${formattedPrice}</td>
                     <td>${plan.days || 0}</td>
                     <td>
