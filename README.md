@@ -2,10 +2,11 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6.2-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
+![PWA](https://img.shields.io/badge/PWA-Ready-green.svg)
 
 ## Table of Contents
 
@@ -140,6 +141,18 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Edit Reseller Functionality**: Admin can now edit reseller details and permissions
 - **Permission Persistence**: View mode preference saved to localStorage
 - **Enhanced Security**: Permission checks in all PHP backend files
+
+### Progressive Web App (PWA) (v1.6.2)
+- **Installable Application**: Install on mobile and desktop devices
+- **Offline Support**: Service Worker caching for offline functionality
+- **Fast Loading**: Cached resources for instant app startup
+- **Auto-Updates**: Automatic detection and prompts for new versions
+- **App Icons**: Multiple sizes (72x72 to 512x512) for all devices
+- **iOS Support**: Apple Touch Icons for iPhone and iPad
+- **Responsive Design**: Optimized for mobile, tablet, and desktop
+- **App-Like Experience**: Full-screen mode, splash screen, theme color
+- **Manifest File**: Complete PWA configuration
+- **Push Notification Ready**: Infrastructure for future notifications
 
 ### User Management
 - Admin and reseller roles with granular permissions
@@ -424,17 +437,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.6.1 - November 2025
+- Version 1.6.2 - November 2025
 
 ---
 
-**Version:** 1.6.1
+**Version:** 1.6.2
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 
 ## Version History
 
+- **v1.6.2** (Nov 2025) - Progressive Web App (PWA) support with offline functionality
 - **v1.6.1** (Nov 2025) - Currency validation for plan assignment to resellers
 - **v1.6.0** (Nov 2025) - Reseller admin permissions system with view mode toggle
 - **v1.5.0** (Nov 2025) - Report export functionality with PDF and Excel support
