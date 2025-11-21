@@ -134,8 +134,13 @@ async function checkAuth() {
             document.getElementById('balance-display').style.display = 'none';
             document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
 
-            // Show all tabs for observers (they can view everything)
-            // But we'll hide all action buttons later
+            // Hide Settings tab for observers
+            document.querySelectorAll('.tab').forEach(tab => {
+                const tabText = tab.textContent.toLowerCase();
+                if(tabText.includes('settings')) {
+                    tab.style.display = 'none';
+                }
+            });
 
             // Add visual indicator that this is an observer account
             document.getElementById('username-display').innerHTML = 'Welcome, ' + result.user.name + ' <span style="color: #fbbf24; font-size: 12px;">(Observer)</span>';
@@ -747,10 +752,20 @@ function renderAccountsPage() {
         tbody.innerHTML = '';
         pageAccounts.forEach(account => {
             const tr = document.createElement('tr');
-            // Only show delete button for admin users
-            const deleteButton = currentUser && currentUser.super_user == 1
+
+            // Check if user is observer
+            const isObserver = currentUser && currentUser.is_observer == 1;
+            const isSuperAdmin = currentUser && currentUser.super_user == 1;
+
+            // Show delete button only for super admin
+            const deleteButton = isSuperAdmin
                 ? `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`
                 : '';
+
+            // Show edit button for everyone, but disabled for observers
+            const editButton = isObserver
+                ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit</button>`
+                : `<button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit</button>`;
 
             // Format expiration date and determine status
             let expirationCell = '';
@@ -806,7 +821,7 @@ function renderAccountsPage() {
                 <td>${creationDate}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit</button>
+                        ${editButton}
                         ${deleteButton}
                     </div>
                 </td>
@@ -936,6 +951,27 @@ async function loadResellers() {
                 const resellerBalance = reseller.balance || 0;
                 const resellerCurrency = reseller.currency_name || 'IRR';
 
+                // Check if user is observer
+                const isObserver = currentUser && currentUser.is_observer == 1;
+                const isSuperAdmin = currentUser && currentUser.super_user == 1;
+
+                // Make buttons disabled for observers
+                const editButton = isObserver
+                    ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit</button>`
+                    : `<button class="btn-sm btn-edit" onclick="editReseller(${reseller.id})">Edit</button>`;
+
+                const adjustCreditButton = isObserver
+                    ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Adjust Credit</button>`
+                    : `<button class="btn-sm btn-edit" onclick="adjustCredit(${reseller.id}, '${reseller.name}', ${resellerBalance}, '${resellerCurrency}')">Adjust Credit</button>`;
+
+                const assignPlansButton = isObserver
+                    ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Assign Plans</button>`
+                    : `<button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}', '${reseller.currency_id}')">Assign Plans</button>`;
+
+                const deleteButton = isSuperAdmin
+                    ? `<button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>`
+                    : '';
+
                 tr.innerHTML = `
                     <td>${reseller.name || ''}</td>
                     <td>${reseller.username || ''}</td>
@@ -944,10 +980,10 @@ async function loadResellers() {
                     <td>${reseller.max_users || 'Unlimited'}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn-sm btn-edit" onclick="editReseller(${reseller.id})">Edit</button>
-                            <button class="btn-sm btn-edit" onclick="adjustCredit(${reseller.id}, '${reseller.name}', ${resellerBalance}, '${resellerCurrency}')">Adjust Credit</button>
-                            <button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}', '${reseller.currency_id}')">Assign Plans</button>
-                            <button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>
+                            ${editButton}
+                            ${adjustCreditButton}
+                            ${assignPlansButton}
+                            ${deleteButton}
                         </div>
                     </td>
                 `;
@@ -995,6 +1031,12 @@ async function loadPlans() {
                 const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
                 const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
 
+                // Check if user is observer (observers can't delete)
+                const isObserver = currentUser && currentUser.is_observer == 1;
+                const deleteButton = isObserver
+                    ? `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`
+                    : `<button class="btn-sm btn-delete" onclick="deletePlan('${plan.external_id}', '${plan.currency_id}')">Delete</button>`;
+
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
                     <td>${plan.name || ''}</td>
@@ -1003,7 +1045,7 @@ async function loadPlans() {
                     <td>${plan.days || 0}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn-sm btn-delete" onclick="deletePlan('${plan.external_id}', '${plan.currency_id}')">Delete</button>
+                            ${deleteButton}
                         </div>
                     </td>
                 `;
@@ -1101,6 +1143,17 @@ async function loadTransactions() {
 
         const tbody = document.getElementById('transactions-tbody');
 
+        // Check if current user is admin or observer (to show reseller column)
+        const isSuperAdmin = currentUser && currentUser.super_user == 1;
+        const isObserver = currentUser && currentUser.is_observer == 1;
+        const showResellerColumn = isSuperAdmin || isObserver;
+
+        // Show/hide reseller column header based on user type
+        const resellerHeader = document.getElementById('reseller-column-header');
+        if(resellerHeader) {
+            resellerHeader.style.display = showResellerColumn ? '' : 'none';
+        }
+
         if(result.error == 0 && result.transactions && result.transactions.length > 0) {
             tbody.innerHTML = '';
 
@@ -1110,17 +1163,24 @@ async function loadTransactions() {
                 const currencySymbol = getCurrencySymbol(tx.currency);
                 const formattedAmount = formatBalance(tx.amount, tx.currency);
 
+                // Build reseller column if needed
+                const resellerColumn = showResellerColumn
+                    ? `<td>${tx.reseller_name || tx.reseller_username || 'N/A'}</td>`
+                    : '';
+
                 tr.innerHTML = `
                     <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
                     <td>${currencySymbol}${formattedAmount}</td>
                     <td>${tx.currency || ''}</td>
                     <td><span class="badge ${tx.type == 1 ? 'active' : 'inactive'}">${type}</span></td>
+                    ${resellerColumn}
                     <td>${tx.details || ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#999">No transactions found</td></tr>';
+            const colspan = showResellerColumn ? '6' : '5';
+            tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:40px;color:#999">No transactions found</td></tr>`;
         }
     } catch(error) {
         console.error('Error loading transactions:', error);

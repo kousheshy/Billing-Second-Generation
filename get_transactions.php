@@ -39,7 +39,8 @@ try {
 
     if($user_info['super_user'] == 1 || $is_observer)
     {
-        $stmt = $pdo->prepare('SELECT * FROM _transactions ORDER BY id DESC LIMIT 100');
+        // Admin and observers see all transactions with reseller names
+        $stmt = $pdo->prepare('SELECT t.*, u.name as reseller_name, u.username as reseller_username FROM _transactions t LEFT JOIN _users u ON t.for_user = u.id ORDER BY t.id DESC LIMIT 100');
         $stmt->execute([]);
     }
     else
