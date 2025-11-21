@@ -65,6 +65,41 @@ if(!$reseller)
     exit();
 }
 
+// Validate that all assigned plans match the reseller's currency
+if(!empty($plans)) {
+    $reseller_currency = $reseller['currency_id'];
+    $plan_combinations = explode(',', $plans);
+    $invalid_plans = [];
+
+    foreach($plan_combinations as $combination) {
+        $parts = explode('-', $combination);
+        if(count($parts) == 2) {
+            $plan_id = $parts[0];
+            $plan_currency = $parts[1];
+
+            // Check if plan currency matches reseller currency
+            if($plan_currency !== $reseller_currency) {
+                // Get plan name for better error message
+                $stmt = $pdo->prepare('SELECT name, external_id FROM _plans WHERE external_id = ? AND currency_id = ?');
+                $stmt->execute([$plan_id, $plan_currency]);
+                $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                $plan_name = $plan_info ? $plan_info['name'] : "Plan $plan_id";
+                $invalid_plans[] = "$plan_name ($plan_currency)";
+            }
+        }
+    }
+
+    // If there are invalid plans, return error
+    if(!empty($invalid_plans)) {
+        $response['error'] = 1;
+        $response['err_msg'] = 'Currency mismatch: Reseller currency is ' . $reseller_currency . ', but the following plans have different currencies: ' . implode(', ', $invalid_plans) . '. Please only assign plans that match the reseller\'s currency.';
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit();
+    }
+}
+
 // Update plans
 $stmt = $pdo->prepare('UPDATE _users SET plans = ? WHERE id = ?');
 $stmt->execute([$plans, $reseller_id]);

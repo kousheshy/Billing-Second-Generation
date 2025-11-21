@@ -881,7 +881,7 @@ async function loadResellers() {
                         <div class="action-buttons">
                             <button class="btn-sm btn-edit" onclick="editReseller(${reseller.id})">Edit</button>
                             <button class="btn-sm btn-edit" onclick="adjustCredit(${reseller.id}, '${reseller.name}', ${resellerBalance}, '${resellerCurrency}')">Adjust Credit</button>
-                            <button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}')">Assign Plans</button>
+                            <button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}', '${reseller.currency_id}')">Assign Plans</button>
                             <button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>
                         </div>
                     </td>
@@ -1477,7 +1477,7 @@ async function submitCreditAdjustment(e) {
 }
 
 // Assign Plans
-function assignPlans(resellerId, resellerName, currentPlans) {
+function assignPlans(resellerId, resellerName, currentPlans, resellerCurrency) {
     document.getElementById('assign-reseller-id').value = resellerId;
     document.getElementById('assign-reseller-name').value = resellerName;
 
@@ -1488,10 +1488,16 @@ function assignPlans(resellerId, resellerName, currentPlans) {
     const checkboxContainer = document.getElementById('assign-plans-checkboxes');
     checkboxContainer.innerHTML = '';
 
+    // Filter plans to only show those matching reseller's currency
+    const matchingPlans = availablePlans.filter(plan => plan.currency_id === resellerCurrency);
+
     if (availablePlans.length === 0) {
         checkboxContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 20px;">No plans available. Please create plans first.</p>';
+    } else if (matchingPlans.length === 0) {
+        const displayCurrency = (resellerCurrency === 'IRT') ? 'IRR' : resellerCurrency;
+        checkboxContainer.innerHTML = `<p style="color: var(--warning); text-align: center; padding: 20px;">No plans available for ${displayCurrency} currency. Please create plans with ${displayCurrency} currency first.</p>`;
     } else {
-        availablePlans.forEach(plan => {
+        matchingPlans.forEach(plan => {
             const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
             const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
             const planValue = `${plan.external_id}-${plan.currency_id}`;
