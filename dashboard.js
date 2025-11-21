@@ -473,6 +473,11 @@ async function loadAccounts() {
             accountsPagination.allAccounts = result.accounts;
             accountsPagination.totalItems = result.accounts.length;
 
+            // Clear any active filters/search so deleted items disappear immediately
+            accountsPagination.filteredAccounts = [];
+            accountsPagination.searchTerm = '';
+            accountsPagination.currentPage = 1; // Reset to first page
+
             // Calculate expiring soon count
             updateExpiringSoonCount(result.accounts);
 
@@ -486,7 +491,7 @@ async function loadAccounts() {
             renderAccountsPage();
         } else {
             const tbody = document.getElementById('accounts-tbody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
             document.getElementById('accounts-pagination').innerHTML = '';
             document.getElementById('accounts-pagination-info').textContent = '';
         }
@@ -830,6 +835,7 @@ function renderAccountsPage() {
             tr.innerHTML = `
                 <td>${account.username || ''}</td>
                 <td>${account.full_name || ''}</td>
+                <td>${account.phone_number || ''}</td>
                 <td>${account.mac || ''}</td>
                 <td>${account.tariff_plan || ''}</td>
                 <td>${resellerDisplay}</td>
@@ -847,7 +853,7 @@ function renderAccountsPage() {
             tbody.appendChild(tr);
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
     }
 
     // Update pagination info
@@ -1559,7 +1565,7 @@ async function editAccount(username) {
         document.getElementById('edit-password').value = ''; // Keep blank
         document.getElementById('edit-name').value = account.full_name || '';
         document.getElementById('edit-email').value = account.email || '';
-        document.getElementById('edit-phone').value = account.phone || '';
+        document.getElementById('edit-phone').value = account.phone_number || '';
         document.getElementById('edit-comment').value = account.comment || '';
 
         // Set status (default to 1 if not set)
@@ -2052,7 +2058,7 @@ function exportToExcel(accounts, reportInfo) {
     const excelData = accounts.map(account => ({
         'MAC Address': account.mac || '',
         'Full Name': account.full_name || '',
-        'Phone': account.phone || '',
+        'Phone': account.phone_number || '',
         'Status': account.status == 1 ? 'Active' : 'Inactive',
         'Expiry Date': account.end_date || 'Unlimited',
         'Reseller': account.reseller_name || 'N/A',
@@ -2105,7 +2111,7 @@ function exportToPDF(accounts, reportInfo) {
     const tableData = accounts.map(account => [
         account.mac || '',
         account.full_name || '',
-        account.phone || '',
+        account.phone_number || '',
         account.status == 1 ? 'Active' : 'Inactive',
         account.end_date || 'Unlimited',
         account.reseller_name || 'N/A'

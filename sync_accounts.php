@@ -44,6 +44,7 @@ $user_id = $user_info['id'];
 
 try {
     // IMPORTANT: Get existing account-to-reseller mappings BEFORE deleting accounts
+    // Note: We DON'T preserve phone numbers - they must come from Stalker Portal as the single source of truth
     $existing_resellers = [];
     $stmt = $pdo->prepare('SELECT username, reseller FROM _accounts WHERE reseller IS NOT NULL');
     $stmt->execute();
@@ -151,12 +152,17 @@ try {
             continue;
         }
 
+        // Phone number - ONLY from Stalker Portal (single source of truth)
+        // If Stalker doesn't have a phone, local database won't have it either
+        $phone_number = $stalker_user->phone ?? null;
+
         // Insert account into local database
-        $stmt = $pdo->prepare('INSERT INTO _accounts (username, email, mac, full_name, tariff_plan, end_date, status, reseller, timestamp) VALUES (?,?,?,?,?,?,?,?,?)');
+        $stmt = $pdo->prepare('INSERT INTO _accounts (username, email, mac, phone_number, full_name, tariff_plan, end_date, status, reseller, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute([
             $login,
             $email,
             $mac,
+            $phone_number,
             $full_name,
             $tariff_plan,
             $end_date,

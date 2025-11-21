@@ -147,10 +147,11 @@ try {
     }
 
     // Update account in local database
-    $stmt = $pdo->prepare('UPDATE _accounts SET username=?, email=?, full_name=?, end_date=?, plan=?, status=? WHERE username=?');
+    $stmt = $pdo->prepare('UPDATE _accounts SET username=?, email=?, phone_number=?, full_name=?, end_date=?, plan=?, status=? WHERE username=?');
     $stmt->execute([
         $new_username,
         $email,
+        $phone,
         $name,
         $new_expiration_date,
         ($plan_id != 0) ? $plan_id : $account['plan'],

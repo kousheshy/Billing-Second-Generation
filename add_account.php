@@ -397,8 +397,13 @@ if(!$decoded || $decoded->status != 'OK')
 
 
 
-// Include reseller_id in the account data sent to Stalker
+// Include reseller_id and phone_number in the account data sent to Stalker
 $data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&account_number='.$account_number.'&tariff_plan='.$plan.'&status='.$status.'&stb_mac='.$mac.'&end_date='.$expire_billing_date.'&comment='.$comment.'&reseller='.$reseller_info['id'];
+
+// Add phone number if provided
+if(!empty($phone_number)) {
+    $data .= '&phone='.$phone_number;
+}
 
 // DEBUG: Log the data being sent to Stalker
 error_log("=== STALKER API CREATE ACCOUNT ===");
@@ -422,8 +427,8 @@ if($decoded->status == 'OK')
     // Log reseller info for debugging
     error_log("Adding account for reseller - ID: " . $reseller_info['id'] . ", Name: " . $reseller_info['name'] . ", Account Username: " . $username);
 
-    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, reseller, plan, timestamp) VALUES (?,?,?,?,?,?)');
-    $stmt->execute([$username, $mac, $email, $reseller_info['id'], $plan_id, time()]);
+    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, phone_number, reseller, plan, timestamp) VALUES (?,?,?,?,?,?,?)');
+    $stmt->execute([$username, $mac, $email, $phone_number, $reseller_info['id'], $plan_id, time()]);
 
     if($price>0)
     {
