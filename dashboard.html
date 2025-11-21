@@ -12,6 +12,9 @@
         <div class="user-info">
             <span id="user-balance"></span>
             <span id="username-display"></span>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+                <span id="theme-icon">🌙</span>
+            </button>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
     </nav>
@@ -39,6 +42,11 @@
                 <div class="value" id="expiring-soon">0</div>
                 <small style="color: #666; font-size: 12px;">Next 2 weeks</small>
             </div>
+            <div class="stat-card expired-last-month">
+                <h3>Expired Last Month</h3>
+                <div class="value" id="expired-last-month">0</div>
+                <small style="color: #fff; font-size: 12px;">Not renewed</small>
+            </div>
         </div>
 
         <div class="tabs">
@@ -46,6 +54,7 @@
             <button class="tab" onclick="switchTab('resellers')">Resellers</button>
             <button class="tab" onclick="switchTab('plans')">Plans</button>
             <button class="tab" onclick="switchTab('transactions')">Transactions</button>
+            <button class="tab" onclick="switchTab('reports')">Reports</button>
             <button class="tab" onclick="switchTab('settings')">Settings</button>
         </div>
 
@@ -155,6 +164,144 @@
                         <tr><td colspan="5" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Reports & Analytics</h2>
+                </div>
+
+                <!-- Dynamic Filters Section -->
+                <div class="report-filters">
+                    <div class="filter-group">
+                        <label>📅 Expired & Not Renewed:</label>
+                        <select id="expired-filter" onchange="handleExpiredFilterChange()">
+                            <option value="7">Last 7 Days</option>
+                            <option value="14">Last 14 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="60">Last 60 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="180">Last 6 Months</option>
+                            <option value="365">Last Year</option>
+                            <option value="custom">Custom Days</option>
+                        </select>
+                        <div id="expired-custom-input" style="display: none;" class="custom-input-group">
+                            <input type="number" id="expired-custom-days" min="1" max="3650" placeholder="Enter days" onchange="updateDynamicReports()">
+                            <small>Enter number of days (1-3650)</small>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>⏰ Expiring Accounts in Next:</label>
+                        <select id="expiring-filter" onchange="handleExpiringFilterChange()">
+                            <option value="7">Next 7 Days</option>
+                            <option value="14" selected>Next 14 Days</option>
+                            <option value="30">Next 30 Days</option>
+                            <option value="60">Next 60 Days</option>
+                            <option value="90">Next 90 Days</option>
+                            <option value="custom">Custom Days</option>
+                        </select>
+                        <div id="expiring-custom-input" style="display: none;" class="custom-input-group">
+                            <input type="number" id="expiring-custom-days" min="1" max="3650" placeholder="Enter days" onchange="updateDynamicReports()">
+                            <small>Enter number of days (1-3650)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Report Cards -->
+                <div class="dynamic-reports">
+                    <div class="report-card dynamic-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <span>📉</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Expired & Not Renewed</h3>
+                            <div class="report-value" id="dynamic-expired-count">0</div>
+                            <small id="dynamic-expired-label">Last 30 days</small>
+                        </div>
+                    </div>
+
+                    <div class="report-card dynamic-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <span>📈</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Expiring in Selected Period</h3>
+                            <div class="report-value" id="dynamic-expiring-count">0</div>
+                            <small id="dynamic-expiring-label">Next 14 days</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Stats Grid -->
+                <div class="report-stats-grid">
+                    <div class="report-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <span>📊</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Total Accounts</h3>
+                            <div class="report-value" id="report-total-accounts">0</div>
+                            <small>All registered accounts</small>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                            <span>✅</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Active Accounts</h3>
+                            <div class="report-value" id="report-active-accounts">0</div>
+                            <small>Currently active subscriptions</small>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <span>❌</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Expired Accounts</h3>
+                            <div class="report-value" id="report-expired-accounts">0</div>
+                            <small>Subscriptions that have expired</small>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <span>⚠️</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Expiring Soon</h3>
+                            <div class="report-value" id="report-expiring-soon">0</div>
+                            <small>Expiring in next 2 weeks</small>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);">
+                            <span>♾️</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Unlimited Plans</h3>
+                            <div class="report-value" id="report-unlimited-accounts">0</div>
+                            <small>No expiration date</small>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <div class="report-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);">
+                            <span>📅</span>
+                        </div>
+                        <div class="report-details">
+                            <h3>Expired Last Month</h3>
+                            <div class="report-value" id="report-expired-last-month">0</div>
+                            <small>Not renewed in 30 days</small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Settings Tab -->

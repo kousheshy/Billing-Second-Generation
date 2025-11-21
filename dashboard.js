@@ -11,6 +11,53 @@ let accountsPagination = {
     searchTerm: ''
 };
 
+// Theme Management
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const themeIcon = document.getElementById('theme-icon');
+
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    // Update icon
+    themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+}
+
+// Initialize theme from localStorage
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    const themeIcon = document.getElementById('theme-icon');
+
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    if (themeIcon) {
+        themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
+}
+
+// Check if account is expiring soon (within 2 weeks)
+function isExpiringSoon(endDate) {
+    if (!endDate) return false;
+
+    const now = new Date();
+    const expirationDate = new Date(endDate);
+    const twoWeeksFromNow = new Date();
+    twoWeeksFromNow.setDate(now.getDate() + 14);
+
+    return expirationDate >= now && expirationDate <= twoWeeksFromNow;
+}
+
+// Check if account is expired
+function isExpired(endDate) {
+    if (!endDate) return false;
+
+    const now = new Date();
+    const expirationDate = new Date(endDate);
+
+    return expirationDate < now;
+}
+
 // Check authentication
 async function checkAuth() {
     try {
@@ -153,6 +200,12 @@ async function loadAccounts() {
             // Calculate expiring soon count
             updateExpiringSoonCount(result.accounts);
 
+            // Calculate expired last month count
+            updateExpiredLastMonthCount(result.accounts);
+
+            // Generate comprehensive reports
+            generateReports(result.accounts);
+
             // Render current page
             renderAccountsPage();
         } else {
@@ -189,6 +242,214 @@ function updateExpiringSoonCount(accounts) {
     document.getElementById('expiring-soon').textContent = expiringSoonCount;
 }
 
+// Calculate and display accounts expired in the last month
+function updateExpiredLastMonthCount(accounts) {
+    const now = new Date();
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(now.getMonth() - 1);
+
+    let expiredLastMonthCount = 0;
+
+    accounts.forEach(account => {
+        if(account.end_date) {
+            const expirationDate = new Date(account.end_date);
+
+            // Check if expired between 1 month ago and now
+            if(expirationDate >= oneMonthAgo && expirationDate < now) {
+                expiredLastMonthCount++;
+            }
+        }
+    });
+
+    document.getElementById('expired-last-month').textContent = expiredLastMonthCount;
+}
+
+// Generate comprehensive reports based on accounts data
+function generateReports(accounts) {
+    const now = new Date();
+    const twoWeeksFromNow = new Date();
+    twoWeeksFromNow.setDate(now.getDate() + 14);
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(now.getMonth() - 1);
+
+    let totalAccounts = accounts.length;
+    let activeAccounts = 0;
+    let expiredAccounts = 0;
+    let expiringSoonCount = 0;
+    let unlimitedAccounts = 0;
+    let expiredLastMonthCount = 0;
+
+    accounts.forEach(account => {
+        if(!account.end_date) {
+            // No expiration date = unlimited
+            unlimitedAccounts++;
+            activeAccounts++; // Unlimited is considered active
+        } else {
+            const expirationDate = new Date(account.end_date);
+
+            if(expirationDate < now) {
+                // Already expired
+                expiredAccounts++;
+
+                // Check if expired in last month
+                if(expirationDate >= oneMonthAgo) {
+                    expiredLastMonthCount++;
+                }
+            } else if(expirationDate >= now && expirationDate <= twoWeeksFromNow) {
+                // Expiring soon
+                expiringSoonCount++;
+                activeAccounts++; // Still active but expiring soon
+            } else {
+                // Active and not expiring soon
+                activeAccounts++;
+            }
+        }
+    });
+
+    // Update report values
+    document.getElementById('report-total-accounts').textContent = totalAccounts;
+    document.getElementById('report-active-accounts').textContent = activeAccounts;
+    document.getElementById('report-expired-accounts').textContent = expiredAccounts;
+    document.getElementById('report-expiring-soon').textContent = expiringSoonCount;
+    document.getElementById('report-unlimited-accounts').textContent = unlimitedAccounts;
+    document.getElementById('report-expired-last-month').textContent = expiredLastMonthCount;
+
+    // Update dynamic reports with default values
+    updateDynamicReports();
+}
+
+// Handle expired filter change
+function handleExpiredFilterChange() {
+    const filterValue = document.getElementById('expired-filter').value;
+    const customInput = document.getElementById('expired-custom-input');
+
+    if(filterValue === 'custom') {
+        customInput.style.display = 'block';
+        // Set default value if empty
+        if(!document.getElementById('expired-custom-days').value) {
+            document.getElementById('expired-custom-days').value = 30;
+        }
+    } else {
+        customInput.style.display = 'none';
+    }
+
+    updateDynamicReports();
+}
+
+// Handle expiring filter change
+function handleExpiringFilterChange() {
+    const filterValue = document.getElementById('expiring-filter').value;
+    const customInput = document.getElementById('expiring-custom-input');
+
+    if(filterValue === 'custom') {
+        customInput.style.display = 'block';
+        // Set default value if empty
+        if(!document.getElementById('expiring-custom-days').value) {
+            document.getElementById('expiring-custom-days').value = 14;
+        }
+    } else {
+        customInput.style.display = 'none';
+    }
+
+    updateDynamicReports();
+}
+
+// Update dynamic reports based on selected filters
+function updateDynamicReports() {
+    const accounts = accountsPagination.allAccounts;
+    if(!accounts || accounts.length === 0) return;
+
+    const now = new Date();
+
+    // Get selected periods
+    let expiredDays, expiringDays;
+
+    const expiredFilterValue = document.getElementById('expired-filter').value;
+    if(expiredFilterValue === 'custom') {
+        const customValue = parseInt(document.getElementById('expired-custom-days').value);
+        expiredDays = customValue && customValue > 0 ? customValue : 30;
+    } else {
+        expiredDays = parseInt(expiredFilterValue);
+    }
+
+    const expiringFilterValue = document.getElementById('expiring-filter').value;
+    if(expiringFilterValue === 'custom') {
+        const customValue = parseInt(document.getElementById('expiring-custom-days').value);
+        expiringDays = customValue && customValue > 0 ? customValue : 14;
+    } else {
+        expiringDays = parseInt(expiringFilterValue);
+    }
+
+    // Calculate date ranges
+    const expiredStartDate = new Date();
+    expiredStartDate.setDate(now.getDate() - expiredDays);
+
+    const expiringEndDate = new Date();
+    expiringEndDate.setDate(now.getDate() + expiringDays);
+
+    // Count accounts
+    let expiredNotRenewedCount = 0;
+    let expiringInPeriodCount = 0;
+
+    accounts.forEach(account => {
+        if(account.end_date) {
+            const expirationDate = new Date(account.end_date);
+
+            // Count expired and NOT renewed (still expired today)
+            // An account is "not renewed" if it expired in the period AND is still expired now
+            // (meaning the end_date was not updated to a future date)
+            if(expirationDate >= expiredStartDate && expirationDate < now) {
+                // This account expired in the selected period and is still expired (not renewed)
+                expiredNotRenewedCount++;
+            }
+
+            // Count expiring in selected period
+            if(expirationDate >= now && expirationDate <= expiringEndDate) {
+                expiringInPeriodCount++;
+            }
+        }
+    });
+
+    // Update UI
+    document.getElementById('dynamic-expired-count').textContent = expiredNotRenewedCount;
+    document.getElementById('dynamic-expiring-count').textContent = expiringInPeriodCount;
+
+    // Update labels
+    const expiredLabel = getExpiredLabel(expiredDays, expiredFilterValue === 'custom');
+    const expiringLabel = getExpiringLabel(expiringDays, expiringFilterValue === 'custom');
+
+    document.getElementById('dynamic-expired-label').textContent = expiredLabel;
+    document.getElementById('dynamic-expiring-label').textContent = expiringLabel;
+}
+
+// Helper function to get expired label text
+function getExpiredLabel(days, isCustom) {
+    if(isCustom) {
+        return `Last ${days} day${days !== 1 ? 's' : ''} (custom)`;
+    }
+    if(days === 7) return 'Last 7 days';
+    if(days === 14) return 'Last 14 days';
+    if(days === 30) return 'Last 30 days';
+    if(days === 60) return 'Last 60 days';
+    if(days === 90) return 'Last 90 days';
+    if(days === 180) return 'Last 6 months';
+    if(days === 365) return 'Last year';
+    return `Last ${days} days`;
+}
+
+// Helper function to get expiring label text
+function getExpiringLabel(days, isCustom) {
+    if(isCustom) {
+        return `Next ${days} day${days !== 1 ? 's' : ''} (custom)`;
+    }
+    if(days === 7) return 'Next 7 days';
+    if(days === 14) return 'Next 14 days';
+    if(days === 30) return 'Next 30 days';
+    if(days === 60) return 'Next 60 days';
+    if(days === 90) return 'Next 90 days';
+    return `Next ${days} days`;
+}
+
 function renderAccountsPage() {
     const { currentPage, perPage, searchTerm, allAccounts, filteredAccounts } = accountsPagination;
     const tbody = document.getElementById('accounts-tbody');
@@ -212,11 +473,43 @@ function renderAccountsPage() {
                 ? `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`
                 : '';
 
-            // Format expiration date
-            let expirationDate = '';
+            // Format expiration date and determine status
+            let expirationCell = '';
+
             if(account.end_date) {
                 const expDate = new Date(account.end_date);
-                expirationDate = expDate.toLocaleDateString();
+                const formattedDate = expDate.toLocaleDateString();
+
+                // Determine status
+                if(isExpired(account.end_date)) {
+                    expirationCell = `
+                        <div class="expiration-cell">
+                            <span class="exp-date">${formattedDate}</span>
+                            <span class="badge inactive">Expired</span>
+                        </div>
+                    `;
+                } else if(isExpiringSoon(account.end_date)) {
+                    expirationCell = `
+                        <div class="expiration-cell">
+                            <span class="exp-date">${formattedDate}</span>
+                            <span class="badge expiring">Expiring Soon</span>
+                        </div>
+                    `;
+                } else {
+                    expirationCell = `
+                        <div class="expiration-cell">
+                            <span class="exp-date">${formattedDate}</span>
+                            <span class="badge active">Active</span>
+                        </div>
+                    `;
+                }
+            } else {
+                expirationCell = `
+                    <div class="expiration-cell">
+                        <span class="exp-date">—</span>
+                        <span class="badge active">Unlimited</span>
+                    </div>
+                `;
             }
 
             // Format creation date
@@ -231,7 +524,7 @@ function renderAccountsPage() {
                 <td>${account.full_name || ''}</td>
                 <td>${account.mac || ''}</td>
                 <td>${account.tariff_plan || ''}</td>
-                <td>${expirationDate}</td>
+                <td>${expirationCell}</td>
                 <td>${creationDate}</td>
                 <td>
                     <div class="action-buttons">
@@ -959,5 +1252,6 @@ async function syncAccounts() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    initTheme();
     checkAuth();
 });
