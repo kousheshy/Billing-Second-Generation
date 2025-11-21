@@ -36,9 +36,9 @@
     --info-text: #1e40af;
 
     /* Transitions */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.3s ease;
-    --transition-slow: 0.5s ease;
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Border Radius */
     --radius-sm: 6px;
@@ -76,12 +76,18 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
     transition: background-color var(--transition-normal), color var(--transition-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Navbar */
@@ -97,6 +103,11 @@ body {
     top: 0;
     z-index: 100;
     backdrop-filter: blur(10px);
+    transition: box-shadow var(--transition-fast);
+}
+
+.navbar:hover {
+    box-shadow: var(--shadow-lg);
 }
 
 .navbar h1 {
@@ -139,6 +150,11 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.navbar .logout-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
 /* Theme Toggle */
 .theme-toggle {
     background: rgba(255, 255, 255, 0.15);
@@ -157,8 +173,17 @@ body {
 
 .theme-toggle:hover {
     background: rgba(255, 255, 255, 0.25);
-    transform: translateY(-2px);
+    transform: translateY(-2px) rotate(15deg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.theme-toggle:active {
+    transform: translateY(0) rotate(0deg);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle #theme-icon {
+    transition: transform var(--transition-fast);
 }
 
 /* Container */
@@ -166,6 +191,7 @@ body {
     max-width: 1400px;
     margin: var(--spacing-xl) auto;
     padding: 0 var(--spacing-lg);
+    animation: fadeIn 0.4s ease-out;
 }
 
 /* Stats Grid */
@@ -182,9 +208,10 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
-    transition: all var(--transition-normal);
+    transition: all var(--transition-fast);
     position: relative;
     overflow: hidden;
+    cursor: default;
 }
 
 .stat-card::before {
@@ -223,6 +250,12 @@ body {
     font-weight: 700;
     line-height: 1;
     letter-spacing: -1px;
+    transition: all var(--transition-fast);
+}
+
+.stat-card:hover .value {
+    transform: scale(1.05);
+    color: var(--primary);
 }
 
 .stat-card small {
@@ -315,6 +348,11 @@ body {
 .tab:hover:not(.active) {
     background: var(--bg-tertiary);
     color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.tab:active {
+    transform: translateY(0);
 }
 
 /* Content */
@@ -528,7 +566,8 @@ table tbody tr {
 
 table tbody tr:hover {
     background: var(--bg-tertiary);
-    transform: scale(1.01);
+    transform: scale(1.002);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 table tbody tr:last-child td {
@@ -560,6 +599,11 @@ table tbody tr:last-child td {
     letter-spacing: 0.3px;
     gap: var(--spacing-xs);
     white-space: nowrap;
+    transition: all var(--transition-fast);
+}
+
+.badge:hover {
+    transform: scale(1.05);
 }
 
 .badge::before {
@@ -724,6 +768,13 @@ table tbody tr:last-child td {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+    border-color: var(--text-tertiary);
 }
 
 .form-group small {
@@ -888,11 +939,29 @@ table tbody tr:last-child td {
     background: var(--bg-secondary);
     border: 2px solid var(--primary);
     box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.dynamic-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -100%;
+    width: 100%;
+    height: calc(100% + 4px);
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.dynamic-card:hover::before {
+    left: 100%;
 }
 
 .dynamic-card:hover {
     border-color: var(--primary-dark);
     box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }
 
 .report-stats-grid {
@@ -910,13 +979,22 @@ table tbody tr:last-child td {
     display: flex;
     align-items: center;
     gap: var(--spacing-lg);
-    transition: all var(--transition-normal);
+    transition: all var(--transition-fast);
+    cursor: default;
 }
 
 .report-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-hover);
     border-color: transparent;
+}
+
+.report-card:hover .report-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.report-card:hover .report-value {
+    transform: scale(1.05);
 }
 
 .report-icon {
@@ -929,6 +1007,7 @@ table tbody tr:last-child td {
     font-size: 28px;
     flex-shrink: 0;
     box-shadow: var(--shadow-md);
+    transition: all var(--transition-fast);
 }
 
 .report-details {
@@ -951,6 +1030,7 @@ table tbody tr:last-child td {
     line-height: 1;
     letter-spacing: -1px;
     margin-bottom: var(--spacing-xs);
+    transition: all var(--transition-fast);
 }
 
 .report-details small {
@@ -1080,6 +1160,11 @@ table tbody tr:last-child td {
     box-shadow: var(--shadow-sm);
 }
 
+.pagination-buttons button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
 .pagination-buttons button:disabled {
     cursor: not-allowed;
     opacity: 0.3;
@@ -1129,6 +1214,11 @@ table tbody tr:last-child td {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.search-container input[type="text"]:hover {
+    border-color: var(--text-tertiary);
 }
 
 .search-container input[type="text"]::placeholder {
