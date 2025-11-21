@@ -300,6 +300,11 @@ body {
     display: none;
 }
 
+.stat-card.expiring-soon:hover .value,
+.stat-card.expired-last-month:hover .value {
+    color: white;
+}
+
 /* Tabs */
 .tabs {
     display: flex;
@@ -1058,6 +1063,31 @@ input[type="number"] {
     color: var(--text-tertiary);
     font-size: 12px;
     display: block;
+}
+
+/* Clickable report cards */
+.report-card.clickable-report {
+    cursor: pointer;
+    user-select: none;
+}
+
+.report-card.clickable-report:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+}
+
+.report-card.clickable-report:active {
+    transform: translateY(-4px) scale(1.01);
+}
+
+.report-card.clickable-report:hover .report-icon {
+    transform: scale(1.15) rotate(8deg);
+}
+
+.report-card.clickable-report:hover .report-value {
+    color: var(--primary);
+    transform: scale(1.08);
 }
 
 /* Sync Section */

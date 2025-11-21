@@ -167,6 +167,116 @@ function switchTab(tabName) {
     event.target.classList.add('active');
 }
 
+// Show accounts list from report cards
+function showReportAccountsList(reportType) {
+    // Switch to accounts tab
+    switchTab('accounts');
+
+    // Clear any existing search
+    document.getElementById('accounts-search').value = '';
+
+    const now = new Date();
+
+    if (reportType === 'expired-dynamic') {
+        // Get the current selected filter days
+        const filterSelect = document.getElementById('expired-filter');
+        let days = parseInt(filterSelect.value);
+
+        if (filterSelect.value === 'custom') {
+            days = parseInt(document.getElementById('expired-custom-days').value) || 30;
+        }
+
+        const startDate = new Date();
+        startDate.setDate(now.getDate() - days);
+
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= startDate && expirationDate < now;
+        });
+        accountsPagination.searchTerm = `expired-dynamic-${days}d`;
+
+    } else if (reportType === 'expiring-dynamic') {
+        // Get the current selected filter days
+        const filterSelect = document.getElementById('expiring-filter');
+        let days = parseInt(filterSelect.value);
+
+        if (filterSelect.value === 'custom') {
+            days = parseInt(document.getElementById('expiring-custom-days').value) || 14;
+        }
+
+        const endDate = new Date();
+        endDate.setDate(now.getDate() + days);
+
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= now && expirationDate <= endDate;
+        });
+        accountsPagination.searchTerm = `expiring-dynamic-${days}d`;
+
+    } else if (reportType === 'expired-all') {
+        // All expired accounts
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate < now;
+        });
+        accountsPagination.searchTerm = 'expired-all';
+
+    } else if (reportType === 'expiring-soon') {
+        // Expiring in next 2 weeks (14 days)
+        const twoWeeksFromNow = new Date();
+        twoWeeksFromNow.setDate(now.getDate() + 14);
+
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= now && expirationDate <= twoWeeksFromNow;
+        });
+        accountsPagination.searchTerm = 'expiring-soon-2weeks';
+
+    } else if (reportType === 'all-accounts') {
+        // Show all accounts (no filter)
+        accountsPagination.filteredAccounts = [];
+        accountsPagination.searchTerm = '';
+
+    } else if (reportType === 'active-accounts') {
+        // Show only active accounts (not expired)
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            if (!account.end_date) return true; // Unlimited plans are active
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= now;
+        });
+        accountsPagination.searchTerm = 'active-accounts';
+
+    } else if (reportType === 'unlimited-plans') {
+        // Show accounts with no expiration date
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            return !account.end_date || account.end_date === null || account.end_date === '';
+        });
+        accountsPagination.searchTerm = 'unlimited-plans';
+
+    } else if (reportType === 'expired-last-month-static') {
+        // Expired in last 30 days (static version)
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setDate(now.getDate() - 30);
+
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            if (!account.end_date) return false;
+            const expirationDate = new Date(account.end_date);
+            return expirationDate >= oneMonthAgo && expirationDate < now;
+        });
+        accountsPagination.searchTerm = 'expired-last-month-static';
+    }
+
+    // Reset to first page
+    accountsPagination.currentPage = 1;
+
+    // Render filtered results
+    renderAccountsPage();
+}
+
 // Format currency symbol
 function getCurrencySymbol(currencyName) {
     // Handle null or undefined currency
