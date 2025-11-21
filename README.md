@@ -513,6 +513,7 @@ Unauthorized copying, modification, or distribution is prohibited.
 - IPTV Billing Management System
 - Integrated with Stalker Portal
 - Version 1.6.6 - November 2025
+- **Developer:** Kambiz Koosheshi
 
 ---
 
