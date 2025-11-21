@@ -1,57 +1,88 @@
-# ShowBox Billing System
+# ShowBox Billing Panel
 
-## System Status: ✅ FULLY OPERATIONAL
+A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-Your IPTV/STB billing management system is now running with a complete UI integrated with your backend APIs!
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
+![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
+![Status](https://img.shields.io/badge/status-production-green.svg)
 
-## Quick Start
+## Table of Contents
 
-### Access the System
-1. **Open your browser** and go to: `http://localhost:8000/index.html`
-2. **Login credentials:**
-   - Username: `admin`
-   - Password: `admin`
+- [Features](#features)
+- [System Status](#system-status)
+- [Quick Start](#quick-start)
+- [Technology Stack](#technology-stack)
+- [Documentation](#documentation)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
 
-### What's Running
+## System Status
+
+✅ **FULLY OPERATIONAL**
+
+Your IPTV/STB billing management system is running with complete UI integrated with backend APIs.
+
+**Current Setup:**
 - ✅ PHP Server: `http://localhost:8000`
 - ✅ MySQL Database: `showboxt_panel`
 - ✅ Frontend UI: Full dashboard with all features
 - ✅ Backend APIs: All integrated and working
 
+## Quick Start
+
+### Access the System
+1. Open your browser: `http://localhost:8000/index.html`
+2. Login credentials:
+   - Username: `admin`
+   - Password: `admin` (⚠️ Change immediately!)
+
+### Technology Stack
+- **Backend**: PHP 7.4+, MySQL 5.7+
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **APIs**: Stalker Portal REST API Integration
+- **Security**: Session-based authentication, PDO prepared statements
+
 ## Features
 
-### 1. Account Management
-- **Add new customer accounts** with MAC addresses
-- **Update accounts** (plans, status, details)
-- **Delete accounts**
-- **View all accounts** in a table
-- Automatic account number generation
-- Email notifications (when configured)
+### Core Functionality
+- **Account Management**: Create, edit, delete, and manage IPTV accounts
+- **Stalker Portal Sync**: Real-time one-click synchronization with Stalker Portal API
+- **Multi-Server Support**: Manage accounts across two separate servers
+- **Reseller System**: Multi-tier reseller management with balance tracking
+- **Tariff Plans**: Flexible subscription plans with automated expiration tracking
+- **Transaction History**: Complete financial transaction logging
+- **Advanced Analytics**: Comprehensive reports and business intelligence
 
-### 2. Reseller Management
-- **Create resellers** with credit balances
-- **Manage permissions** and limits
-- **Track reseller balances**
-- **Set max users** per reseller
-- Multi-currency support (GBP, USD, EUR)
+### Dashboard Features
+- Real-time account statistics with visual cards
+- Expiring accounts alerts (next 2 weeks)
+- Expired & not renewed tracking with custom date ranges
+- Active/Inactive account monitoring
+- Dynamic date range reports (7, 14, 30, 60, 90, 180, 365 days + custom)
+- Search and pagination (25 accounts per page)
+- Dark/Light theme toggle for comfortable viewing
 
-### 3. Subscription Plans
-- **Create plans** with pricing and duration
-- **Multi-currency pricing**
-- **Set expiry days**
-- **Delete plans**
-- Plans automatically populate in account creation
+### Reports & Analytics
+- Total accounts overview
+- Active vs expired accounts breakdown
+- Expiring soon warnings (configurable periods)
+- Custom date range filtering
+- **Expired & Not Renewed** tracking with sophisticated logic:
+  - Date-based expiration (ignores status field)
+  - Status field is for admin control only
+  - Accounts are "not renewed" if `end_date` remains in the past
+  - Renewal detected when `end_date` is updated to a future date
+- Unlimited plans monitoring
+- Expired last month statistics
 
-### 4. Transaction History
-- **View all transactions**
-- **Track credits/debits**
-- **Filter by user** (reseller-specific view)
-- Automatic transaction logging
-
-### 5. Settings
-- **Change password**
-- **View balance**
-- **View account statistics**
+### User Management
+- Admin and reseller roles
+- Balance management system
+- Secure session-based authentication
+- Password change functionality
+- User-specific permissions (admin can delete, resellers cannot)
 
 ## Database Schema
 
@@ -260,19 +291,76 @@ mysql -u root showboxt_panel
 # Run your SQL commands
 ```
 
+## Documentation
+
+Comprehensive documentation available:
+- [MVP.md](MVP.md) - Product roadmap and feature priorities
+- [INSTALLATION.md](INSTALLATION.md) - Detailed setup instructions
+- [API_DOCUMENTATION.md](API_DOCUMENTATION.md) - API endpoints reference
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and data flow
+- [CHANGELOG.md](CHANGELOG.md) - Version history and updates
+
 ## Support
 
-For issues or questions:
-- Check error_log file for PHP errors
+### Contact Information
+- **24/7 Support**: WhatsApp +447736932888
+- **Instagram**: @ShowBoxAdmin
+- **Panel Name**: ShowBox
+
+### Troubleshooting
+- Check `server.log` for PHP errors
 - Check browser console for JavaScript errors
 - Review server terminal for request logs
+- Verify MySQL is running: `brew services list`
+- Check database connection in `config.php`
+
+## Security Considerations
+
+⚠️ **IMPORTANT SECURITY TASKS:**
+1. Change default admin password immediately
+2. Set strong database password
+3. Enable SSL/HTTPS in production
+4. Update password hashing from MD5 to bcrypt
+5. Protect `config.php` from web access
+6. Enable SSL verification in cURL requests
+7. Add rate limiting to prevent abuse
+8. Implement CSRF protection
+9. Add input validation and sanitization
+10. Regular backups of database
+
+## Performance Optimization
+
+- Client-side filtering reduces server load
+- Pagination for large datasets (25 accounts per page)
+- Efficient database indexing
+- Minimal API calls with caching
+- Optimized CSS and JavaScript
+
+## Browser Compatibility
+
+| Browser | Version | Status |
+|---------|---------|--------|
+| Chrome  | 90+     | ✅ Full Support |
+| Firefox | 88+     | ✅ Full Support |
+| Safari  | 14+     | ✅ Full Support |
+| Edge    | 90+     | ✅ Full Support |
+| Opera   | 76+     | ✅ Full Support |
 
 ## License
 
-Proprietary - ShowBox IPTV Billing System
+Proprietary - ShowBox IPTV Billing System. All rights reserved.
+Unauthorized copying, modification, or distribution is prohibited.
+
+## Credits
+
+**Developed for ShowBox**
+- IPTV Billing Management System
+- Integrated with Stalker Portal
+- Version 1.0.0 - January 2025
 
 ---
 
-**Version:** 1.0
-**Last Updated:** November 20, 2025
+**Version:** 1.0.0
+**Last Updated:** January 2025
 **Status:** Production Ready ✅
+**Maintained by:** ShowBox Development Team
