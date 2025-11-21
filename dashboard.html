@@ -462,25 +462,35 @@
             </div>
             <form onsubmit="addPlan(event)">
                 <div class="form-group">
+                    <label>Select Tariff Plan *</label>
+                    <select name="tariff_id" id="tariff-select" required onchange="updatePlanDetails(this)">
+                        <option value="">-- Select a tariff --</option>
+                    </select>
+                    <small>Choose a tariff plan from your Stalker Portal server</small>
+                </div>
+                <div class="form-group">
                     <label>Plan Name *</label>
-                    <input type="text" name="name" required>
+                    <input type="text" name="name" id="plan-name-input" required>
+                    <small>Auto-filled from tariff, but you can edit it</small>
                 </div>
                 <div class="form-group">
                     <label>Currency *</label>
-                    <select name="currency">
-                        <option value="GBP">GBP</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
+                    <select name="currency" required>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
                         <option value="IRR">IRR</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Price *</label>
                     <input type="number" step="0.01" name="price" required>
+                    <small>Set the price for this plan in selected currency</small>
                 </div>
                 <div class="form-group">
-                    <label>Days *</label>
-                    <input type="number" name="days" required>
+                    <label>Duration (Days) *</label>
+                    <input type="number" name="days" id="plan-days-input" required readonly>
+                    <small>Automatically filled from selected tariff</small>
                 </div>
                 <button type="submit" class="btn-primary">Create Plan</button>
             </form>
@@ -535,11 +545,11 @@
                     <input type="text" id="assign-reseller-name" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Assigned Plans</label>
-                    <select name="plans" id="assign-plans-select" multiple size="10" style="width:100%">
-                        <!-- Plans will be loaded dynamically -->
-                    </select>
-                    <small>Hold Ctrl/Cmd to select multiple plans. Leave empty to allow all plans.</small>
+                    <label>Available Plans</label>
+                    <div id="assign-plans-checkboxes" class="plans-checkbox-container">
+                        <!-- Checkboxes will be loaded dynamically -->
+                    </div>
+                    <small>Check the plans you want to assign to this reseller. Uncheck to remove access.</small>
                 </div>
                 <button type="submit" class="btn-primary">Update Plans</button>
             </form>

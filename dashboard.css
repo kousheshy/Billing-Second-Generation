@@ -780,6 +780,17 @@ table tbody tr:last-child td {
     border-color: var(--text-tertiary);
 }
 
+/* Remove spinner arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
 .form-group small {
     color: var(--text-tertiary) !important;
     font-size: 12px;
@@ -1382,4 +1393,70 @@ table tbody tr:last-child td {
     color: var(--text-secondary);
     font-size: 16px;
     font-weight: 500;
+}
+
+/* Plan Assignment Checkboxes */
+.plans-checkbox-container {
+    max-height: 450px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    background: var(--bg-primary);
+}
+
+.plan-checkbox-item {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+}
+
+.plan-checkbox-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary);
+}
+
+.plan-checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    gap: 10px;
+}
+
+.plan-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.plan-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+    gap: 12px;
+    min-width: 0;
+}
+
+.plan-name {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.plan-details {
+    color: var(--text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }

@@ -110,6 +110,8 @@ async function checkAuth() {
 
         if(result.user.super_user == 1) {
             loadResellers();
+            // Auto-fetch tariffs from server for admin
+            loadTariffs();
         }
 
         // Hide loading overlay after everything is loaded
@@ -754,8 +756,10 @@ async function loadPlans() {
             tbody.innerHTML = '';
             planSelect.innerHTML = '<option value="0">No Plan</option>';
             if(resellerPlansSelect) resellerPlansSelect.innerHTML = '';
-            if(assignPlansSelect) assignPlansSelect.innerHTML = '';
             document.getElementById('total-plans').textContent = result.plans.length;
+
+            // Store plans globally for use in assign modal
+            availablePlans = result.plans;
 
             result.plans.forEach(plan => {
                 const tr = document.createElement('tr');
@@ -783,18 +787,12 @@ async function loadPlans() {
                 option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
                 planSelect.appendChild(option);
 
-                // Add to reseller plan assignment dropdowns with planID-currency format
+                // Add to reseller plan assignment dropdown with planID-currency format
                 if(resellerPlansSelect) {
                     const resellerOption = document.createElement('option');
                     resellerOption.value = `${plan.external_id}-${plan.currency_id}`;
                     resellerOption.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
                     resellerPlansSelect.appendChild(resellerOption);
-                }
-                if(assignPlansSelect) {
-                    const assignOption = document.createElement('option');
-                    assignOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    assignOption.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
-                    assignPlansSelect.appendChild(assignOption);
                 }
             });
         } else {
@@ -803,6 +801,63 @@ async function loadPlans() {
     } catch(error) {
         console.error('Error loading plans:', error);
         showAlert('Error loading plans', 'error');
+    }
+}
+
+// Global variables to store tariffs and plans
+let availableTariffs = [];
+let availablePlans = [];
+
+// Load Tariffs from Stalker Portal Server (auto-fetch on login)
+async function loadTariffs() {
+    try {
+        const response = await fetch('get_tariffs.php');
+        const result = await response.json();
+
+        if (result.error === 0 && result.tariffs) {
+            availableTariffs = result.tariffs;
+            console.log(`Loaded ${result.count} tariffs from server`);
+
+            // Populate tariff dropdown in Add Plan modal
+            populateTariffDropdown();
+        } else {
+            console.error('Failed to load tariffs:', result.message);
+        }
+    } catch (error) {
+        console.error('Error loading tariffs:', error);
+    }
+}
+
+// Populate tariff dropdown in Add Plan modal
+function populateTariffDropdown() {
+    const tariffSelect = document.getElementById('tariff-select');
+    if (!tariffSelect) return;
+
+    // Clear existing options except the first one
+    tariffSelect.innerHTML = '<option value="">-- Select a tariff --</option>';
+
+    availableTariffs.forEach(tariff => {
+        const option = document.createElement('option');
+        option.value = tariff.id;
+        option.textContent = `${tariff.name} (${tariff.days} days)`;
+        option.dataset.name = tariff.name;
+        option.dataset.days = tariff.days;
+        tariffSelect.appendChild(option);
+    });
+}
+
+// Update plan details when tariff is selected
+function updatePlanDetails(selectElement) {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+
+    if (selectedOption.value) {
+        // Auto-fill name and days from selected tariff
+        document.getElementById('plan-name-input').value = selectedOption.dataset.name;
+        document.getElementById('plan-days-input').value = selectedOption.dataset.days;
+    } else {
+        // Clear fields if no tariff selected
+        document.getElementById('plan-name-input').value = '';
+        document.getElementById('plan-days-input').value = '';
     }
 }
 
@@ -1173,13 +1228,37 @@ function assignPlans(resellerId, resellerName, currentPlans) {
     document.getElementById('assign-reseller-id').value = resellerId;
     document.getElementById('assign-reseller-name').value = resellerName;
 
-    // Pre-select current plans
-    const assignPlansSelect = document.getElementById('assign-plans-select');
+    // Get currently assigned plans
     const plansArray = currentPlans ? currentPlans.split(',') : [];
 
-    Array.from(assignPlansSelect.options).forEach(option => {
-        option.selected = plansArray.includes(option.value);
-    });
+    // Populate checkboxes
+    const checkboxContainer = document.getElementById('assign-plans-checkboxes');
+    checkboxContainer.innerHTML = '';
+
+    if (availablePlans.length === 0) {
+        checkboxContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 20px;">No plans available. Please create plans first.</p>';
+    } else {
+        availablePlans.forEach(plan => {
+            const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
+            const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+            const planValue = `${plan.external_id}-${plan.currency_id}`;
+            const isChecked = plansArray.includes(planValue);
+
+            const checkboxDiv = document.createElement('div');
+            checkboxDiv.className = 'plan-checkbox-item';
+            checkboxDiv.innerHTML = `
+                <label class="plan-checkbox-label">
+                    <input type="checkbox" name="plan_checkbox" value="${planValue}" ${isChecked ? 'checked' : ''}>
+                    <div class="plan-info">
+                        <span class="plan-name">${plan.name || plan.external_id}</span>
+                        <span class="plan-details">${formattedPrice} • ${plan.days}d</span>
+                    </div>
+                </label>
+            `;
+
+            checkboxContainer.appendChild(checkboxDiv);
+        });
+    }
 
     openModal('assignPlansModal');
 }
@@ -1188,8 +1267,8 @@ async function submitPlanAssignment(e) {
     e.preventDefault();
 
     const resellerId = document.getElementById('assign-reseller-id').value;
-    const plansSelect = document.getElementById('assign-plans-select');
-    const selectedPlans = Array.from(plansSelect.selectedOptions).map(opt => opt.value);
+    const checkboxes = document.querySelectorAll('#assign-plans-checkboxes input[type="checkbox"]:checked');
+    const selectedPlans = Array.from(checkboxes).map(cb => cb.value);
     const plansString = selectedPlans.join(',');
 
     const formData = new FormData();

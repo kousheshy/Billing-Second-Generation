@@ -1,95 +1,129 @@
 <?php
-
 session_start();
 
-include('config.php');
+// Set JSON header first
+header('Content-Type: application/json');
 
-if(isset($_SESSION['login']))
-{
+// Disable error display, log errors instead
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 
-    $session = $_SESSION['login'];
+try {
+    include('config.php');
 
-    if($session!=1)
-    {
-        exit();
+    // Check if user is logged in
+    if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Not logged in']);
+        exit;
     }
 
-}else{
-    exit();
+    $username = $_SESSION['username'];
+
+    $host = $ub_db_host;
+    $db   = $ub_main_db;
+    $user = $ub_db_username;
+    $pass = $ub_db_password;
+    $charset = 'utf8';
+
+    $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+    $opt = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    $pdo = new PDO($dsn, $user, $pass, $opt);
+
+    // Check if user is admin
+    $stmt = $pdo->prepare('SELECT * FROM _users WHERE username = ?');
+    $stmt->execute([$username]);
+    $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if(!$user_info || $user_info['super_user'] != 1) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Unauthorized. Admin only.']);
+        exit;
+    }
+
+    // Get and validate input parameters
+    if(!isset($_GET['tariff_id']) || !isset($_GET['name']) || !isset($_GET['currency']) || !isset($_GET['price']) || !isset($_GET['days'])) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Missing required parameters']);
+        exit;
+    }
+
+    $tariff_id = trim($_GET['tariff_id']); // Tariff ID from Stalker Portal
+    $name = trim($_GET['name']);
+    $currency = strtoupper(trim($_GET['currency']));
+    $price = trim($_GET['price']);
+    $days = trim($_GET['days']);
+
+    // Validate inputs
+    if(empty($tariff_id)) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Tariff ID is required']);
+        exit;
+    }
+
+    if(empty($name)) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Plan name is required']);
+        exit;
+    }
+
+    if(!in_array($currency, ['GBP', 'USD', 'EUR', 'IRR'])) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Invalid currency']);
+        exit;
+    }
+
+    if(!is_numeric($price) || $price < 0) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Invalid price']);
+        exit;
+    }
+
+    if(!is_numeric($days) || $days < 1) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Invalid days']);
+        exit;
+    }
+
+    // Use tariff_id as external_id (the Stalker Portal tariff plan ID)
+    $plan = $tariff_id;
+
+    // Check if this tariff ID + currency combination already exists
+    $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id = ? AND currency_id = ?');
+    $stmt->execute([$plan, $currency]);
+
+    if($stmt->rowCount() > 0) {
+        // This combination already exists, update it
+        $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=? WHERE id=?');
+        $stmt->execute([$name, $price, $days, $plan_info['id']]);
+
+        echo json_encode([
+            'error' => 0,
+            'err_msg' => '',
+            'message' => 'Plan updated successfully'
+        ]);
+
+    } else {
+        // Insert new plan
+        $stmt = $pdo->prepare('INSERT INTO _plans (external_id, name, currency_id, price, days) VALUES (?,?,?,?,?)');
+        $stmt->execute([$plan, $name, $currency, $price, $days]);
+
+        echo json_encode([
+            'error' => 0,
+            'err_msg' => '',
+            'message' => 'Plan created successfully'
+        ]);
+    }
+
+} catch(PDOException $e) {
+    echo json_encode([
+        'error' => 1,
+        'err_msg' => 'Database error: ' . $e->getMessage()
+    ]);
+} catch(Exception $e) {
+    echo json_encode([
+        'error' => 1,
+        'err_msg' => 'Error: ' . $e->getMessage()
+    ]);
 }
-
-
-$username = $_SESSION['username'];
-
-
-$host = $ub_db_host;
-$db   = $ub_main_db;
-$user = $ub_db_username;
-$pass = $ub_db_password;
-$charset = 'utf8';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$opt = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-$pdo = new PDO($dsn, $user, $pass, $opt);
-
-$stmt = $pdo->prepare('SELECT * FROM _users WHERE username = ?');
-$stmt->execute([$username]);
-
-$user_info = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-if($user_info['super_user']!=1)
-{
-    exit();
-}
-
-
-
-$name = trim($_GET['name']);
-$currency = strtoupper($_GET['currency']);
-$price = trim($_GET['price']);
-$days = trim($_GET['days']);
-
-// Auto-generate plan ID by finding the next available number
-$stmt = $pdo->prepare('SELECT MAX(CAST(external_id AS UNSIGNED)) as max_id FROM _plans');
-$stmt->execute();
-$result = $stmt->fetch(PDO::FETCH_ASSOC);
-$next_id = ($result['max_id'] !== null) ? intval($result['max_id']) + 1 : 1;
-$plan = strval($next_id);
-
-// Check if this plan ID + currency combination already exists
-$stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id = ? AND currency_id = ?');
-$stmt->execute([$plan, $currency]);
-
-$count = $stmt->rowCount();
-
-if($count > 0)
-{
-    // This combination already exists, update it
-    $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=? WHERE id=?');
-    $stmt->execute([$name, $price, $days, $plan_info['id']]);
-
-}else
-{
-    // Insert new plan with auto-generated ID
-    $stmt = $pdo->prepare('INSERT INTO _plans (external_id, name, currency_id, price, days) VALUES (?,?,?,?,?)');
-    $stmt->execute([$plan, $name, $currency, $price, $days]);
-
-}
-
-
-
-$response['error']=0;
-$response['err_msg']='';
-
-echo json_encode($response);
-
-
 ?>
