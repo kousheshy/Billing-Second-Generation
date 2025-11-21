@@ -9,26 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2025-11-21
 
+### Added - Auto-Sync on Login
+
+**Automatic Synchronization**
+- Implemented automatic account sync on login for both admin and resellers
+- Admin: Syncs all accounts from Stalker Portal
+- Reseller: Syncs only their assigned accounts
+- Added full-screen loading overlay during sync process
+- Users experience seamless loading without knowing sync is happening
+- No timeout limit - sync completes regardless of internet speed or account volume
+- Preserves existing reseller-to-account ownership mappings across syncs
+
+**Loading UX**
+- Added loading spinner overlay with animated graphics in [dashboard.html](dashboard.html:10-14)
+- Overlay blocks interaction until sync completes
+- Professional "Loading dashboard..." message
+- CSS animations for smooth transitions in [dashboard.css](dashboard.css:1339-1375)
+- Automatic overlay removal when all data is loaded
+
 ### Changed - Currency Standardization
 
 **Currency Code Updates**
 - Standardized Iranian currency code from `IRT` to `IRR` (ISO 4217 standard)
-- Updated all frontend files (dashboard.html, dashboard.js)
-- Updated backend sync script (sync_plans.php)
+- Updated all frontend files (dashboard.html, dashboard.js, dashboard.css)
+- Updated backend sync script ([sync_plans.php](sync_plans.php))
+- Removed all Persian text (ریال) from currency displays
 - Improved currency symbol display logic with fallback handling
 - Enhanced balance formatting for all currencies
+- Iranian Rial formatting with thousand separators (6,500,000)
+
+**Currency Display Logic**
+- IRR displays as "IRR " prefix with comma separators
+- Other currencies (USD, EUR, GBP) show symbols with 2 decimal places
+- Null/undefined currency defaults to IRR
+- Consistent formatting across all pages (accounts, resellers, plans, transactions)
 
 **UI/UX Improvements**
-- Improved stat card value typography for better readability
+- Improved stat card value typography for better readability in [dashboard.css](dashboard.css:247-257)
+- Reduced font size from 36px to 28px for balance displays
+- Changed font weight from 700 to 600 for cleaner appearance
 - Added proper word wrapping for long values
-- Enhanced font styling with system font stack
-- Adjusted font sizes and spacing for better visual hierarchy
+- Enhanced font styling with system font stack (-apple-system, BlinkMacSystemFont, Segoe UI)
+- Adjusted font sizes, letter spacing, and line height for better visual hierarchy
 
-**Bug Fixes**
-- Fixed null/undefined currency handling in JavaScript
+### Fixed
+
+**Auto-Sync Implementation**
+- Fixed reseller-specific sync logic in [sync_accounts.php](sync_accounts.php:42-54)
+- Resellers now only delete and sync their own accounts
+- Admin deletes all accounts and syncs everything
+- Preserved account-to-reseller mappings across syncs in [sync_accounts.php](sync_accounts.php:87-93)
+- Fixed permission checks to prevent resellers from seeing other accounts
+
+**Currency Display Bugs**
+- Fixed null/undefined currency handling in [dashboard.js](dashboard.js:167-192)
+- Fixed "£10000000.00" showing instead of "IRR 10,000,000"
+- Fixed "null 10000000.00" display in adjust credit modal
 - Added defensive programming for missing balance values
+- Fixed plan price display in dropdowns showing raw decimals (6500000.00)
+- Fixed plan table prices not formatted correctly in [dashboard.js](dashboard.js:761-783)
 - Improved number formatting consistency across all currency displays
-- Fixed plan price display in dropdowns and tables
+
+**JavaScript Errors**
+- Fixed duplicate `formattedPrice` variable declaration that was preventing page load
+- Fixed onclick attribute generation with null values in [dashboard.js](dashboard.js:702-722)
+- Pre-process null balance/currency values before HTML generation
+
+**Performance Issues**
+- Removed 30-second timeout from auto-sync function in [dashboard.js](dashboard.js:124-141)
+- Sync now waits indefinitely for completion (handles slow internet)
+- Improved loading state management for large account databases
 
 ---
 

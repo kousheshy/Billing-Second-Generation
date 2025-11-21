@@ -2,8 +2,8 @@
 
 Technical architecture documentation for the ShowBox Billing Panel.
 
-**Version:** 1.0.0
-**Last Updated:** January 2025
+**Version:** 1.1.0
+**Last Updated:** November 21, 2025
 
 ---
 
@@ -151,7 +151,8 @@ The ShowBox Billing Panel is a three-tier web application:
 **Key Functions:**
 
 **Authentication:**
-- `checkAuth()` - Validate session
+- `checkAuth()` - Validate session and trigger auto-sync
+- `autoSyncAccounts()` - Automatic account synchronization on login
 - `logout()` - Destroy session
 
 **Data Management:**
@@ -180,6 +181,16 @@ if (expirationDate >= expiredStartDate && expirationDate < now) {
     expiredNotRenewedCount++;
 }
 ```
+
+**Currency Formatting:**
+- `getCurrencySymbol(currencyName)` - Returns currency symbol or code
+  - IRR returns "IRR " (with space)
+  - USD returns "$", EUR returns "€", GBP returns "£"
+  - Null/undefined defaults to "IRR "
+- `formatBalance(amount, currencyName)` - Formats numbers with proper separators
+  - IRR: Comma thousand separator (6,500,000)
+  - Other currencies: Two decimal places (10000.00)
+  - Handles null/undefined amounts (defaults to 0)
 
 **Theme Management:**
 - `toggleTheme()` - Switch between light/dark
@@ -260,11 +271,20 @@ function api_send_request($url, $username, $password, $case, $op, $mac, $data) {
 
 **sync_accounts.php**
 ```php
-// DELETE all accounts (fresh sync)
-// Fetch from Stalker Portal
-// Map and normalize data
+// Get current user info (admin or reseller)
+// For admin: DELETE all accounts
+// For reseller: DELETE only their accounts WHERE reseller = user_id
+// Get existing reseller mappings to preserve ownership
+// Fetch from Stalker Portal API /accounts/
+// Map and normalize data:
+//   - login → username
+//   - stb_mac → mac
+//   - full_name, email, tariff_plan, end_date, status
+//   - Handle invalid dates (0000-00-00 → NULL)
+// Determine reseller assignment (preserve existing or assign to current user)
+// For resellers: Skip accounts not assigned to them
 // Insert into local database
-// Return sync statistics
+// Return sync statistics (synced count, skipped count, total)
 ```
 
 #### Configuration Layer
@@ -336,7 +356,7 @@ $stmt->execute([$username]);
 
 ## Data Flow
 
-### Flow 1: User Login
+### Flow 1: User Login with Auto-Sync
 
 ```
 1. User enters credentials in index.html
@@ -352,8 +372,26 @@ $stmt->execute([$username]);
    ↓
 6. dashboard.js calls checkAuth()
    ↓
-7. Session validated, load dashboard data
+7. Session validated, show loading overlay
+   ↓
+8. Call autoSyncAccounts() automatically:
+   a. POST to sync_accounts.php
+   b. For Admin: DELETE all accounts, sync all from Stalker
+   c. For Reseller: DELETE only their accounts, sync only theirs
+   d. Preserve existing reseller-to-account mappings
+   e. No timeout - wait for completion
+   ↓
+9. After sync completes:
+   a. Load accounts from local database
+   b. Load transactions
+   c. Load plans
+   d. For admin: Load resellers
+   e. Hide loading overlay
+   ↓
+10. Dashboard ready for user interaction
 ```
+
+**Key Innovation:** Users see only "Loading dashboard..." and never know accounts are syncing from Stalker Portal. The experience feels like a normal page load.
 
 ### Flow 2: Account Creation
 
@@ -380,22 +418,43 @@ $stmt->execute([$username]);
 
 ### Flow 3: Account Synchronization
 
+**Auto-Sync (on login):**
 ```
-1. User clicks "Sync Accounts" button
+1. User logs in successfully
+   ↓
+2. dashboard.js checkAuth() calls autoSyncAccounts()
+   ↓
+3. sync_accounts.php:
+   a. Get current user info (admin or reseller)
+   b. If admin: DELETE FROM _accounts
+      If reseller: DELETE FROM _accounts WHERE reseller = user_id
+   c. Get existing reseller mappings to preserve ownership
+   d. Call Stalker Portal API /accounts/
+   e. Parse JSON response
+   f. Loop through accounts:
+      - Map fields (login→username, etc.)
+      - Handle invalid dates (0000-00-00 → NULL)
+      - Preserve existing reseller assignment
+      - For resellers: Skip accounts not assigned to them
+      - INSERT INTO _accounts
+   g. Return sync statistics
+   ↓
+4. Continue loading dashboard without showing sync result
+   ↓
+5. Reload accounts table automatically
+   ↓
+6. Hide loading overlay
+```
+
+**Manual Sync (optional):**
+```
+1. User clicks "Sync Accounts" button in Accounts tab
    ↓
 2. JavaScript sends POST to sync_accounts.php
    ↓
-3. sync_accounts.php:
-   a. DELETE FROM _accounts (clear all)
-   b. Call Stalker Portal API /accounts/
-   c. Parse JSON response
-   d. Loop through accounts:
-      - Map fields (login→username, etc.)
-      - Handle invalid dates
-      - INSERT INTO _accounts
-   e. Return sync statistics
+3. Same process as auto-sync
    ↓
-4. JavaScript displays sync result
+4. JavaScript displays sync result message
    ↓
 5. Reload accounts table
    ↓
@@ -777,6 +836,6 @@ For architecture questions:
 
 ---
 
-**Document Version:** 1.0.0
-**Last Updated:** January 2025
+**Document Version:** 1.1.0
+**Last Updated:** November 21, 2025
 **Maintained by:** ShowBox Development Team

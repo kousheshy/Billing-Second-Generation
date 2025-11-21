@@ -37,6 +37,9 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 2. Login credentials:
    - Username: `admin`
    - Password: `admin` (⚠️ Change immediately!)
+3. On first login, accounts will automatically sync from Stalker Portal
+   - Wait for "Loading dashboard..." overlay to complete
+   - No user action required - sync happens automatically
 
 ### Technology Stack
 - **Backend**: PHP 7.4+, MySQL 5.7+
@@ -48,7 +51,12 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 
 ### Core Functionality
 - **Account Management**: Create, edit, delete, and manage IPTV accounts
-- **Stalker Portal Sync**: Real-time one-click synchronization with Stalker Portal API
+- **Auto-Sync on Login**: Automatic account synchronization from Stalker Portal when logging in
+  - Admin: Syncs all accounts from server
+  - Reseller: Syncs only their assigned accounts
+  - Seamless loading experience with no timeout limits
+  - Preserves reseller-to-account ownership mappings
+- **Stalker Portal Sync**: Manual one-click synchronization available from Accounts tab
 - **Multi-Server Support**: Manage accounts across two separate servers
 - **Reseller System**: Multi-tier reseller management with balance tracking
 - **Tariff Plans**: Flexible subscription plans with automated expiration tracking
@@ -57,12 +65,14 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 
 ### Dashboard Features
 - Real-time account statistics with visual cards
+- Automatic data synchronization on login with loading overlay
 - Expiring accounts alerts (next 2 weeks)
 - Expired & not renewed tracking with custom date ranges
 - Active/Inactive account monitoring
 - Dynamic date range reports (7, 14, 30, 60, 90, 180, 365 days + custom)
 - Search and pagination (25 accounts per page)
 - Dark/Light theme toggle for comfortable viewing
+- Multi-currency support (GBP, USD, EUR, IRR) with proper formatting
 
 ### Reports & Analytics
 - Total accounts overview
