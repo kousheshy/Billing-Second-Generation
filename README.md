@@ -520,6 +520,7 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
+**Developer:** Kambiz Koosheshi
 
 ## Version History
 
