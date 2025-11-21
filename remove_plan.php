@@ -45,8 +45,11 @@ $stmt->execute([$username]);
 
 $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+$permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
 
-if($user_info['super_user']!=1)
+if($user_info['super_user']!=1 && !$is_reseller_admin)
 {
     $response['error']=1;
     $response['err_msg']='Permission denied';

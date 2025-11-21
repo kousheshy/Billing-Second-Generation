@@ -51,9 +51,14 @@ $permissions = explode('|', $user_info['permissions']);
 $id = $_POST['id'];
 
 
-if($user_info['super_user']==0)
+// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+$permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+// Only super admins and reseller admins can delete accounts
+if($user_info['super_user']==0 && !$is_reseller_admin)
 {
-    // Resellers are not allowed to delete accounts
+    // Regular resellers are not allowed to delete accounts
     $response['error']=1;
     $response['err_msg']="Resellers cannot delete accounts. Please contact admin.";
     header('Content-Type: application/json');

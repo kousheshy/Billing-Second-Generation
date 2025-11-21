@@ -107,18 +107,21 @@ if($user_info['super_user']==1)
 
 
 
-$permissions = explode('|', $user_info['permissions']);
+// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+$permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
 
 $price = 0;
 $discount = 0;
 
-if($user_info['super_user']==0)
+// Super admins and reseller admins have full access
+if($user_info['super_user']==0 && !$is_reseller_admin)
 {
-
-    if($permissions[0]==0)
+    // Check "can add accounts" permission (index 1)
+    if($permissions[1]==0)
     {
         $response['error']=1;
-        $response['err_msg']="Permission denied.";
+        $response['err_msg']="Permission denied. You do not have permission to add accounts.";
 
         echo json_encode($response);
         exit();
@@ -146,8 +149,19 @@ if($user_info['super_user']==0)
 
 
 
+    // Parse plan value (format: "planID-currency")
+    $plan_parts = explode('-', $_POST['plan']);
+    if(count($plan_parts) == 2) {
+        $plan_id = $plan_parts[0];
+        $plan_currency = $plan_parts[1];
+    } else {
+        // Fallback to old format (just planID, use user's currency)
+        $plan_id = $_POST['plan'];
+        $plan_currency = $user_info['currency_id'];
+    }
+
     $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id=? AND currency_id=?');
-    $stmt->execute([$_POST['plan'], $user_info['currency_id']]);
+    $stmt->execute([$plan_id, $plan_currency]);
 
 
     $count = $stmt->rowCount();
@@ -155,7 +169,7 @@ if($user_info['super_user']==0)
     if($count == 0)
     {
         $response['error']=1;
-        $response['err_msg']="Error.";
+        $response['err_msg']="Error. Plan not found.";
 
         echo json_encode($response);
         exit();
@@ -184,8 +198,19 @@ if($user_info['super_user']==0)
 
     if($_POST['plan']!=0)
     {
+        // Parse plan value (format: "planID-currency")
+        $plan_parts = explode('-', $_POST['plan']);
+        if(count($plan_parts) == 2) {
+            $plan_id = $plan_parts[0];
+            $plan_currency = $plan_parts[1];
+        } else {
+            // Fallback to old format (just planID, use reseller's currency)
+            $plan_id = $_POST['plan'];
+            $plan_currency = $reseller_info['currency_id'];
+        }
+
         $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id=? AND currency_id=?');
-        $stmt->execute([$_POST['plan'], $reseller_info['currency_id']]);
+        $stmt->execute([$plan_id, $plan_currency]);
 
         $count = $stmt->rowCount();
 

@@ -36,14 +36,33 @@ try {
 
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Get counts
+    // Parse permissions to check if reseller has admin-level permissions
+    // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    $user_info['is_reseller_admin'] = $is_reseller_admin;
+
+    // Get view mode preference from request (only for reseller admins)
+    // Default to false (My Accounts) for reseller admins
+    $viewAllAccounts = isset($_GET['viewAllAccounts']) ? $_GET['viewAllAccounts'] === 'true' : false;
+
+    // Get counts based on user type and view mode
     if($user_info['super_user'] == 1)
     {
+        // Super admin always sees all accounts
+        $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM _accounts');
+        $stmt->execute([]);
+    }
+    else if($is_reseller_admin && $viewAllAccounts)
+    {
+        // Reseller admin viewing all accounts
         $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM _accounts');
         $stmt->execute([]);
     }
     else
     {
+        // Regular reseller or reseller admin viewing only their own
         $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM _accounts WHERE reseller = ?');
         $stmt->execute([$user_info['id']]);
     }

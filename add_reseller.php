@@ -1,83 +1,88 @@
 <?php
 
-
 session_start();
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+
+// Disable error display to prevent HTML in JSON response
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
-include('config.php');
 
-if(isset($_SESSION['login']))
-{
+// Set JSON header first
+header('Content-Type: application/json');
 
-    $session = $_SESSION['login'];
+try {
+    include('config.php');
 
-    if($session!=1)
-    {
+    if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Not logged in']);
         exit();
     }
 
-}else{
-    exit();
+    $username = $_SESSION['username'];
+
+    $host = $ub_db_host;
+    $db   = $ub_main_db;
+    $user = $ub_db_username;
+    $pass = $ub_db_password;
+    $charset = 'utf8';
+
+    $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+    $opt = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    $pdo = new PDO($dsn, $user, $pass, $opt);
+
+    $stmt = $pdo->prepare('SELECT * FROM _users WHERE username = ?');
+    $stmt->execute([$username]);
+
+    $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if($user_info['super_user']!=1) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Unauthorized. Admin only.']);
+        exit();
+    }
+
+    // Validate required fields
+    if(empty($_POST['username']) || empty($_POST['password']) || empty($_POST['name'])) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Missing required fields']);
+        exit();
+    }
+
+    $username = trim($_POST['username']);
+    $password = md5(trim($_POST['password']));
+    $name = trim($_POST['name']);
+    $email = trim($_POST['email']);
+    $max_users = trim($_POST['max_users']);
+    $theme = trim($_POST['theme']);
+
+    if(empty($max_users)) {
+        $max_users = 0;
+    }
+
+    $currency = $_POST['currency'];
+    $balance = isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
+    $use_ip_ranges = isset($_POST['use_ip_ranges']) ? $_POST['use_ip_ranges'] : '';
+    $plans = isset($_POST['plans']) ? $_POST['plans'] : '';
+    $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|1|1';
+
+    // All resellers are created with super_user = 0
+    // Admin-level permissions are stored in permissions string (index 2)
+    $stmt = $pdo->prepare('INSERT INTO _users (username, password, name, email, max_users, balance, theme, ip_ranges, currency_id, plans, super_user, permissions, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$username, $password, $name, $email, $max_users, $balance, $theme, $use_ip_ranges, $currency, $plans, 0, $permissions, time()]);
+
+    echo json_encode(['error' => 0, 'err_msg' => '']);
+
+} catch(PDOException $e) {
+    // Check if it's a duplicate entry error
+    if($e->getCode() == 23000 || strpos($e->getMessage(), 'Duplicate entry') !== false) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Username already exists. Please choose a different username.']);
+    } else {
+        echo json_encode(['error' => 1, 'err_msg' => 'Database error: ' . $e->getMessage()]);
+    }
+} catch(Exception $e) {
+    echo json_encode(['error' => 1, 'err_msg' => 'Error: ' . $e->getMessage()]);
 }
-
-
-$username = $_SESSION['username'];
-
-
-$host = $ub_db_host;
-$db   = $ub_main_db;
-$user = $ub_db_username;
-$pass = $ub_db_password;
-$charset = 'utf8';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$opt = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-$pdo = new PDO($dsn, $user, $pass, $opt);
-
-$stmt = $pdo->prepare('SELECT * FROM _users WHERE username = ?');
-$stmt->execute([$username]);
-
-$user_info = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-if($user_info['super_user']!=1)
-{
-    exit();
-}
-
-
-$username=trim($_POST['username']);
-$password=md5(trim($_POST['password']));
-$name=trim($_POST['name']);
-$email=trim($_POST['email']);
-$max_users=trim($_POST['max_users']);
-$theme=trim($_POST['theme']);
-if(empty($max_users))
-{
-    $max_users=0;
-}
-$currency=$_POST['currency'];
-$balance=isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
-$use_ip_ranges=$_POST['use_ip_ranges'];
-$plans=$_POST['plans'];
-$is_admin=$_POST['is_admin'];
-$permissions=$_POST['permissions'];
-
-
-
-$stmt = $pdo->prepare('INSERT INTO _users (username, password, name, email, max_users, balance, theme, ip_ranges, currency_id, plans, super_user, permissions, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
-$stmt->execute([$username, $password, $name, $email, $max_users, $balance, $theme, $use_ip_ranges, $currency, $plans, $is_admin, $permissions, time()]);
-
-$response['error']=0;
-$response['err_msg']='';
-
-echo json_encode($response);
-
-
 ?>

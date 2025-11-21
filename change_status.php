@@ -50,8 +50,12 @@ $mac=$_POST['mac'];
 $status=$_POST['status'];
 
 
+// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+$permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
 
-if($user_info['super_user']==0)
+// Regular resellers can only change status of their own accounts
+if($user_info['super_user']==0 && !$is_reseller_admin)
 {
     $stmt = $pdo->prepare('SELECT * FROM _accounts WHERE reseller = ? AND mac = ?');
     $stmt->execute([$user_info['id'], $mac]);

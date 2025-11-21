@@ -60,6 +60,15 @@
             </div>
         </div>
 
+        <!-- View Mode Toggle (for reseller admins) -->
+        <div id="view-mode-toggle" style="display: none; justify-content: center; align-items: center; gap: 12px; margin: 20px 0; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <label class="toggle-switch">
+                <input type="checkbox" id="view-all-accounts" onchange="toggleAccountViewMode()">
+                <span class="toggle-slider"></span>
+            </label>
+            <span id="view-mode-label" style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">View All Accounts</span>
+        </div>
+
         <div class="tabs">
             <button class="tab active" onclick="switchTab('accounts')">Accounts</button>
             <button class="tab" onclick="switchTab('resellers')">Resellers</button>
@@ -184,7 +193,7 @@
                 </div>
 
                 <!-- Dynamic Filters Section -->
-                <div class="report-filters">
+                <div id="dynamic-reports-section" class="report-filters">
                     <div class="filter-group">
                         <label>📅 Expired & Not Renewed:</label>
                         <select id="expired-filter" onchange="handleExpiredFilterChange()">
@@ -221,7 +230,7 @@
                 </div>
 
                 <!-- Dynamic Report Cards -->
-                <div class="dynamic-reports">
+                <div id="dynamic-reports-cards" class="dynamic-reports">
                     <div class="report-card dynamic-card clickable-report" onclick="showReportAccountsList('expired-dynamic')" title="Click to view list of expired accounts">
                         <div class="report-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
                             <span>📉</span>
@@ -485,7 +494,113 @@
                     <label>Theme</label>
                     <input type="text" name="theme" value="default">
                 </div>
+
+                <!-- Permissions Section -->
+                <div class="form-group">
+                    <label style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: block;">Permissions</label>
+                    <div class="permissions-container">
+                        <div class="permission-item permission-admin">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="is_admin" value="1">
+                                <span>Grant Admin Permissions</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Give full admin access to this reseller</small>
+                        </div>
+                        <div class="permission-item permission-edit">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="can_edit_accounts" value="1">
+                                <span>Can Edit Accounts</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to edit existing accounts</small>
+                        </div>
+                        <div class="permission-item permission-add">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="can_add_accounts" value="1">
+                                <span>Can Add New Accounts</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to create new accounts</small>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-primary">Create Reseller</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Reseller Modal -->
+    <div id="editResellerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Reseller</h3>
+                <button class="close-btn" onclick="closeModal('editResellerModal')">&times;</button>
+            </div>
+            <form onsubmit="updateReseller(event)">
+                <input type="hidden" id="edit-reseller-id" name="id">
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" id="edit-reseller-username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="edit-reseller-password" name="password" placeholder="Leave blank to keep current password">
+                    <small>Only enter a password if you want to change it</small>
+                </div>
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="edit-reseller-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="edit-reseller-email" name="email">
+                </div>
+                <div class="form-group">
+                    <label>Max Users (0 = unlimited)</label>
+                    <input type="number" id="edit-reseller-max-users" name="max_users" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="edit-reseller-currency" name="currency">
+                        <option value="GBP">GBP</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="IRR">IRR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Theme</label>
+                    <input type="text" id="edit-reseller-theme" name="theme" value="default">
+                </div>
+
+                <!-- Permissions Section -->
+                <div class="form-group">
+                    <label style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: block;">Permissions</label>
+                    <div class="permissions-container">
+                        <div class="permission-item permission-admin">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-is-admin" name="is_admin" value="1">
+                                <span>Grant Admin Permissions</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Give full admin access to this reseller</small>
+                        </div>
+                        <div class="permission-item permission-edit">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-can-edit-accounts" name="can_edit_accounts" value="1">
+                                <span>Can Edit Accounts</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to edit existing accounts</small>
+                        </div>
+                        <div class="permission-item permission-add">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-can-add-accounts" name="can_add_accounts" value="1">
+                                <span>Can Add New Accounts</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to create new accounts</small>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">Update Reseller</button>
             </form>
         </div>
     </div>

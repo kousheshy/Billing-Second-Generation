@@ -75,17 +75,46 @@ async function checkAuth() {
         // Display user info
         document.getElementById('username-display').textContent = 'Welcome, ' + result.user.name;
 
-        // Hide balance for admin (super_user), show only for resellers
-        if(result.user.super_user == 1) {
+        // Check if user is super admin or reseller admin
+        const isSuperAdmin = result.user.super_user == 1;
+        const isResellerAdmin = result.user.is_reseller_admin === true || result.user.is_reseller_admin === '1';
+
+        // Hide balance for super admin only
+        if(isSuperAdmin) {
             document.getElementById('balance-display').style.display = 'none';
             document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
 
-            // Show sync section for admin only
+            // Show sync section for super admin only
             document.getElementById('sync-section').style.display = 'block';
-        } else {
+        } else if(isResellerAdmin) {
+            // Reseller admin: show balance but hide reseller-related items
             document.getElementById('balance-display').textContent = getCurrencySymbol(result.user.currency_name) + formatBalance(result.user.balance, result.user.currency_name);
 
-            // Hide admin-only tabs for resellers
+            // Hide reseller tab and stat card for admin-level resellers
+            document.querySelectorAll('.tab').forEach(tab => {
+                const tabText = tab.textContent.toLowerCase();
+                if(tabText.includes('reseller')) {
+                    tab.style.display = 'none';
+                }
+            });
+
+            document.querySelector('.stat-card:nth-child(3)').style.display = 'none'; // Total Resellers
+
+            // Show view mode toggle for reseller admins
+            document.getElementById('view-mode-toggle').style.display = 'flex';
+
+            // Load saved preference from localStorage (default to false for "My Accounts")
+            const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+            document.getElementById('view-all-accounts').checked = viewAllAccounts;
+            updateViewModeLabel(viewAllAccounts);
+
+            // Update account count based on initial preference
+            updateAccountCount(viewAllAccounts);
+        } else {
+            // Regular reseller: show balance, hide resellers AND plans
+            document.getElementById('balance-display').textContent = getCurrencySymbol(result.user.currency_name) + formatBalance(result.user.balance, result.user.currency_name);
+
+            // Hide admin-only tabs for regular resellers
             document.querySelectorAll('.tab').forEach(tab => {
                 const tabText = tab.textContent.toLowerCase();
                 if(tabText.includes('reseller') || tabText.includes('plan')) {
@@ -93,7 +122,7 @@ async function checkAuth() {
                 }
             });
 
-            // Hide admin-only stat cards for resellers
+            // Hide admin-only stat cards for regular resellers
             document.querySelector('.stat-card:nth-child(3)').style.display = 'none'; // Total Resellers
             document.querySelector('.stat-card:nth-child(4)').style.display = 'none'; // Total Plans
         }
@@ -106,11 +135,14 @@ async function checkAuth() {
         // Load initial data based on user type
         loadAccounts();
         loadTransactions();
-        loadPlans(); // Load plans for both admin and resellers (filtered on backend)
 
-        if(result.user.super_user == 1) {
+        // Load plans for ALL users (they need plans to create accounts)
+        // Plans will be filtered by backend based on user type and permissions
+        loadPlans();
+
+        if(isSuperAdmin) {
             loadResellers();
-            // Auto-fetch tariffs from server for admin
+            // Auto-fetch tariffs from server for super admin only
             loadTariffs();
         }
 
@@ -165,6 +197,11 @@ function switchTab(tabName) {
 
     document.getElementById(tabName + '-tab').classList.add('active');
     event.target.classList.add('active');
+
+    // Refresh dynamic reports when switching to reports tab
+    if(tabName === 'reports' && accountsPagination.allAccounts) {
+        updateDynamicReports();
+    }
 }
 
 // Show accounts list from report cards
@@ -357,11 +394,17 @@ function showAlert(message, type) {
 // Load Accounts
 async function loadAccounts() {
     try {
-        const response = await fetch('get_accounts.php');
+        // Get view mode preference for reseller admins
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const url = `get_accounts.php?viewAllAccounts=${viewAllAccounts}`;
+        console.log('[loadAccounts] Fetching with viewAllAccounts:', viewAllAccounts);
+
+        const response = await fetch(url);
         const result = await response.json();
 
         if(result.error == 0 && result.accounts) {
             // Store all accounts
+            console.log('[loadAccounts] Received', result.accounts.length, 'accounts');
             accountsPagination.allAccounts = result.accounts;
             accountsPagination.totalItems = result.accounts.length;
 
@@ -525,6 +568,7 @@ function handleExpiringFilterChange() {
 // Update dynamic reports based on selected filters
 function updateDynamicReports() {
     const accounts = accountsPagination.allAccounts;
+    console.log('[updateDynamicReports] Called with', accounts ? accounts.length : 0, 'accounts');
     if(!accounts || accounts.length === 0) return;
 
     const now = new Date();
@@ -579,6 +623,7 @@ function updateDynamicReports() {
     });
 
     // Update UI
+    console.log('[updateDynamicReports] Expired:', expiredNotRenewedCount, 'Expiring:', expiringInPeriodCount);
     document.getElementById('dynamic-expired-count').textContent = expiredNotRenewedCount;
     document.getElementById('dynamic-expiring-count').textContent = expiringInPeriodCount;
 
@@ -834,6 +879,7 @@ async function loadResellers() {
                     <td>${reseller.max_users || 'Unlimited'}</td>
                     <td>
                         <div class="action-buttons">
+                            <button class="btn-sm btn-edit" onclick="editReseller(${reseller.id})">Edit</button>
                             <button class="btn-sm btn-edit" onclick="adjustCredit(${reseller.id}, '${reseller.name}', ${resellerBalance}, '${resellerCurrency}')">Adjust Credit</button>
                             <button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}')">Assign Plans</button>
                             <button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>
@@ -854,8 +900,14 @@ async function loadResellers() {
 // Load Plans
 async function loadPlans() {
     try {
-        const response = await fetch('get_plans.php');
+        // Get view mode preference for reseller admins
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const url = `get_plans.php?viewAllAccounts=${viewAllAccounts}`;
+        console.log('[loadPlans] Fetching plans with URL:', url);
+
+        const response = await fetch(url);
         const result = await response.json();
+        console.log('[loadPlans] Received plans:', result);
 
         const tbody = document.getElementById('plans-tbody');
         const planSelect = document.getElementById('plan-select');
@@ -863,6 +915,7 @@ async function loadPlans() {
         const assignPlansSelect = document.getElementById('assign-plans-select');
 
         if(result.error == 0 && result.plans && result.plans.length > 0) {
+            console.log('[loadPlans] Loading', result.plans.length, 'plans into dropdowns');
             tbody.innerHTML = '';
             planSelect.innerHTML = '<option value="0">No Plan</option>';
             if(resellerPlansSelect) resellerPlansSelect.innerHTML = '';
@@ -892,8 +945,9 @@ async function loadPlans() {
                 tbody.appendChild(tr);
 
                 // Add to plan select for account creation
+                // Use planID-currency format to ensure correct plan is selected
                 const option = document.createElement('option');
-                option.value = plan.external_id;
+                option.value = `${plan.external_id}-${plan.currency_id}`;
                 option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
                 planSelect.appendChild(option);
 
@@ -906,7 +960,10 @@ async function loadPlans() {
                 }
             });
         } else {
+            console.log('[loadPlans] No plans to display. Error:', result.error, 'Plans:', result.plans);
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">No plans found</td></tr>';
+            planSelect.innerHTML = '<option value="0">No Plan</option>';
+            document.getElementById('total-plans').textContent = '0';
         }
     } catch(error) {
         console.error('Error loading plans:', error);
@@ -1047,8 +1104,17 @@ async function addReseller(e) {
 
     formData.set('plans', plansString);
     formData.append('use_ip_ranges', '');
-    formData.append('is_admin', '0');
-    formData.append('permissions', '1|1|1|1|1');
+
+    // Handle permissions checkboxes
+    const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
+    const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
+    const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
+
+    // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|1|1`;
+
+    formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
+    formData.set('permissions', permissions);
 
     try {
         const response = await fetch('add_reseller.php', {
@@ -1148,6 +1214,83 @@ async function deletePlan(planId, currency) {
         }
     } catch(error) {
         showAlert('Error deleting plan: ' + error.message, 'error');
+    }
+}
+
+// Edit Reseller
+async function editReseller(resellerId) {
+    try {
+        const response = await fetch('get_resellers.php');
+        const result = await response.json();
+
+        if (result.error == 0 && result.resellers) {
+            const reseller = result.resellers.find(r => r.id == resellerId);
+            if (reseller) {
+                // Populate form fields
+                document.getElementById('edit-reseller-id').value = reseller.id;
+                document.getElementById('edit-reseller-username').value = reseller.username || '';
+                document.getElementById('edit-reseller-name').value = reseller.name || '';
+                document.getElementById('edit-reseller-email').value = reseller.email || '';
+                document.getElementById('edit-reseller-max-users').value = reseller.max_users || 0;
+                document.getElementById('edit-reseller-currency').value = reseller.currency_id || 'IRR';
+                document.getElementById('edit-reseller-theme').value = reseller.theme || 'default';
+
+                // Parse permissions (format: can_edit|can_add|is_reseller_admin|reserved|reserved)
+                const permissions = (reseller.permissions || '0|0|0|0|0').split('|');
+                document.getElementById('edit-can-edit-accounts').checked = permissions[0] === '1';
+                document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
+                document.getElementById('edit-is-admin').checked = permissions[2] === '1';
+
+                // Open modal
+                openModal('editResellerModal');
+
+                // Setup permission toggles and check initial state
+                setupEditResellerPermissions();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading reseller:', error);
+        showAlert('Error loading reseller data', 'error');
+    }
+}
+
+// Update Reseller
+async function updateReseller(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+
+    // Handle permissions checkboxes
+    const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
+    const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
+    const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
+
+    // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|1|1`;
+
+    formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
+    formData.set('permissions', permissions);
+    formData.append('use_ip_ranges', '');
+    // Don't send plans field - let backend preserve existing plans
+    // Plans are managed separately via "Assign Plans" button
+
+    try {
+        const response = await fetch('update_reseller.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.error == 0) {
+            showAlert('Reseller updated successfully!', 'success');
+            closeModal('editResellerModal');
+            loadResellers();
+        } else {
+            showAlert(result.err_msg || 'Error updating reseller', 'error');
+        }
+    } catch (error) {
+        showAlert('Error updating reseller: ' + error.message, 'error');
     }
 }
 
@@ -1770,8 +1913,137 @@ function exportToPDF(accounts, reportInfo) {
     doc.save(`${reportInfo.filename}.pdf`);
 }
 
+// ===========================
+// Permission Management Functions
+// ===========================
+
+/**
+ * Toggle other permissions based on admin checkbox state
+ * Preserves the checkbox states when hiding/showing them
+ */
+function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox) {
+    const isAdmin = adminCheckbox.checked;
+
+    if (isAdmin) {
+        // Hide other permission items when admin is checked (but preserve their state)
+        canEditCheckbox.closest('.permission-item').style.display = 'none';
+        canAddCheckbox.closest('.permission-item').style.display = 'none';
+    } else {
+        // Show other permission items when admin is unchecked (state is preserved)
+        canEditCheckbox.closest('.permission-item').style.display = 'flex';
+        canAddCheckbox.closest('.permission-item').style.display = 'flex';
+    }
+}
+
+/**
+ * Setup permission toggle event listeners for Add Reseller modal
+ */
+function setupAddResellerPermissions() {
+    const adminCheckbox = document.querySelector('#addResellerModal input[name="is_admin"]');
+    const canEditCheckbox = document.querySelector('#addResellerModal input[name="can_edit_accounts"]');
+    const canAddCheckbox = document.querySelector('#addResellerModal input[name="can_add_accounts"]');
+
+    if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
+        adminCheckbox.addEventListener('change', function() {
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox);
+        });
+    }
+}
+
+/**
+ * Setup permission toggle event listeners for Edit Reseller modal
+ */
+function setupEditResellerPermissions() {
+    const adminCheckbox = document.getElementById('edit-is-admin');
+    const canEditCheckbox = document.getElementById('edit-can-edit-accounts');
+    const canAddCheckbox = document.getElementById('edit-can-add-accounts');
+
+    if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
+        adminCheckbox.addEventListener('change', function() {
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox);
+        });
+
+        // Initial state check when modal is opened
+        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox);
+    }
+}
+
+/**
+ * Toggle between viewing all accounts and own accounts (for reseller admins)
+ */
+async function toggleAccountViewMode() {
+    const viewAllAccounts = document.getElementById('view-all-accounts').checked;
+    console.log('[toggleAccountViewMode] Toggled to:', viewAllAccounts ? 'All Accounts' : 'My Accounts');
+
+    // Save preference to localStorage
+    localStorage.setItem('viewAllAccounts', viewAllAccounts);
+
+    // Update label
+    updateViewModeLabel(viewAllAccounts);
+
+    // Update total accounts count
+    await updateAccountCount(viewAllAccounts);
+
+    // Reload accounts with new filter (await to ensure it completes)
+    console.log('[toggleAccountViewMode] Calling loadAccounts()...');
+    await loadAccounts();
+
+    // Reload plans with new filter (for reseller admins)
+    console.log('[toggleAccountViewMode] Calling loadPlans()...');
+    await loadPlans();
+
+    // Explicitly refresh dynamic reports to ensure they update
+    console.log('[toggleAccountViewMode] Refreshing dynamic reports...');
+    if(accountsPagination.allAccounts && accountsPagination.allAccounts.length > 0) {
+        updateDynamicReports();
+    }
+}
+
+/**
+ * Update the view mode label text and show/hide dynamic reports
+ */
+function updateViewModeLabel(viewAllAccounts) {
+    const label = document.getElementById('view-mode-label');
+    const dynamicReportsSection = document.getElementById('dynamic-reports-section');
+    const dynamicReportsCards = document.getElementById('dynamic-reports-cards');
+
+    if (viewAllAccounts) {
+        label.textContent = 'Viewing All Accounts';
+        label.style.color = 'var(--primary)';
+        // Show dynamic reports when viewing all accounts
+        if(dynamicReportsSection) dynamicReportsSection.style.display = 'grid';
+        if(dynamicReportsCards) dynamicReportsCards.style.display = 'grid';
+    } else {
+        label.textContent = 'Viewing My Accounts';
+        label.style.color = 'var(--text-secondary)';
+        // Hide dynamic reports when viewing only own accounts
+        if(dynamicReportsSection) dynamicReportsSection.style.display = 'none';
+        if(dynamicReportsCards) dynamicReportsCards.style.display = 'none';
+    }
+}
+
+/**
+ * Update account count based on view mode
+ */
+async function updateAccountCount(viewAllAccounts) {
+    try {
+        const url = `get_user_info.php?viewAllAccounts=${viewAllAccounts}`;
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.error == 0) {
+            document.getElementById('total-accounts').textContent = result.total_accounts;
+        }
+    } catch (error) {
+        console.error('Error updating account count:', error);
+    }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     initTheme();
     checkAuth();
+
+    // Setup permission toggles
+    setupAddResellerPermissions();
 });

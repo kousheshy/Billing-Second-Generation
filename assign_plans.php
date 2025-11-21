@@ -69,6 +69,9 @@ if(!$reseller)
 $stmt = $pdo->prepare('UPDATE _users SET plans = ? WHERE id = ?');
 $stmt->execute([$plans, $reseller_id]);
 
+// Debug: Log plan assignment
+error_log('[assign_plans.php] Assigned plans to reseller ID ' . $reseller_id . ': ' . ($plans ?: 'EMPTY'));
+
 $response['error'] = 0;
 $response['err_msg'] = '';
 $response['plans'] = $plans;

@@ -74,13 +74,30 @@ try {
         exit();
     }
 
-    // Check permissions - resellers can only edit their own accounts
-    if($user_info['super_user'] != 1 && $account['reseller'] != $user_info['id']) {
-        $response['error'] = 1;
-        $response['err_msg'] = 'Permission denied';
-        header('Content-Type: application/json');
-        echo json_encode($response);
-        exit();
+    // Check permissions
+    // Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    // Super admins and reseller admins have full access
+    if($user_info['super_user'] != 1 && !$is_reseller_admin) {
+        // Check if reseller owns this account
+        if($account['reseller'] != $user_info['id']) {
+            $response['error'] = 1;
+            $response['err_msg'] = 'Permission denied. This account does not belong to you.';
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit();
+        }
+
+        // Check "can edit accounts" permission (index 0)
+        if($permissions[0] == 0) {
+            $response['error'] = 1;
+            $response['err_msg'] = 'Permission denied. You do not have permission to edit accounts.';
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit();
+        }
     }
 
     // If plan is selected (not 0), calculate new expiration date and renew
