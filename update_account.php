@@ -346,12 +346,13 @@ if($res == 'OK')
 
 
 
+    // Include reseller_id in updates to Stalker (maintain reseller ownership)
     if(empty($plan))
     {
-        $data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&status='.$status.'&stb_mac='.$mac.'&comment='.$comment.'';
+        $data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&status='.$status.'&stb_mac='.$mac.'&comment='.$comment.'&reseller='.$reseller_info['id'];
     }else
     {
-        $data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&tariff_plan='.$plan.'&status='.$status.'&stb_mac='.$mac.'&end_date='.$expire_billing_date.'&comment='.$comment.'';
+        $data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&tariff_plan='.$plan.'&status='.$status.'&stb_mac='.$mac.'&end_date='.$expire_billing_date.'&comment='.$comment.'&reseller='.$reseller_info['id'];
     }
 
 

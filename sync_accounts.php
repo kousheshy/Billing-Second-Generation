@@ -66,6 +66,11 @@ try {
     $op = "GET";
 
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, null);
+
+    // DEBUG: Log raw Stalker API response (first 500 chars to see structure)
+    error_log("=== STALKER API GET ACCOUNTS ===");
+    error_log("Raw response (first 500 chars): " . substr($res, 0, 500));
+
     $decoded = json_decode($res);
 
     if($decoded->status != 'OK') {
@@ -118,8 +123,25 @@ try {
         // Use current timestamp for creation date
         $created_timestamp = time();
 
-        // Determine reseller: preserve existing mapping, or assign to current user (admin or reseller)
-        $reseller_id = $existing_resellers[$login] ?? $user_id;
+        // Determine reseller priority (Stalker is source of truth):
+        // 1. Use reseller from Stalker if available
+        // 2. Fallback to existing local mapping
+        // 3. Fallback to current user (admin or reseller)
+        $stalker_reseller = $stalker_user->reseller ?? null;
+
+        // DEBUG: Log what Stalker returned for reseller field
+        error_log("=== SYNC ACCOUNT: $login ===");
+        error_log("Stalker reseller field value: " . ($stalker_reseller !== null ? $stalker_reseller : 'NULL'));
+        error_log("Existing local mapping: " . ($existing_resellers[$login] ?? 'NONE'));
+        error_log("Current user ID: " . $user_id);
+
+        if($stalker_reseller && is_numeric($stalker_reseller) && $stalker_reseller > 0) {
+            $reseller_id = (int)$stalker_reseller;
+            error_log("Using Stalker reseller: " . $reseller_id);
+        } else {
+            $reseller_id = $existing_resellers[$login] ?? $user_id;
+            error_log("Using fallback reseller: " . $reseller_id);
+        }
 
         // For resellers: only sync accounts that belong to them
         if(!$is_admin && $reseller_id != $user_id) {

@@ -397,10 +397,20 @@ if(!$decoded || $decoded->status != 'OK')
 
 
 
-$data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&account_number='.$account_number.'&tariff_plan='.$plan.'&status='.$status.'&stb_mac='.$mac.'&end_date='.$expire_billing_date.'&comment='.$comment.'';
+// Include reseller_id in the account data sent to Stalker
+$data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&account_number='.$account_number.'&tariff_plan='.$plan.'&status='.$status.'&stb_mac='.$mac.'&end_date='.$expire_billing_date.'&comment='.$comment.'&reseller='.$reseller_info['id'];
+
+// DEBUG: Log the data being sent to Stalker
+error_log("=== STALKER API CREATE ACCOUNT ===");
+error_log("Data being sent: " . $data);
+error_log("Reseller ID being sent: " . $reseller_info['id']);
+
 $case = 'accounts';
 $op = "POST";
 $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
+
+// DEBUG: Log Stalker's response
+error_log("Stalker API Response: " . $res);
 
 $decoded = json_decode($res);
 
