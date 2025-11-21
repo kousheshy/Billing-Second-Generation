@@ -1,6 +1,9 @@
 <?php
 
 session_start();
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 
 include('config.php');
 
@@ -45,22 +48,28 @@ $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if($user_info['super_user']!=1)
 {
+    $response['error']=1;
+    $response['err_msg']='Permission denied';
+    header('Content-Type: application/json');
+    echo json_encode($response);
     exit();
 }
 
 
 
-$id = $_GET['id'];
+$plan_id = $_GET['plan'];
+$currency = $_GET['currency'];
 
 
 
-$stmt = $pdo->prepare('DELETE FROM _plans WHERE external_id=?');
-$stmt->execute([$id]);
+$stmt = $pdo->prepare('DELETE FROM _plans WHERE external_id=? AND currency_id=?');
+$stmt->execute([$plan_id, $currency]);
 
 
 $response['error']=0;
 $response['err_msg']='';
 
+header('Content-Type: application/json');
 echo json_encode($response);
 
 

@@ -34,6 +34,11 @@
                 <h3>Total Plans</h3>
                 <div class="value" id="total-plans">0</div>
             </div>
+            <div class="stat-card expiring-soon">
+                <h3>Expiring Soon</h3>
+                <div class="value" id="expiring-soon">0</div>
+                <small style="color: #666; font-size: 12px;">Next 2 weeks</small>
+            </div>
         </div>
 
         <div class="tabs">
@@ -53,20 +58,36 @@
                     <h2>Account Management</h2>
                     <button class="btn-primary" onclick="openModal('addAccountModal')">+ Add Account</button>
                 </div>
+                <div class="search-container">
+                    <input type="text" id="accounts-search" placeholder="Search by username, name, MAC, or tariff..." onkeyup="searchAccounts()">
+                </div>
+                <div class="pagination-controls">
+                    <div class="per-page-selector">
+                        <label>Show:</label>
+                        <select id="accounts-per-page" onchange="changeAccountsPerPage()">
+                            <option value="25">25 per page</option>
+                            <option value="100">100 per page</option>
+                        </select>
+                    </div>
+                    <div id="accounts-pagination-info" class="pagination-info"></div>
+                </div>
                 <table id="accounts-table">
                     <thead>
                         <tr>
                             <th>Username</th>
+                            <th>Full Name</th>
                             <th>MAC Address</th>
-                            <th>Email</th>
-                            <th>Created</th>
+                            <th>Tariff Plan</th>
+                            <th>Expiration Date</th>
+                            <th>Creation Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="accounts-tbody">
-                        <tr><td colspan="5" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
+                <div id="accounts-pagination" class="pagination-buttons"></div>
             </div>
 
             <!-- Resellers Tab -->
@@ -102,6 +123,7 @@
                     <thead>
                         <tr>
                             <th>Plan ID</th>
+                            <th>Name</th>
                             <th>Currency</th>
                             <th>Price</th>
                             <th>Days</th>
@@ -109,7 +131,7 @@
                         </tr>
                     </thead>
                     <tbody id="plans-tbody">
-                        <tr><td colspan="5" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                        <tr><td colspan="6" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -140,21 +162,36 @@
                 <div class="section-header">
                     <h2>Settings</h2>
                 </div>
-                <form onsubmit="changePassword(event)">
-                    <div class="form-group">
-                        <label>Old Password</label>
-                        <input type="password" id="old-password" required>
-                    </div>
-                    <div class="form-group">
-                        <label>New Password</label>
-                        <input type="password" id="new-password" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Confirm New Password</label>
-                        <input type="password" id="confirm-password" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Update Password</button>
-                </form>
+
+                <!-- Change Password Section -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="margin-bottom: 20px; color: #333;">Change Password</h3>
+                    <form onsubmit="changePassword(event)">
+                        <div class="form-group">
+                            <label>Old Password</label>
+                            <input type="password" id="old-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="new-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirm-password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Update Password</button>
+                    </form>
+                </div>
+
+                <!-- Sync Accounts Section (Admin Only) -->
+                <div id="sync-section" class="sync-section" style="display:none;">
+                    <h3 style="margin-bottom: 20px; color: #333;">Sync Accounts</h3>
+                    <p style="margin-bottom: 15px; color: #666;">Sync all accounts from Stalker Portal. This will delete all existing accounts and fetch fresh data from the server.</p>
+                    <button class="btn-sync" onclick="syncAccounts()">
+                        <span id="sync-icon">⟳</span> Sync Accounts from Server
+                    </button>
+                    <div id="sync-status" class="sync-status"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -283,8 +320,8 @@
             </div>
             <form onsubmit="addPlan(event)">
                 <div class="form-group">
-                    <label>Plan ID *</label>
-                    <input type="text" name="plan" required>
+                    <label>Plan Name *</label>
+                    <input type="text" name="name" required>
                 </div>
                 <div class="form-group">
                     <label>Currency *</label>
@@ -363,6 +400,69 @@
                     <small style="color:#666">Hold Ctrl/Cmd to select multiple plans. Leave empty to allow all plans.</small>
                 </div>
                 <button type="submit" class="btn-primary">Update Plans</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Account Modal -->
+    <div id="editAccountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Account</h3>
+                <button class="close-btn" onclick="closeModal('editAccountModal')">&times;</button>
+            </div>
+            <form onsubmit="return submitEditAccount(event)" id="editAccountForm">
+                <input type="hidden" id="edit-original-username" name="original_username">
+
+                <div class="form-group">
+                    <label>Username*</label>
+                    <input type="text" id="edit-username" name="username" required>
+                    <small style="color:#666">Must be unique.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="text" id="edit-password" name="password" placeholder="">
+                    <small style="color:#666">Leave blank for making no change.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="edit-name" name="name">
+                </div>
+
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="edit-email" name="email">
+                </div>
+
+                <div class="form-group">
+                    <label>Phone number</label>
+                    <input type="text" id="edit-phone" name="phone">
+                </div>
+
+                <div class="form-group">
+                    <label>Plan</label>
+                    <select id="edit-plan" name="plan">
+                        <option value="0">SELECT ONE TO UPDATE</option>
+                        <!-- Plans will be loaded dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="edit-status" name="status">
+                        <option value="1">On</option>
+                        <option value="0">Off</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Comment</label>
+                    <textarea id="edit-comment" name="comment" rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">Save</button>
             </form>
         </div>
     </div>

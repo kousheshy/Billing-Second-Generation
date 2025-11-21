@@ -200,15 +200,34 @@ if($user_info['super_user']==0)
 
 
         $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if($plan_info['price'] > $reseller_info['balance'])
+
+        // Only check credit if admin is adding account for a reseller
+        // Admin doesn't need credit when adding their own accounts
+        if($user_info['super_user']==1 && !empty($_POST['reseller']))
         {
-            $response['error']=1;
-            $response['err_msg']="Not enough credit.";
-    
-            echo json_encode($response);
-            exit();
+            // Admin is adding account for a specific reseller - check reseller's credit
+            if($plan_info['price'] > $reseller_info['balance'])
+            {
+                $response['error']=1;
+                $response['err_msg']="Not enough credit.";
+
+                echo json_encode($response);
+                exit();
+            }
         }
+        elseif($user_info['super_user']==0)
+        {
+            // Reseller is adding their own account - check their credit
+            if($plan_info['price'] > $reseller_info['balance'])
+            {
+                $response['error']=1;
+                $response['err_msg']="Not enough credit.";
+
+                echo json_encode($response);
+                exit();
+            }
+        }
+        // Admin adding their own account (no reseller selected) - no credit check needed
 
         $price = (int)$plan_info['price'];
         
@@ -360,8 +379,9 @@ $decoded = json_decode($res);
 if($decoded->status == 'OK')
 {
 
-    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, reseller, timestamp) VALUES (?,?,?,?,?)');
-    $stmt->execute([$username, $mac, $email, $reseller_info['id'], time()]);
+    $plan_id = ($_POST['plan'] != 0 && isset($plan_info['id'])) ? $plan_info['id'] : null;
+    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, reseller, plan, timestamp) VALUES (?,?,?,?,?,?)');
+    $stmt->execute([$username, $mac, $email, $reseller_info['id'], $plan_id, time()]);
 
     if($price>0)
     {
@@ -377,7 +397,7 @@ if($decoded->status == 'OK')
         
         
         $tmp = '';
-        
+
         if(!empty($name))
         {
             $tmp = ' ,'.$name.' , '.$mac.'';
@@ -385,8 +405,10 @@ if($decoded->status == 'OK')
         {
             $tmp = ' ,'.$mac.'';
         }
-        
-        $details = 'Plan "'.$plan_names[$_POST['plan']].'" assigned for '.$username.$tmp;
+
+        // Use plan name from local database instead of Stalker Portal
+        $plan_name = isset($plan_info['name']) ? $plan_info['name'] : 'Plan #'.$_POST['plan'];
+        $details = 'Plan "'.$plan_name.'" assigned for '.$username.$tmp;
 
         $stmt = $pdo->prepare('INSERT INTO _transactions (creator, for_user, amount, currency, type, details, timestamp) VALUES (?,?,?,?,?,?,?)');
         $stmt->execute(['system', $reseller_info['id'], $price, $reseller_info['currency_name'], 0, $details, time()]);

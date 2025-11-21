@@ -1,6 +1,16 @@
 // Global variable to store user info
 let currentUser = null;
 
+// Pagination state
+let accountsPagination = {
+    currentPage: 1,
+    perPage: 25,
+    totalItems: 0,
+    allAccounts: [],
+    filteredAccounts: [],
+    searchTerm: ''
+};
+
 // Check authentication
 async function checkAuth() {
     try {
@@ -22,6 +32,9 @@ async function checkAuth() {
         if(result.user.super_user == 1) {
             document.getElementById('balance-display').style.display = 'none';
             document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
+
+            // Show sync section for admin only
+            document.getElementById('sync-section').style.display = 'block';
         } else {
             document.getElementById('balance-display').textContent = getCurrencySymbol(result.user.currency_name) + formatBalance(result.user.balance, result.user.currency_name);
 
@@ -132,38 +145,207 @@ async function loadAccounts() {
         const response = await fetch('get_accounts.php');
         const result = await response.json();
 
-        const tbody = document.getElementById('accounts-tbody');
+        if(result.error == 0 && result.accounts) {
+            // Store all accounts
+            accountsPagination.allAccounts = result.accounts;
+            accountsPagination.totalItems = result.accounts.length;
 
-        if(result.error == 0 && result.accounts && result.accounts.length > 0) {
-            tbody.innerHTML = '';
-            result.accounts.forEach(account => {
-                const tr = document.createElement('tr');
-                // Only show delete button for admin users
-                const deleteButton = currentUser && currentUser.super_user == 1
-                    ? `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`
-                    : '';
+            // Calculate expiring soon count
+            updateExpiringSoonCount(result.accounts);
 
-                tr.innerHTML = `
-                    <td>${account.username || ''}</td>
-                    <td>${account.mac || ''}</td>
-                    <td>${account.email || ''}</td>
-                    <td>${new Date(account.timestamp * 1000).toLocaleDateString()}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit</button>
-                            ${deleteButton}
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+            // Render current page
+            renderAccountsPage();
         } else {
+            const tbody = document.getElementById('accounts-tbody');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+            document.getElementById('accounts-pagination').innerHTML = '';
+            document.getElementById('accounts-pagination-info').textContent = '';
         }
     } catch(error) {
         console.error('Error loading accounts:', error);
         showAlert('Error loading accounts', 'error');
     }
+}
+
+// Calculate and display accounts expiring in the next 2 weeks
+function updateExpiringSoonCount(accounts) {
+    const now = new Date();
+    const twoWeeksFromNow = new Date();
+    twoWeeksFromNow.setDate(now.getDate() + 14);
+
+    let expiringSoonCount = 0;
+
+    accounts.forEach(account => {
+        if(account.end_date) {
+            const expirationDate = new Date(account.end_date);
+
+            // Check if expiration date is between now and 2 weeks from now
+            if(expirationDate >= now && expirationDate <= twoWeeksFromNow) {
+                expiringSoonCount++;
+            }
+        }
+    });
+
+    document.getElementById('expiring-soon').textContent = expiringSoonCount;
+}
+
+function renderAccountsPage() {
+    const { currentPage, perPage, searchTerm, allAccounts, filteredAccounts } = accountsPagination;
+    const tbody = document.getElementById('accounts-tbody');
+
+    // Use filtered accounts if search is active, otherwise use all accounts
+    const accountsToDisplay = searchTerm ? filteredAccounts : allAccounts;
+    const totalItems = accountsToDisplay.length;
+
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = Math.min(startIndex + perPage, totalItems);
+    const pageAccounts = accountsToDisplay.slice(startIndex, endIndex);
+
+    // Render accounts for current page
+    if(pageAccounts.length > 0) {
+        tbody.innerHTML = '';
+        pageAccounts.forEach(account => {
+            const tr = document.createElement('tr');
+            // Only show delete button for admin users
+            const deleteButton = currentUser && currentUser.super_user == 1
+                ? `<button class="btn-sm btn-delete" onclick="deleteAccount('${account.username}')">Delete</button>`
+                : '';
+
+            // Format expiration date
+            let expirationDate = '';
+            if(account.end_date) {
+                const expDate = new Date(account.end_date);
+                expirationDate = expDate.toLocaleDateString();
+            }
+
+            // Format creation date
+            let creationDate = '';
+            if(account.timestamp) {
+                const createDate = new Date(account.timestamp * 1000); // Convert Unix timestamp to milliseconds
+                creationDate = createDate.toLocaleDateString();
+            }
+
+            tr.innerHTML = `
+                <td>${account.username || ''}</td>
+                <td>${account.full_name || ''}</td>
+                <td>${account.mac || ''}</td>
+                <td>${account.tariff_plan || ''}</td>
+                <td>${expirationDate}</td>
+                <td>${creationDate}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit</button>
+                        ${deleteButton}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+    }
+
+    // Update pagination info
+    document.getElementById('accounts-pagination-info').textContent =
+        `Showing ${startIndex + 1}-${endIndex} of ${totalItems} accounts`;
+
+    // Render pagination buttons
+    renderPaginationButtons();
+}
+
+function renderPaginationButtons() {
+    const { currentPage, perPage, searchTerm, allAccounts, filteredAccounts } = accountsPagination;
+    const accountsToDisplay = searchTerm ? filteredAccounts : allAccounts;
+    const totalItems = accountsToDisplay.length;
+    const totalPages = Math.ceil(totalItems / perPage);
+    const paginationDiv = document.getElementById('accounts-pagination');
+
+    if(totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+
+    let buttonsHTML = '';
+
+    // Previous button
+    buttonsHTML += `<button onclick="goToAccountsPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+
+    // Page numbers with ellipsis
+    const maxButtons = 7;
+    let startPage = Math.max(1, currentPage - 3);
+    let endPage = Math.min(totalPages, currentPage + 3);
+
+    // Show first page
+    if(startPage > 1) {
+        buttonsHTML += `<button class="page-btn ${currentPage === 1 ? 'active' : ''}" onclick="goToAccountsPage(1)">1</button>`;
+        if(startPage > 2) {
+            buttonsHTML += `<button class="ellipsis" disabled>...</button>`;
+        }
+    }
+
+    // Show page numbers
+    for(let i = startPage; i <= endPage; i++) {
+        buttonsHTML += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToAccountsPage(${i})">${i}</button>`;
+    }
+
+    // Show last page
+    if(endPage < totalPages) {
+        if(endPage < totalPages - 1) {
+            buttonsHTML += `<button class="ellipsis" disabled>...</button>`;
+        }
+        buttonsHTML += `<button class="page-btn ${currentPage === totalPages ? 'active' : ''}" onclick="goToAccountsPage(${totalPages})">${totalPages}</button>`;
+    }
+
+    // Next button
+    buttonsHTML += `<button onclick="goToAccountsPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+
+    paginationDiv.innerHTML = buttonsHTML;
+}
+
+function goToAccountsPage(page) {
+    const { searchTerm, allAccounts, filteredAccounts, perPage } = accountsPagination;
+    const accountsToDisplay = searchTerm ? filteredAccounts : allAccounts;
+    const totalPages = Math.ceil(accountsToDisplay.length / perPage);
+    if(page < 1 || page > totalPages) return;
+
+    accountsPagination.currentPage = page;
+    renderAccountsPage();
+
+    // Scroll to top of table
+    document.getElementById('accounts-table').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function changeAccountsPerPage() {
+    const select = document.getElementById('accounts-per-page');
+    accountsPagination.perPage = parseInt(select.value);
+    accountsPagination.currentPage = 1; // Reset to first page
+    renderAccountsPage();
+}
+
+function searchAccounts() {
+    const searchTerm = document.getElementById('accounts-search').value.toLowerCase().trim();
+
+    accountsPagination.searchTerm = searchTerm;
+
+    if(searchTerm === '') {
+        // No search - show all accounts
+        accountsPagination.filteredAccounts = [];
+    } else {
+        // Filter accounts
+        accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
+            return (
+                (account.username && account.username.toLowerCase().includes(searchTerm)) ||
+                (account.full_name && account.full_name.toLowerCase().includes(searchTerm)) ||
+                (account.mac && account.mac.toLowerCase().includes(searchTerm)) ||
+                (account.tariff_plan && account.tariff_plan.toLowerCase().includes(searchTerm))
+            );
+        });
+    }
+
+    // Reset to first page and re-render
+    accountsPagination.currentPage = 1;
+    renderAccountsPage();
 }
 
 // Load Resellers
@@ -227,6 +409,7 @@ async function loadPlans() {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
+                    <td>${plan.name || ''}</td>
                     <td>${plan.currency_id || ''}</td>
                     <td>${plan.price || 0}</td>
                     <td>${plan.days || 0}</td>
@@ -241,25 +424,25 @@ async function loadPlans() {
                 // Add to plan select for account creation
                 const option = document.createElement('option');
                 option.value = plan.external_id;
-                option.textContent = `${plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
+                option.textContent = `${plan.name || plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
                 planSelect.appendChild(option);
 
                 // Add to reseller plan assignment dropdowns with planID-currency format
                 if(resellerPlansSelect) {
                     const resellerOption = document.createElement('option');
                     resellerOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    resellerOption.textContent = `${plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
+                    resellerOption.textContent = `${plan.name || plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
                     resellerPlansSelect.appendChild(resellerOption);
                 }
                 if(assignPlansSelect) {
                     const assignOption = document.createElement('option');
                     assignOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    assignOption.textContent = `${plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
+                    assignOption.textContent = `${plan.name || plan.external_id} - ${plan.currency_id}${plan.price} (${plan.days} days)`;
                     assignPlansSelect.appendChild(assignOption);
                 }
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#999">No plans found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">No plans found</td></tr>';
         }
     } catch(error) {
         console.error('Error loading plans:', error);
@@ -468,9 +651,124 @@ async function deleteReseller(resellerId) {
     }
 }
 
-// Edit functions (placeholders)
-function editAccount(username) {
-    showAlert('Edit account feature - Coming soon!', 'success');
+// Edit Account
+async function editAccount(username) {
+    try {
+        // Find account data from the loaded accounts
+        const account = accountsPagination.allAccounts.find(acc => acc.username === username);
+
+        if(!account) {
+            showAlert('Account not found', 'error');
+            return;
+        }
+
+        // Populate form fields
+        document.getElementById('edit-original-username').value = account.username;
+        document.getElementById('edit-username').value = account.username;
+        document.getElementById('edit-password').value = ''; // Keep blank
+        document.getElementById('edit-name').value = account.full_name || '';
+        document.getElementById('edit-email').value = account.email || '';
+        document.getElementById('edit-phone').value = account.phone || '';
+        document.getElementById('edit-comment').value = account.comment || '';
+
+        // Set status (default to 1 if not set)
+        const statusSelect = document.getElementById('edit-status');
+        statusSelect.value = account.status !== undefined ? account.status : '1';
+
+        // Load plans into dropdown
+        await loadPlansForEdit();
+
+        // Open modal
+        openModal('editAccountModal');
+
+    } catch(error) {
+        console.error('Error loading account for edit:', error);
+        showAlert('Error loading account data', 'error');
+    }
+}
+
+async function loadPlansForEdit() {
+    try {
+        const response = await fetch('get_plans.php');
+        const result = await response.json();
+
+        const planSelect = document.getElementById('edit-plan');
+
+        // Clear existing options except the first one
+        planSelect.innerHTML = '<option value="0">SELECT ONE TO UPDATE</option>';
+
+        if(result.error == 0 && result.plans) {
+            result.plans.forEach(plan => {
+                const option = document.createElement('option');
+                option.value = plan.id;
+                option.textContent = `${plan.name} - ${plan.currency_id} ${plan.price} (${plan.days} days)`;
+                planSelect.appendChild(option);
+            });
+        }
+    } catch(error) {
+        console.error('Error loading plans:', error);
+    }
+}
+
+async function submitEditAccount(e) {
+    console.log('submitEditAccount called');
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const selectedPlan = document.getElementById('edit-plan').value;
+
+    console.log('Form data:', Object.fromEntries(formData));
+    console.log('Selected plan:', selectedPlan);
+
+    // Confirm if renewing with a plan
+    if(selectedPlan != '0') {
+        if(!confirm('This will renew the account with the selected plan. Continue?')) {
+            return false;
+        }
+    }
+
+    try {
+        console.log('Sending request to edit_account.php');
+        const response = await fetch('edit_account.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        console.log('Response status:', response.status);
+        const result = await response.json();
+        console.log('Response result:', result);
+
+        if(result.error == 0) {
+            showAlert(result.message || 'Account updated successfully!', 'success');
+
+            // Log debug info to console
+            if(result.debug) {
+                console.log('Edit Account Debug:', result.debug);
+            }
+
+            closeModal('editAccountModal');
+
+            // Reload accounts to reflect changes
+            loadAccounts();
+
+            // Reload user info to update balance if reseller renewed
+            if(currentUser && currentUser.super_user != 1) {
+                checkAuth();
+            }
+        } else {
+            showAlert(result.err_msg || 'Error updating account', 'error');
+
+            // Log error details to console
+            if(result.debug) {
+                console.error('Edit Account Error Debug:', result.debug);
+            }
+        }
+    } catch(error) {
+        console.error('Error updating account:', error);
+        showAlert('Error updating account: ' + error.message, 'error');
+    }
+
+    return false;
 }
 
 // Adjust Credit
@@ -597,6 +895,65 @@ function logout() {
     fetch('logout.php').then(() => {
         window.location.href = 'index.html';
     });
+}
+
+// Sync accounts from Stalker Portal
+async function syncAccounts() {
+    const syncBtn = document.querySelector('.btn-sync');
+    const syncIcon = document.getElementById('sync-icon');
+    const syncStatus = document.getElementById('sync-status');
+
+    try {
+        // Disable button and show syncing state
+        syncBtn.disabled = true;
+        syncBtn.classList.add('syncing');
+        syncStatus.className = 'sync-status info';
+        syncStatus.textContent = 'Syncing accounts from server...';
+
+        const response = await fetch('sync_accounts.php', {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if(result.error == 0) {
+            syncStatus.className = 'sync-status success';
+
+            let message = `✓ Sync completed! `;
+            if(result.synced > 0) {
+                message += `${result.synced} account(s) synced from server. `;
+            }
+            if(result.skipped > 0) {
+                message += `${result.skipped} skipped. `;
+            }
+            message += `Total accounts: ${result.total_accounts}`;
+
+            syncStatus.textContent = message;
+
+            // Reload accounts table
+            loadAccounts();
+
+            // Update total accounts count
+            document.getElementById('total-accounts').textContent = result.total_accounts;
+        } else {
+            syncStatus.className = 'sync-status error';
+            syncStatus.textContent = `✗ Sync failed: ${result.err_msg}`;
+        }
+
+    } catch(error) {
+        syncStatus.className = 'sync-status error';
+        syncStatus.textContent = `✗ Sync failed: ${error.message}`;
+    } finally {
+        // Re-enable button and remove syncing state
+        syncBtn.disabled = false;
+        syncBtn.classList.remove('syncing');
+
+        // Clear status after 5 seconds
+        setTimeout(() => {
+            syncStatus.className = 'sync-status';
+            syncStatus.textContent = '';
+        }, 5000);
+    }
 }
 
 // Initialize

@@ -50,45 +50,37 @@ if($user_info['super_user']!=1)
 
 
 
-$plan = $_GET['plan'];
+$name = trim($_GET['name']);
 $currency = strtoupper($_GET['currency']);
 $price = trim($_GET['price']);
 $days = trim($_GET['days']);
 
+// Auto-generate plan ID by finding the next available number
+$stmt = $pdo->prepare('SELECT MAX(CAST(external_id AS UNSIGNED)) as max_id FROM _plans');
+$stmt->execute();
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+$next_id = ($result['max_id'] !== null) ? intval($result['max_id']) + 1 : 1;
+$plan = strval($next_id);
 
-
+// Check if this plan ID + currency combination already exists
 $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id = ? AND currency_id = ?');
 $stmt->execute([$plan, $currency]);
 
 $count = $stmt->rowCount();
 
-
 if($count > 0)
 {
+    // This combination already exists, update it
     $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $stmt = $pdo->prepare('UPDATE _plans SET external_id=?, currency_id=?, price=? WHERE id=?');
-    $stmt->execute([$plan, $currency, $price, $plan_info['id']]);
+    $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=? WHERE id=?');
+    $stmt->execute([$name, $price, $days, $plan_info['id']]);
 
 }else
 {
-    $stmt = $pdo->prepare('INSERT INTO _plans (external_id, currency_id, price, days) VALUES (?,?,?,?)');
-    $stmt->execute([$plan, $currency, $price, $days]);
-
-}
-
-
-$stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id = ?');
-$stmt->execute([$plan]);
-
-$count = $stmt->rowCount();
-
-if($count > 0)
-{
-    $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $stmt = $pdo->prepare('UPDATE _plans SET days=? WHERE external_id=?');
-    $stmt->execute([$days, $plan_info['external_id']]);
+    // Insert new plan with auto-generated ID
+    $stmt = $pdo->prepare('INSERT INTO _plans (external_id, name, currency_id, price, days) VALUES (?,?,?,?,?)');
+    $stmt->execute([$plan, $name, $currency, $price, $days]);
 
 }
 

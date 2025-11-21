@@ -37,16 +37,20 @@ try {
 
     if($user_info['super_user'] == 1)
     {
-        $stmt = $pdo->prepare('SELECT * FROM _accounts ORDER BY id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id ORDER BY a.id DESC');
         $stmt->execute([]);
     }
     else
     {
-        $stmt = $pdo->prepare('SELECT * FROM _accounts WHERE reseller = ? ORDER BY id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id WHERE a.reseller = ? ORDER BY a.id DESC');
         $stmt->execute([$user_info['id']]);
     }
 
     $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Data is now stored locally - no need to fetch from Stalker Portal every time
+    // All account data (full_name, tariff_plan, end_date) is already in the local database
+    // It gets synced when the admin clicks "Sync Accounts from Server"
 
     $response['error'] = 0;
     $response['accounts'] = $accounts;
