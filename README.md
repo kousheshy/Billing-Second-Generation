@@ -595,8 +595,10 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Version 1.6.6 - November 2025
-- **Developer:** Kambiz Koosheshi
+- Current Version: 1.9.0 - November 2025
+- **Lead Developer:** Kambiz Koosheshi
+- **GitHub:** [@kousheshy](https://github.com/kousheshy)
+- **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
