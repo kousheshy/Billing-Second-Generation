@@ -562,6 +562,15 @@
                         </div>
                     </div>
 
+                    <div class="history-search-controls">
+                        <input type="text" id="history-search" placeholder="Search by account, name, or MAC address..." class="history-search-input" oninput="filterReminderHistory()">
+                        <select id="history-status-filter" class="history-filter-select" onchange="filterReminderHistory()">
+                            <option value="">All Status</option>
+                            <option value="sent">✓ Sent Only</option>
+                            <option value="failed">✗ Failed Only</option>
+                        </select>
+                    </div>
+
                     <div id="history-table-container" class="history-table-container">
                         <table id="reminder-history-table" class="data-table">
                             <thead>
@@ -584,6 +593,27 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="history-pagination" id="history-pagination" style="display:none;">
+                        <div class="pagination-info">
+                            <span id="history-page-info">Showing 0-0 of 0</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="btn-pagination" onclick="changeHistoryPage(-1)" id="history-prev-btn" disabled>Previous</button>
+                            <span id="history-page-numbers"></span>
+                            <button class="btn-pagination" onclick="changeHistoryPage(1)" id="history-next-btn" disabled>Next</button>
+                        </div>
+                        <div class="pagination-size">
+                            <label>Show:</label>
+                            <select id="history-page-size" onchange="changeHistoryPageSize()">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span>per page</span>
+                        </div>
                     </div>
                 </div>
             </div>

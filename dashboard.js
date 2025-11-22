@@ -3271,6 +3271,12 @@ function showReminderSection() {
  * ============================================================================
  */
 
+// Global variables for pagination and filtering
+let allReminders = [];
+let filteredReminders = [];
+let currentHistoryPage = 1;
+let historyPageSize = 10;
+
 /**
  * Load reminder history for selected date
  */
@@ -3287,19 +3293,25 @@ async function loadReminderHistory() {
         const result = await response.json();
 
         if(result.error == 0) {
+            // Store all reminders globally
+            allReminders = result.reminders || [];
+
             // Update stats
             document.getElementById('history-total-count').textContent = `${result.total} reminder${result.total !== 1 ? 's' : ''}`;
             document.getElementById('history-sent-count').textContent = `${result.sent} sent`;
             document.getElementById('history-failed-count').textContent = `${result.failed} failed`;
 
-            // Update table
-            displayReminderHistoryTable(result.reminders);
+            // Reset to first page and apply filters
+            currentHistoryPage = 1;
+            filterReminderHistory();
         } else {
             console.error('Error loading reminder history:', result.err_msg);
+            allReminders = [];
             displayReminderHistoryTable([]);
         }
     } catch(error) {
         console.error('Error loading reminder history:', error);
+        allReminders = [];
         displayReminderHistoryTable([]);
     }
 }
@@ -3309,15 +3321,17 @@ async function loadReminderHistory() {
  */
 function displayReminderHistoryTable(reminders) {
     const tbody = document.getElementById('history-tbody');
+    const pagination = document.getElementById('history-pagination');
 
     if(!reminders || reminders.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
-                    No reminders found for this date
+                    ${filteredReminders.length === 0 && allReminders.length > 0 ? 'No reminders match your search criteria' : 'No reminders found for this date'}
                 </td>
             </tr>
         `;
+        pagination.style.display = 'none';
         return;
     }
 
@@ -3371,6 +3385,129 @@ function setHistoryToday() {
 
     dateInput.value = `${year}-${month}-${day}`;
     loadReminderHistory();
+}
+
+/**
+ * Filter reminder history based on search and status
+ */
+function filterReminderHistory() {
+    const searchInput = document.getElementById('history-search');
+    const statusFilter = document.getElementById('history-status-filter');
+
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const statusValue = statusFilter.value;
+
+    // Filter reminders
+    filteredReminders = allReminders.filter(reminder => {
+        // Search filter
+        const matchesSearch = !searchTerm ||
+            (reminder.username && reminder.username.toLowerCase().includes(searchTerm)) ||
+            (reminder.full_name && reminder.full_name.toLowerCase().includes(searchTerm)) ||
+            (reminder.mac && reminder.mac.toLowerCase().includes(searchTerm));
+
+        // Status filter
+        const matchesStatus = !statusValue || reminder.status === statusValue;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    // Reset to first page when filtering
+    currentHistoryPage = 1;
+
+    // Display filtered results with pagination
+    displayReminderHistoryWithPagination();
+}
+
+/**
+ * Display reminder history with pagination
+ */
+function displayReminderHistoryWithPagination() {
+    const totalItems = filteredReminders.length;
+    const totalPages = Math.ceil(totalItems / historyPageSize);
+
+    // Calculate start and end indices
+    const startIndex = (currentHistoryPage - 1) * historyPageSize;
+    const endIndex = Math.min(startIndex + historyPageSize, totalItems);
+
+    // Get current page data
+    const pageData = filteredReminders.slice(startIndex, endIndex);
+
+    // Display table
+    displayReminderHistoryTable(pageData);
+
+    // Update pagination controls
+    updateHistoryPagination(totalItems, totalPages, startIndex, endIndex);
+}
+
+/**
+ * Update pagination controls
+ */
+function updateHistoryPagination(totalItems, totalPages, startIndex, endIndex) {
+    const pagination = document.getElementById('history-pagination');
+    const pageInfo = document.getElementById('history-page-info');
+    const prevBtn = document.getElementById('history-prev-btn');
+    const nextBtn = document.getElementById('history-next-btn');
+    const pageNumbers = document.getElementById('history-page-numbers');
+
+    if(totalItems === 0) {
+        pagination.style.display = 'none';
+        return;
+    }
+
+    pagination.style.display = 'flex';
+
+    // Update page info
+    pageInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalItems}`;
+
+    // Update prev/next buttons
+    prevBtn.disabled = currentHistoryPage === 1;
+    nextBtn.disabled = currentHistoryPage === totalPages;
+
+    // Generate page numbers
+    pageNumbers.innerHTML = '';
+    const maxPageButtons = 5;
+    let startPage = Math.max(1, currentHistoryPage - Math.floor(maxPageButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+    if(endPage - startPage < maxPageButtons - 1) {
+        startPage = Math.max(1, endPage - maxPageButtons + 1);
+    }
+
+    for(let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('span');
+        pageBtn.className = 'page-number' + (i === currentHistoryPage ? ' active' : '');
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => {
+            currentHistoryPage = i;
+            displayReminderHistoryWithPagination();
+        };
+        pageNumbers.appendChild(pageBtn);
+    }
+}
+
+/**
+ * Change history page
+ */
+function changeHistoryPage(direction) {
+    const totalPages = Math.ceil(filteredReminders.length / historyPageSize);
+
+    if(direction === -1 && currentHistoryPage > 1) {
+        currentHistoryPage--;
+        displayReminderHistoryWithPagination();
+    } else if(direction === 1 && currentHistoryPage < totalPages) {
+        currentHistoryPage++;
+        displayReminderHistoryWithPagination();
+    }
+}
+
+/**
+ * Change history page size
+ */
+function changeHistoryPageSize() {
+    const pageSizeSelect = document.getElementById('history-page-size');
+    historyPageSize = parseInt(pageSizeSelect.value);
+    currentHistoryPage = 1;
+    displayReminderHistoryWithPagination();
 }
 
 /**
