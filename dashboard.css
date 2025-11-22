@@ -110,13 +110,26 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
+.navbar-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .navbar h1 {
     font-size: 24px;
     font-weight: 700;
     letter-spacing: -0.5px;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
+    margin: 0;
+    line-height: 1;
+}
+
+.app-version {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.75;
+    letter-spacing: 0.3px;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .navbar .user-info {
@@ -2655,3 +2668,4 @@ input[type="number"] {
     color: var(--text-primary);
     cursor: pointer;
 }
+

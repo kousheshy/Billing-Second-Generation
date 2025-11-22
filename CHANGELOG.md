@@ -35,6 +35,21 @@ New granular permission control for the Messaging tab, allowing administrators t
 - Restrict messaging features from resellers who should only manage accounts
 - Maintain clean dashboard UI by hiding unused tabs from unauthorized users
 
+### Added - Copyright and Version Display
+
+**Overview**
+Added copyright notice and version information to application headers, visible on all pages.
+
+**Features**
+- **Copyright Notice**: "© 2025 All Rights Reserved"
+- **Version Display**: Shows current version (v1.7.9)
+- **Header Integration**: Displayed as subtitle below main title in top-left
+- **Non-Intrusive Design**: Small, subtle text with proper opacity
+- **Dark Mode Compatible**: Adapts to dashboard theme colors
+- **Pages Updated**:
+  - Dashboard: Below "ShowBox Billing Panel" in navbar
+  - Login page: Below "Billing Management System" text
+
 ---
 
 ## [1.7.8] - 2025-11-22
