@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.6-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -190,12 +190,13 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Sync accounts functionality
   - Assign accounts to resellers
   - Delete accounts (if permission granted)
-- **Granular Permission Control (v1.6.5, Enhanced v1.7.4)**:
+- **Granular Permission Control (v1.6.5, Enhanced v1.7.4, v1.7.5)**:
   - Can Edit Accounts: Permission to modify existing accounts
   - Can Add Accounts: Permission to create new accounts
   - Can Delete Accounts: Permission to delete accounts (new in v1.6.5)
   - **Can Send STB Events & Messages (v1.7.4)**: Permission to send events and messages to customers' STB devices
-  - Admin Permissions: Full admin-level access (hides other checkboxes)
+  - **Can Toggle Account Status (v1.7.5)**: Permission to enable/disable customer accounts
+  - Admin Permissions: Full admin-level access (hides other checkboxes and auto-grants all permissions)
   - Observer: Read-only access (mutually exclusive with Admin - v1.7.0)
 - **View Mode Toggle**: Reseller admins can switch between:
   - "My Accounts" - View only their own accounts
@@ -598,13 +599,48 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.7.4
+**Version:** 1.7.6
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.7.6** (Nov 2025) - Reseller Admin Plan & Tariff Access + STB Auto-Grant
+  - **Expanded Authorization**: Reseller admins can now create plans (`add_plan.php`) and retrieve tariffs (`get_tariffs.php`) (previously super admin only)
+  - **Unified Permission Logic**: Backend checks allow super admin OR reseller admin for plan/tariff endpoints
+  - **Auto-Grant STB & Status Toggle**: Selecting Admin permission auto-enables both STB control (`can_control_stb`) and status toggle (`can_toggle_status`) flags in the permission string
+  - **Permission String (6 Fields)**: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status`
+  - **Dashboard Logic Update**: `dashboard.js` derives STB/status toggle flags when Admin is checked (preventing accidental omission)
+  - **Security & Consistency**: Ensures reseller admins with full admin rights have complete operational control including device and account status management
+  - **Files Modified**: `add_plan.php`, `get_tariffs.php`, `dashboard.js`
+  - **No Database Migration**: Pure authorization & permission propagation changes
+  - **Documentation**: README & CHANGELOG updated accordingly
+
+- **v1.7.5** (Nov 2025) - Account Status Toggle System & Permission Expansion
+  - **One-Click Status Toggle**: Compact green/red switch per account for enabling/disabling service
+  - **Instant Dual-Server Sync**: Status changes pushed to both Stalker servers immediately
+  - **Granular Permission**: New `can_toggle_status` field added (6th position in permission string)
+  - **Automatic Granting**: Reseller admins inherit status toggle permission automatically
+  - **UI Integration**: Toggle column added; creation date column removed for cleaner 9-column layout
+  - **Permission Hierarchy**: Super admin > reseller admin > reseller with explicit permission > observer (disabled view)
+  - **Updated Permission Format**: Upgraded from 5-field to 6-field layout to include toggle flag
+  - **Files Added/Changed**: `toggle_account_status.php`, `dashboard.html`, `dashboard.js`, `dashboard.css`, plus permission parsing updates across API endpoints
+  - **Enhanced Feedback**: Success messages use customer's full name for clarity
+  - **Security Controls**: Ownership validation ensures resellers can only toggle their own accounts
+  - **Backward Compatibility**: Previous 5-field permissions automatically extended with default `0` for toggle flag
+
+- **v1.7.5** (Nov 2025) - Reseller Admin Plan & Tariff Access + STB Auto-Grant
+  - **Expanded Authorization**: Reseller admins can now create plans (`add_plan.php`) and retrieve tariffs (`get_tariffs.php`) previously restricted to super admins
+  - **Unified Permission Logic**: Backend checks now allow either super admin or reseller admin role for plan/tariff endpoints
+  - **Auto-Grant STB Control**: Selecting Admin permission automatically enables STB control (`can_control_stb`) without needing manual checkbox selection
+  - **Permission String Finalized**: Format locked as `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb`
+  - **Dashboard Logic Update**: `dashboard.js` constructs permission string with derived STB flag when Admin is checked
+  - **Consistency & Security**: Prevents accidental omission of STB control for reseller admins granted full admin rights
+  - **Files Modified**: `add_plan.php`, `get_tariffs.php`, `dashboard.js`
+  - **No DB Migration Required**: Pure authorization & frontend logic enhancement
+  - **Documentation Updated**: README & CHANGELOG reflect new capabilities
 
 - **v1.7.4** (Nov 2025) - Reseller Theme Bulk Propagation & Enhanced MAC Initialization
   - **Automatic Theme Propagation**: Changing a reseller's theme now updates ALL existing subscriber accounts on Stalker Portal

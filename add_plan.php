@@ -35,13 +35,22 @@ try {
 
     $pdo = new PDO($dsn, $user, $pass, $opt);
 
-    // Check if user is admin
-    $stmt = $pdo->prepare('SELECT * FROM _users WHERE username = ?');
+    // Check if user is admin or reseller admin
+    $stmt = $pdo->prepare('SELECT super_user, permissions FROM _users WHERE username = ?');
     $stmt->execute([$username]);
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if(!$user_info || $user_info['super_user'] != 1) {
-        echo json_encode(['error' => 1, 'err_msg' => 'Unauthorized. Admin only.']);
+    if (!$user_info) {
+        echo json_encode(['error' => 1, 'err_msg' => 'User not found.']);
+        exit;
+    }
+
+    // Check permissions: super_user OR reseller admin (index 2 in permissions string)
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    if ($user_info['super_user'] != 1 && !$is_reseller_admin) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Unauthorized. Admin or Reseller Admin only.']);
         exit;
     }
 

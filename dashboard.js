@@ -1026,17 +1026,23 @@ function renderAccountsPage() {
                 `;
             }
 
-            // Format creation date
-            let creationDate = '';
-            if(account.timestamp) {
-                const createDate = new Date(account.timestamp * 1000); // Convert Unix timestamp to milliseconds
-                creationDate = createDate.toLocaleDateString();
-            }
-
             // Format reseller display
             const resellerDisplay = account.reseller_name
                 ? account.reseller_name
                 : '<span style="color: #999; font-style: italic;">Not Assigned</span>';
+
+            // Status toggle (default to active=1 if not set)
+            const accountStatus = account.status !== undefined ? account.status : 1;
+            const isActive = accountStatus == 1;
+            const statusToggle = isObserver
+                ? `<label class="status-toggle" style="opacity: 0.5; cursor: not-allowed;">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} disabled>
+                    <span class="toggle-slider"></span>
+                   </label>`
+                : `<label class="status-toggle" onclick="toggleAccountStatus('${account.username}', ${isActive ? 0 : 1})">
+                    <input type="checkbox" ${isActive ? 'checked' : ''}>
+                    <span class="toggle-slider"></span>
+                   </label>`;
 
             tr.innerHTML = `
                 <td>${account.username || ''}</td>
@@ -1045,8 +1051,8 @@ function renderAccountsPage() {
                 <td>${account.mac || ''}</td>
                 <td>${account.tariff_plan || ''}</td>
                 <td>${resellerDisplay}</td>
+                <td>${statusToggle}</td>
                 <td>${expirationCell}</td>
-                <td>${creationDate}</td>
                 <td>
                     <div class="action-buttons">
                         ${editButton}
@@ -1530,11 +1536,15 @@ async function addReseller(e) {
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
     const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
     const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
+    const canToggleStatus = formData.get('can_toggle_status') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${canControlStb}`;
+    // If admin is checked, grant all permissions including STB control and status toggle
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status
+    const finalCanControlStb = isAdmin === '1' ? '1' : canControlStb;
+    const finalCanToggleStatus = isAdmin === '1' ? '1' : canToggleStatus;
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -1614,6 +1624,29 @@ async function deleteAccount(username) {
         }
     } catch(error) {
         showAlert('Error deleting account: ' + error.message, 'error');
+    }
+}
+
+// Toggle Account Status
+async function toggleAccountStatus(username, newStatus) {
+    try {
+        const response = await fetch(`toggle_account_status.php?username=${encodeURIComponent(username)}&status=${newStatus}`);
+        const result = await response.json();
+
+        if(result.error == 0) {
+            // Use the message from the server (which contains the full name)
+            showAlert(result.message || 'Status updated successfully', 'success');
+            // Reload accounts to reflect the change
+            loadAccounts();
+        } else {
+            showAlert(result.err_msg || 'Error toggling account status', 'error');
+            // Reload accounts to reset toggle to previous state
+            loadAccounts();
+        }
+    } catch(error) {
+        showAlert('Error toggling account status: ' + error.message, 'error');
+        // Reload accounts to reset toggle to previous state
+        loadAccounts();
     }
 }
 
@@ -1739,13 +1772,14 @@ async function editReseller(resellerId) {
                 const themeToSet = reseller.theme || (defaultTheme ? defaultTheme.id : 'HenSoft-TV Realistic-Centered SHOWBOX');
                 document.getElementById('edit-reseller-theme').value = themeToSet;
 
-                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb)
-                const permissions = (reseller.permissions || '0|0|0|0|0').split('|');
+                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status)
+                const permissions = (reseller.permissions || '0|0|0|0|0|0').split('|');
                 document.getElementById('edit-can-edit-accounts').checked = permissions[0] === '1';
                 document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
                 document.getElementById('edit-is-admin').checked = permissions[2] === '1';
                 document.getElementById('edit-can-delete-accounts').checked = permissions[3] === '1';
                 document.getElementById('edit-can-control-stb').checked = permissions[4] === '1';
+                document.getElementById('edit-can-toggle-status').checked = permissions[5] === '1';
 
                 // Set observer checkbox
                 document.getElementById('edit-is-observer').checked = reseller.is_observer == 1;
@@ -1774,11 +1808,15 @@ async function updateReseller(e) {
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
     const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
     const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
+    const canToggleStatus = formData.get('can_toggle_status') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${canControlStb}`;
+    // If admin is checked, grant all permissions including STB control and status toggle
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status
+    const finalCanControlStb = isAdmin === '1' ? '1' : canControlStb;
+    const finalCanToggleStatus = isAdmin === '1' ? '1' : canToggleStatus;
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -2624,7 +2662,7 @@ function hideObserverActions() {
  * Toggle other permissions based on admin checkbox state
  * Preserves the checkbox states when hiding/showing them
  */
-function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox) {
+function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox) {
     const isAdmin = adminCheckbox ? adminCheckbox.checked : false;
     const isObserver = observerCheckbox ? observerCheckbox.checked : false;
 
@@ -2640,13 +2678,22 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canDeleteCheckbox) {
             canDeleteCheckbox.closest('.permission-item').style.display = 'none';
         }
+        if (canControlStbCheckbox) {
+            canControlStbCheckbox.closest('.permission-item').style.display = 'none';
+        }
+        if (canToggleStatusCheckbox) {
+            canToggleStatusCheckbox.closest('.permission-item').style.display = 'none';
+        }
         // Uncheck all permissions when observer is checked
         canEditCheckbox.checked = false;
         canAddCheckbox.checked = false;
         if (canDeleteCheckbox) canDeleteCheckbox.checked = false;
+        if (canControlStbCheckbox) canControlStbCheckbox.checked = false;
+        if (canToggleStatusCheckbox) canToggleStatusCheckbox.checked = false;
     } else if (isAdmin) {
         // Admin is checked - hide and uncheck Observer and all other permissions
         // Observer and Admin are mutually exclusive
+        // Admin gets full access, so individual permissions are hidden
         if (observerCheckbox) {
             observerCheckbox.closest('.permission-item').style.display = 'none';
             observerCheckbox.checked = false;
@@ -2656,6 +2703,12 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canDeleteCheckbox) {
             canDeleteCheckbox.closest('.permission-item').style.display = 'none';
         }
+        if (canControlStbCheckbox) {
+            canControlStbCheckbox.closest('.permission-item').style.display = 'none';
+        }
+        if (canToggleStatusCheckbox) {
+            canToggleStatusCheckbox.closest('.permission-item').style.display = 'none';
+        }
     } else {
         // Neither admin nor observer is checked - show all permission items
         if (adminCheckbox) adminCheckbox.closest('.permission-item').style.display = 'flex';
@@ -2664,6 +2717,12 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         canAddCheckbox.closest('.permission-item').style.display = 'flex';
         if (canDeleteCheckbox) {
             canDeleteCheckbox.closest('.permission-item').style.display = 'flex';
+        }
+        if (canControlStbCheckbox) {
+            canControlStbCheckbox.closest('.permission-item').style.display = 'flex';
+        }
+        if (canToggleStatusCheckbox) {
+            canToggleStatusCheckbox.closest('.permission-item').style.display = 'flex';
         }
     }
 }
@@ -2677,16 +2736,18 @@ function setupAddResellerPermissions() {
     const canEditCheckbox = document.querySelector('#addResellerModal input[name="can_edit_accounts"]');
     const canAddCheckbox = document.querySelector('#addResellerModal input[name="can_add_accounts"]');
     const canDeleteCheckbox = document.querySelector('#addResellerModal input[name="can_delete_accounts"]');
+    const canControlStbCheckbox = document.querySelector('#addResellerModal input[name="can_control_stb"]');
+    const canToggleStatusCheckbox = document.querySelector('#addResellerModal input[name="can_toggle_status"]');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox);
         });
     }
 
     if (observerCheckbox) {
         observerCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, this);
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, this);
         });
     }
 }
@@ -2700,19 +2761,21 @@ function setupEditResellerPermissions() {
     const canEditCheckbox = document.getElementById('edit-can-edit-accounts');
     const canAddCheckbox = document.getElementById('edit-can-add-accounts');
     const canDeleteCheckbox = document.getElementById('edit-can-delete-accounts');
+    const canControlStbCheckbox = document.getElementById('edit-can-control-stb');
+    const canToggleStatusCheckbox = document.getElementById('edit-can-toggle-status');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox);
         });
 
         // Initial state check when modal is opened
-        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, observerCheckbox);
+        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox);
     }
 
     if (observerCheckbox) {
         observerCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, this);
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, this);
         });
     }
 }

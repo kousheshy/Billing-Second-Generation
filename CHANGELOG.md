@@ -5,6 +5,121 @@ All notable changes to the ShowBox Billing Panel will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.6] - 2025-11-22
+
+### Added - Reseller Admin Plan & Tariff Access + Permission Auto-Grant Enhancements
+
+**Authorization Expansion**
+- Reseller admins can now create plans via `add_plan.php` (previously super admin only)
+- Reseller admins can retrieve tariffs via `get_tariffs.php`
+- Unified backend checks: allow super admin OR reseller admin for plan/tariff operations
+
+**Permission Auto-Grant Logic**
+- Admin selection now auto-enables STB control and status toggle permissions
+- Prevents configuration drift where admin lacks device/status management
+- Permission string (6 fields) finalized: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status`
+
+**Frontend Updates**
+- `dashboard.js`: derives `can_control_stb` and `can_toggle_status` when Admin is checked
+- Ensures consistent permission serialization across Add/Edit reseller flows
+
+**Security & Consistency**
+- Eliminates manual oversight for granting operational control to reseller admins
+- Aligns reseller admin capabilities with platform-wide administrative expectations
+
+**Files Modified**
+- `add_plan.php` - Added reseller admin authorization branch
+- `get_tariffs.php` - Added reseller admin authorization branch & user existence check
+- `dashboard.js` - Permission assembly logic updated for auto-grant flags
+
+**Migration Notes**
+- No database schema changes
+- Existing 5-field permissions automatically treated with implicit `0` for new sixth field until updated
+
+**Documentation**
+- README updated with 1.7.6 entry & revised permission format
+
+---
+
+## [1.7.5] - 2025-11-22
+
+### Added - Account Status Toggle System
+
+**Account Status Toggle Feature**
+- **One-Click Status Toggle**: Quick enable/disable toggle switch for each account in the accounts table
+- **Visual Toggle Switch**: Modern toggle UI component (green=active, red=disabled) without text labels for compact design
+- **Instant Feedback**: Success messages display customer's full name (not username) with current status
+- **Real-time Updates**: Status changes immediately reflected in the account table
+- **Dual Server Sync**: Status updates automatically applied to both Stalker Portal servers
+- **API Integration**: Uses proper Stalker Portal API method (PUT operation with MAC address)
+- **Permission-Based Access**: New granular permission system controls who can toggle account status
+
+**Status Toggle Permission System**
+- **New Permission**: "Can Toggle Account Status" - Sixth permission field added to reseller permissions
+- **Admin Control**: Super admins can grant/revoke status toggle permission for each reseller
+- **Automatic Granting**: Reseller admins automatically receive status toggle permission
+- **UI Integration**: Permission checkbox in both Add and Edit Reseller forms with descriptive helper text
+- **Backend Validation**: Strict permission checks prevent unauthorized status changes
+- **Permission Hierarchy**:
+  - Super Admin: Can toggle any account status
+  - Reseller Admin: Can toggle status of accounts under them
+  - Regular Reseller with Permission: Can toggle their own customers' accounts
+  - Regular Reseller without Permission: Cannot toggle account status
+- **Security**: Resellers can only toggle status of accounts that belong to them
+- **Clear Error Messages**: Permission denied messages explain why action was blocked
+
+**User Interface Enhancements**
+- **Compact Table Layout**: Status column optimized to 60px width with proper spacing
+- **Visual Feedback**: Toggle switch changes color based on state (green/red)
+- **Observer Mode**: Toggle switch shown but disabled for observer users
+- **Column Spacing**: Added right padding to status column for visual separation from expiration date
+- **Removed Creation Date**: Removed non-functional creation date column from accounts table
+- **Table Updates**: Updated table from 10 columns to 9 columns after removal
+
+**Technical Implementation**
+- New endpoint: `toggle_account_status.php` - Handles status toggle with permission validation
+- Updated `dashboard.html`:
+  - Added "Status" column header
+  - Added "Can Toggle Account Status" checkbox in Add/Edit Reseller forms
+  - Removed "Creation Date" column
+  - Updated colspan from 10 to 9
+- Updated `dashboard.js`:
+  - Added `toggleAccountStatus()` function for async status updates
+  - Status toggle rendering in `renderAccountsPage()` with observer handling
+  - Updated `addReseller()` to handle 6-field permissions
+  - Updated `updateReseller()` to handle 6-field permissions
+  - Updated `editReseller()` to populate new checkbox
+  - Updated `handleAdminPermissionToggle()` to manage new permission visibility
+- Updated `dashboard.css`:
+  - Toggle switch styles (38x20px compact design)
+  - Status column width and padding
+  - Compact button styles for table rows
+- Backend permission format updates in all PHP files:
+  - `add_reseller.php` - Default permissions: `'0|0|0|0|1|0'`
+  - `update_reseller.php` - Default permissions: `'0|0|0|0|1|0'`
+  - `get_user_info.php` - Updated permission parsing
+  - `send_stb_event.php` - Updated permission parsing
+  - `send_stb_message.php` - Updated permission parsing
+  - `get_tariffs.php` - Updated permission parsing
+  - `change_status.php` - Updated permission parsing and comment
+
+**Permissions Format Updated**
+- Old format (v1.7.4): `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb`
+- New format (v1.7.5): `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status`
+
+**Files Modified**
+- `toggle_account_status.php` - NEW (status toggle endpoint)
+- `dashboard.html` - Status column, permission checkbox, removed creation date
+- `dashboard.js` - Toggle function, permission handling
+- `dashboard.css` - Toggle switch styling, column layout
+- `add_reseller.php` - 6-field permissions default
+- `update_reseller.php` - 6-field permissions default
+- `get_user_info.php` - 6-field permissions parsing
+- `send_stb_event.php` - 6-field permissions parsing
+- `send_stb_message.php` - 6-field permissions parsing
+- `get_tariffs.php` - 6-field permissions parsing
+- `change_status.php` - 6-field permissions parsing
+
 ---
 
 ## [1.7.4] - 2025-11-22
