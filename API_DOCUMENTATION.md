@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.7.2
+**Version:** 1.7.3
 **Last Updated:** November 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -18,7 +18,8 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 6. [User Management](#user-management)
 7. [Stalker Portal Integration](#stalker-portal-integration)
 8. [STB Device Control](#stb-device-control)
-9. [Error Codes](#error-codes)
+9. [Theme Management](#theme-management)
+10. [Error Codes](#error-codes)
 
 ---
 
@@ -850,6 +851,92 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
   "message": "Failed to fetch tariff plans from Stalker Portal"
 }
 ```
+
+---
+
+## Theme Management
+
+### Get Available Themes
+**Endpoint:** `GET /get_themes.php`
+
+**Description:** Retrieve list of available Stalker Portal themes for reseller assignment.
+
+**Version:** Added in v1.7.3
+
+**Permissions:** Super admin only
+
+**Request:** No parameters required
+
+**Response:**
+```json
+{
+  "error": 0,
+  "themes": [
+    {
+      "id": "HenSoft-TV Realistic-Centered SHOWBOX",
+      "name": "HenSoft-TV Realistic-Centered SHOWBOX (Default)",
+      "is_default": true
+    },
+    {
+      "id": "HenSoft-TV Realistic-Centered",
+      "name": "HenSoft-TV Realistic-Centered"
+    },
+    {
+      "id": "HenSoft-TV Realistic-Dark",
+      "name": "HenSoft-TV Realistic-Dark"
+    },
+    {
+      "id": "HenSoft-TV Realistic-Light",
+      "name": "HenSoft-TV Realistic-Light"
+    },
+    {
+      "id": "cappuccino",
+      "name": "Cappuccino"
+    },
+    {
+      "id": "digital",
+      "name": "Digital"
+    },
+    {
+      "id": "emerald",
+      "name": "Emerald"
+    },
+    {
+      "id": "graphite",
+      "name": "Graphite"
+    },
+    {
+      "id": "ocean_blue",
+      "name": "Ocean Blue"
+    }
+  ]
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Permission denied. Only super admins can access themes."
+}
+```
+
+**Usage:**
+- Called automatically when admin opens Add/Edit Reseller modal
+- Populates theme dropdown in reseller forms
+- Default theme is pre-selected in Add Reseller form
+
+**Theme Application:**
+- When creating a reseller, selected theme is stored in `_users.theme` column
+- When creating an account, reseller's theme is automatically applied via server-side script
+- When editing an account, theme is synced to ensure consistency with reseller's current theme
+- Theme is sent to Stalker Portal using custom `/stalker_portal/update_account.php` endpoint
+
+**Technical Details:**
+- Uses server-side theme list (can be updated in `get_themes.php`)
+- Default theme: "HenSoft-TV Realistic-Centered SHOWBOX"
+- Theme IDs must match exactly with Stalker Portal theme names
+- No API method available from Stalker Portal for dynamic theme fetching (as of v5.2)
 
 ---
 

@@ -204,6 +204,8 @@ async function checkAuth() {
             loadResellers();
             // Load tariffs for super admin, reseller admins, and observers
             loadTariffs();
+            // Load themes for reseller management
+            loadThemes();
         }
 
         // Hide all action buttons for observers
@@ -1356,6 +1358,65 @@ function updatePlanDetails(selectElement) {
     }
 }
 
+// Global variable to store themes
+let availableThemes = [];
+
+// Load Themes from server
+async function loadThemes() {
+    try {
+        const response = await fetch('get_themes.php');
+        const result = await response.json();
+
+        if (result.error === 0 && result.themes) {
+            availableThemes = result.themes;
+            console.log(`Loaded ${result.themes.length} themes from server`);
+
+            // Populate theme dropdowns in Add and Edit Reseller modals
+            populateThemeDropdowns();
+        } else {
+            console.error('Failed to load themes:', result.err_msg);
+        }
+    } catch (error) {
+        console.error('Error loading themes:', error);
+    }
+}
+
+// Populate theme dropdowns in Add and Edit Reseller modals
+function populateThemeDropdowns() {
+    const addThemeSelect = document.getElementById('add-reseller-theme');
+    const editThemeSelect = document.getElementById('edit-reseller-theme');
+
+    if (!addThemeSelect && !editThemeSelect) return;
+
+    // Find default theme
+    const defaultTheme = availableThemes.find(theme => theme.is_default) || availableThemes[0];
+
+    // Populate Add Reseller theme dropdown
+    if (addThemeSelect) {
+        addThemeSelect.innerHTML = '';
+        availableThemes.forEach(theme => {
+            const option = document.createElement('option');
+            option.value = theme.id;
+            option.textContent = theme.name;
+            if (theme.is_default || theme.id === defaultTheme.id) {
+                option.selected = true;
+            }
+            addThemeSelect.appendChild(option);
+        });
+    }
+
+    // Populate Edit Reseller theme dropdown
+    if (editThemeSelect) {
+        editThemeSelect.innerHTML = '';
+        availableThemes.forEach(theme => {
+            const option = document.createElement('option');
+            option.value = theme.id;
+            option.textContent = theme.name;
+            editThemeSelect.appendChild(option);
+        });
+    }
+}
+
 // Load Transactions
 async function loadTransactions() {
     try {
@@ -1646,6 +1707,11 @@ async function deletePlan(planId, currency) {
 // Edit Reseller
 async function editReseller(resellerId) {
     try {
+        // Ensure themes are loaded before opening modal
+        if (availableThemes.length === 0) {
+            await loadThemes();
+        }
+
         const response = await fetch('get_resellers.php');
         const result = await response.json();
 
@@ -1659,7 +1725,11 @@ async function editReseller(resellerId) {
                 document.getElementById('edit-reseller-email').value = reseller.email || '';
                 document.getElementById('edit-reseller-max-users').value = reseller.max_users || 0;
                 document.getElementById('edit-reseller-currency').value = reseller.currency_id || 'IRR';
-                document.getElementById('edit-reseller-theme').value = reseller.theme || 'default';
+
+                // Set theme value (use default if reseller has no theme set)
+                const defaultTheme = availableThemes.find(t => t.is_default);
+                const themeToSet = reseller.theme || (defaultTheme ? defaultTheme.id : 'HenSoft-TV Realistic-Centered SHOWBOX');
+                document.getElementById('edit-reseller-theme').value = themeToSet;
 
                 // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|reserved)
                 const permissions = (reseller.permissions || '0|0|0|0|0').split('|');

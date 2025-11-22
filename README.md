@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.3-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -135,6 +135,27 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Comprehensive Data**: Includes MAC, Name, Phone, Status, Expiry, Reseller
 - **Timestamped Files**: Auto-generated filenames with dates
 - **Export Libraries**: Integrated XLSX.js, jsPDF, and jsPDF-autoTable
+
+### Reseller Theme Management (v1.7.3)
+- **Portal Theme Assignment**: Assign specific Stalker Portal themes to resellers
+- **Theme Inheritance**: All subscribers under a reseller automatically receive the reseller's theme
+- **9 Available Themes**:
+  - HenSoft-TV Realistic-Centered SHOWBOX (Default)
+  - HenSoft-TV Realistic-Centered
+  - HenSoft-TV Realistic-Dark
+  - HenSoft-TV Realistic-Light
+  - Cappuccino
+  - Digital
+  - Emerald
+  - Graphite
+  - Ocean Blue
+- **Smart Theme Dropdown**: Themes dynamically loaded from server with default pre-selected
+- **Automatic Application**: Theme applied to Stalker Portal when creating accounts
+- **Theme Sync**: Ensures theme consistency when editing accounts
+- **Reseller Management**: Theme selection available in both Add and Edit Reseller forms
+- **Visual Customization**: Customize the portal interface appearance for each reseller's customers
+- **Server-Side Updates**: Uses reliable server-side script for theme synchronization
+- **No Subscriber Override**: Resellers cannot modify theme setting (admin-only feature)
 
 ### Reseller Assignment (v1.7.0)
 - **Account-to-Reseller Mapping**: Assign any account to any reseller with one click

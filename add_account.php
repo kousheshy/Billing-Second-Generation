@@ -470,13 +470,28 @@ if($decoded->status == 'OK')
     // $url = $SERVER_2_ADDRESS."/stalker_portal/update_account.php";
     // send_request($url, "POST", $data);
 
-    $data = "key=f4H75Sgf53GH4dd&login=".$username."&theme=".$reseller_info['theme'];
+    // Log theme information before sending
+    error_log("=== THEME UPDATE DEBUG ===");
+    error_log("Reseller ID: " . $reseller_info['id']);
+    error_log("Reseller Name: " . $reseller_info['name']);
+    error_log("Reseller Theme: " . ($reseller_info['theme'] ?? 'NULL'));
+    error_log("Account Username: " . $username);
+    error_log("Server Address: " . $SERVER_1_ADDRESS);
+
+    $theme_to_apply = !empty($reseller_info['theme']) ? $reseller_info['theme'] : 'HenSoft-TV Realistic-Centered SHOWBOX';
+    error_log("Theme to apply: " . $theme_to_apply);
+
+    $data = "key=f4H75Sgf53GH4dd&login=".$username."&theme=".$theme_to_apply;
     $url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
+
+    error_log("POST Data: " . $data);
+    error_log("POST URL: " . $url);
 
     $res = send_request($url, "POST", $data);
 
     // Log the update_account response
     error_log("update_account.php response: " . $res);
+    error_log("=== END THEME UPDATE DEBUG ===");
 
     if($res == 'OK')
     {

@@ -226,6 +226,32 @@ try {
         exit();
     }
 
+    // Update theme on Stalker Portal server (to ensure theme matches reseller's current theme)
+    // Get reseller's current theme
+    $stmt = $pdo->prepare('SELECT theme FROM _users WHERE id = ?');
+    $stmt->execute([$account['reseller']]);
+    $reseller_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if($reseller_info && !empty($reseller_info['theme'])) {
+        // Use the custom server-side script to update theme
+        $theme_data = "key=f4H75Sgf53GH4dd&login=".$username_to_send."&theme=".$reseller_info['theme'];
+        $theme_url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
+
+        // Helper function for simple POST request
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($curl, CURLOPT_POSTREDIR, 3);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $theme_data);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($curl, CURLOPT_URL, $theme_url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        $theme_result = curl_exec($curl);
+        curl_close($curl);
+
+        error_log("edit_account.php: Theme update response: " . $theme_result);
+    }
+
     $response['error'] = 0;
     $response['err_msg'] = '';
     $response['message'] = 'Account updated successfully';

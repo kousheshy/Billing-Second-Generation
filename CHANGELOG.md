@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.3] - 2025-11-22
+
+### Added - Reseller Theme Management
+
+**Theme Assignment Feature**
+- New theme management system for resellers and their subscribers
+- Resellers can be assigned a specific portal theme that applies to all their subscribers
+- Theme dropdown in Add/Edit Reseller forms with 9 available themes:
+  - **HenSoft-TV Realistic-Centered SHOWBOX** (Default)
+  - HenSoft-TV Realistic-Centered
+  - HenSoft-TV Realistic-Dark
+  - HenSoft-TV Realistic-Light
+  - Cappuccino
+  - Digital
+  - Emerald
+  - Graphite
+  - Ocean Blue
+- Automatic theme application when creating new subscriber accounts
+- Theme inheritance: all subscribers under a reseller automatically receive the reseller's theme
+- Theme persistence: theme is synchronized to Stalker Portal server
+- Theme updates when editing accounts to ensure consistency with reseller's current theme
+
+**Technical Implementation**
+- New endpoint: `get_themes.php` - Fetches available themes list
+- Updated `add_reseller.php` and `update_reseller.php` to handle theme field
+- Updated `add_account.php` to apply reseller's theme after account creation
+- Updated `edit_account.php` to sync theme when updating accounts
+- Theme dropdown dynamically populated from server
+- Default theme pre-selected in Add Reseller form
+- Uses existing server-side script method (`/stalker_portal/update_account.php`) for reliable theme updates
+- Theme stored in `_users` table `theme` column (VARCHAR 50)
+
+**Files Modified**
+- `get_themes.php` - NEW
+- `add_reseller.php` - Theme field handling (already existed)
+- `update_reseller.php` - Theme field handling (already existed)
+- `edit_account.php` - Added theme sync on account update
+- `dashboard.html` - Added theme dropdown to reseller forms
+- `dashboard.js` - Added theme loading and population logic
+
+---
+
 ## [1.7.2] - 2025-11-22
 
 ### Added - STB Device Control System
