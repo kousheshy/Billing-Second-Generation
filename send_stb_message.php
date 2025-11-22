@@ -45,16 +45,22 @@ try {
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Check permissions
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb
     $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
     $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+    $can_control_stb = isset($permissions[4]) && $permissions[4] === '1';
 
-    // Only super admin and reseller admin can send STB messages
-    if($user_info['super_user'] != 1 && !$is_reseller_admin) {
-        $response['error'] = 1;
-        $response['err_msg'] = 'Permission denied. Only administrators can send STB messages.';
-        header('Content-Type: application/json');
-        echo json_encode($response);
-        exit();
+    // Super admin can always send STB messages
+    // Reseller admin can only send if they have can_control_stb permission
+    // Regular resellers can only send if they have can_control_stb permission
+    if($user_info['super_user'] != 1) {
+        if(!$can_control_stb) {
+            $response['error'] = 1;
+            $response['err_msg'] = 'Permission denied. You do not have permission to send STB messages.';
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit();
+        }
     }
 
     // Get parameters

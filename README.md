@@ -178,7 +178,7 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Manual assignment required for proper reseller ownership
   - Prevents automatic admin assignment during sync
 
-### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5, v1.7.0)
+### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5, v1.7.0, v1.7.4)
 - **Three-Tier Permission System**:
   - Super Admin: Full system access including assign reseller
   - Reseller Admin: Admin-level permissions within reseller scope (now includes assign reseller)
@@ -190,10 +190,11 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Sync accounts functionality
   - Assign accounts to resellers
   - Delete accounts (if permission granted)
-- **Granular Permission Control (v1.6.5)**:
+- **Granular Permission Control (v1.6.5, Enhanced v1.7.4)**:
   - Can Edit Accounts: Permission to modify existing accounts
   - Can Add Accounts: Permission to create new accounts
   - Can Delete Accounts: Permission to delete accounts (new in v1.6.5)
+  - **Can Send STB Events & Messages (v1.7.4)**: Permission to send events and messages to customers' STB devices
   - Admin Permissions: Full admin-level access (hides other checkboxes)
   - Observer: Read-only access (mutually exclusive with Admin - v1.7.0)
 - **View Mode Toggle**: Reseller admins can switch between:

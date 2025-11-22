@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.4] - 2025-11-22
 
-### Added - Theme Propagation & Enhanced MAC Input
+### Added - Theme Propagation, Enhanced MAC Input & STB Control Permission
 
 **Automatic Theme Propagation**
 - **Theme Change Propagation**: When admin changes a reseller's theme, ALL existing accounts under that reseller are automatically updated
@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Debug Logging**: Console logging for troubleshooting MAC input initialization
 - **Universal Application**: Works identically for both admin and reseller users
 - **Smart Duplicate Prevention**: Prevents re-initializing already initialized inputs
+
+**STB Control Permission System**
+- **New Permission**: "Can Send STB Events & Messages" - Granular control over who can send STB commands
+- **Admin Control**: Super admins can grant/revoke STB control permission for each reseller
+- **Permission Enforcement**: Backend validation prevents unauthorized STB operations
+- **UI Integration**: Permission checkbox in Add/Edit Reseller forms
+- **Clear Labels**: Descriptive permission text and helper text
+- **Security**: Only users with explicit permission can send events and messages to STB devices
+- **Flexible**: Can be enabled/disabled independently of other permissions (edit, add, delete)
 
 **Warning Messages**
 - **Edit Reseller Modal**: "⚠️ Warning: Changing the theme will update the Stalker Portal theme for ALL existing accounts under this reseller. This change will take effect immediately."
@@ -52,8 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Files Modified**
 - `update_reseller_accounts_theme.php` - NEW (standalone bulk update endpoint)
 - `update_reseller.php` - Added theme propagation logic
-- `dashboard.html` - Added warning message in Edit Reseller modal
-- `dashboard.js` - Enhanced MAC input initialization and theme update feedback
+- `dashboard.html` - Added warning message in Edit Reseller modal, added STB control permission checkbox
+- `dashboard.js` - Enhanced MAC input initialization, theme update feedback, and STB permission handling
+- `send_stb_event.php` - Added STB control permission validation
+- `send_stb_message.php` - Added STB control permission validation
+
+**Permissions Format Updated**
+- Old format: `can_edit|can_add|is_reseller_admin|can_delete|reserved`
+- New format: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb`
 
 ---
 

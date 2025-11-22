@@ -1529,11 +1529,12 @@ async function addReseller(e) {
     const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
     const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
+    const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|reserved
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|1`;
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${canControlStb}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -1738,12 +1739,13 @@ async function editReseller(resellerId) {
                 const themeToSet = reseller.theme || (defaultTheme ? defaultTheme.id : 'HenSoft-TV Realistic-Centered SHOWBOX');
                 document.getElementById('edit-reseller-theme').value = themeToSet;
 
-                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|reserved)
+                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb)
                 const permissions = (reseller.permissions || '0|0|0|0|0').split('|');
                 document.getElementById('edit-can-edit-accounts').checked = permissions[0] === '1';
                 document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
                 document.getElementById('edit-is-admin').checked = permissions[2] === '1';
                 document.getElementById('edit-can-delete-accounts').checked = permissions[3] === '1';
+                document.getElementById('edit-can-control-stb').checked = permissions[4] === '1';
 
                 // Set observer checkbox
                 document.getElementById('edit-is-observer').checked = reseller.is_observer == 1;
@@ -1771,11 +1773,12 @@ async function updateReseller(e) {
     const canEditAccounts = formData.get('can_edit_accounts') === '1' ? '1' : '0';
     const canAddAccounts = formData.get('can_add_accounts') === '1' ? '1' : '0';
     const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
+    const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|reserved
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|1`;
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${canControlStb}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);

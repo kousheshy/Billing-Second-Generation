@@ -419,7 +419,7 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 - If password is empty, the existing password is retained
 - Theme propagation only occurs when theme value actually changes
 - Plans are NOT updated here - they are managed separately via `assign_plans.php`
-- Permissions format: `can_edit|can_add|is_admin|can_delete|reserved`
+- Permissions format: `can_edit|can_add|is_admin|can_delete|can_control_stb` (v1.7.4: changed from `reserved` to `can_control_stb`)
 
 ---
 
@@ -706,9 +706,11 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 
 **Description:** Send control event to Set-Top Box device via Stalker Portal API.
 
-**Version:** Added in v1.7.2
+**Version:** Added in v1.7.2, Enhanced in v1.7.4
 
-**Permissions:** Super admin or reseller admin only
+**Permissions:**
+- Super admin: Always allowed
+- Resellers: Must have "Can Send STB Events & Messages" permission (v1.7.4)
 
 **Request Body:**
 ```json
@@ -769,9 +771,11 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 
 **Description:** Send text message to Set-Top Box device via Stalker Portal API.
 
-**Version:** Added in v1.7.2
+**Version:** Added in v1.7.2, Enhanced in v1.7.4
 
-**Permissions:** Super admin or reseller admin only
+**Permissions:**
+- Super admin: Always allowed
+- Resellers: Must have "Can Send STB Events & Messages" permission (v1.7.4)
 
 **Request Body:**
 ```json
