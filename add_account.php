@@ -6,6 +6,7 @@ ini_set('display_startup_errors', 0);
 error_reporting(0);
 include('config.php');
 include('api.php');
+include('sms_helper.php');
 
 use PHPMailer\PHPMailer\PHPMailer;
 require 'PHPMailer/src/PHPMailer.php';
@@ -552,8 +553,23 @@ if($decoded->status == 'OK')
         // $res = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
 
         $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-        
-    
+
+        // Send welcome SMS if phone number is provided
+        if (!empty($phone_number)) {
+            try {
+                // Get the account ID we just created
+                $stmt = $pdo->prepare('SELECT id FROM _accounts WHERE mac = ? ORDER BY id DESC LIMIT 1');
+                $stmt->execute([$mac]);
+                $account_row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $account_id = $account_row ? $account_row['id'] : null;
+
+                // Send welcome SMS (non-blocking - won't affect account creation if it fails)
+                sendWelcomeSMS($pdo, $user_info['id'], $name, $mac, $phone_number, $expire_billing_date, $account_id);
+            } catch (Exception $e) {
+                // Silently fail - don't disrupt account creation
+                error_log("Welcome SMS failed: " . $e->getMessage());
+            }
+        }
 
         $response['error']=0;
         $response['err_msg']='';

@@ -494,8 +494,16 @@
                     <p style="color: var(--text-secondary); margin-top: 8px;">Manage automated and manual messaging to your customers</p>
                 </div>
 
-                <!-- Expiry Reminder Section (STB Permission Required) -->
-                <div id="reminder-section" class="reminder-section" style="display:none;">
+                <!-- SMS Tab Navigation -->
+                <div class="messaging-tabs" style="margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
+                    <button class="messaging-tab-btn active" onclick="switchMessagingTab('stb')">STB Messages</button>
+                    <button class="messaging-tab-btn" onclick="switchMessagingTab('sms')">SMS Messages</button>
+                </div>
+
+                <!-- STB Messages Content -->
+                <div id="stb-messages-content" class="messaging-tab-content">
+                    <!-- Expiry Reminder Section (STB Permission Required) -->
+                    <div id="reminder-section" class="reminder-section" style="display:none;">
                     <h3>Expiry Reminder Settings</h3>
                     <p>Automatically send reminders to customers whose accounts are expiring soon.</p>
 
@@ -619,6 +627,258 @@
                         </div>
                     </div>
                 </div>
+                </div> <!-- End STB Messages Content -->
+
+                <!-- SMS Messages Content -->
+                <div id="sms-messages-content" class="messaging-tab-content" style="display:none;">
+                    <!-- SMS Configuration Section -->
+                    <div class="sms-config-section">
+                        <h3>SMS Configuration</h3>
+                        <p>Configure your Faraz SMS API settings for sending SMS messages</p>
+
+                        <div class="reminder-config">
+                            <div class="form-group">
+                                <label>API Token *</label>
+                                <input type="password" id="sms-api-token" class="reminder-input" placeholder="Your Faraz SMS API token">
+                                <small>Get your API token from <a href="https://sms.farazsms.com/dashboard" target="_blank">Faraz SMS Dashboard</a></small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sender Number *</label>
+                                <input type="text" id="sms-sender-number" class="reminder-input" placeholder="+983000505">
+                                <small>Your SMS sender phone number in E.164 format</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>API Base URL</label>
+                                <input type="text" id="sms-base-url" class="reminder-input" value="https://edge.ippanel.com/v1" readonly>
+                                <small>Faraz SMS API endpoint (default: https://edge.ippanel.com/v1)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="toggle-label-horizontal">
+                                    <span class="toggle-text">Enable Automatic SMS Reminders</span>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="sms-auto-send-enabled">
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <small>Automatically send 4-stage SMS reminders: 7 days, 3 days, 1 day before expiry, and when account expires</small>
+                            </div>
+
+                            <div class="form-group" style="background: var(--bg-secondary); padding: 16px; border-radius: var(--radius-md); border-left: 4px solid var(--primary);">
+                                <h4 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 14px;">📱 Multi-Stage Reminder System</h4>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: var(--text-secondary);">
+                                    <li>Stage 1: 7 days before expiry (early warning)</li>
+                                    <li>Stage 2: 3 days before expiry (urgent reminder ⚠️)</li>
+                                    <li>Stage 3: 1 day before expiry (final warning 🚨)</li>
+                                    <li>Stage 4: Account expired (service deactivated ❌)</li>
+                                </ul>
+                                <p style="margin: 12px 0 0 0; font-size: 12px; color: var(--text-tertiary);">✓ Smart duplicate prevention • ✓ Stops after renewal • ✓ Personalized messages</p>
+                            </div>
+
+                            <button class="btn-primary" onclick="saveSMSSettings()">Save SMS Configuration</button>
+                        </div>
+
+                        <div id="sms-config-status" class="reminder-status" style="display:none;"></div>
+                    </div>
+
+                    <!-- Send SMS Section -->
+                    <div class="sms-send-section" style="margin-top: 30px;">
+                        <h3>Send SMS Messages</h3>
+                        <p>Send SMS to individual numbers or multiple accounts</p>
+
+                        <div class="sms-tabs" style="margin-bottom: 20px;">
+                            <button class="sms-tab-btn active" onclick="switchSMSMode('manual')">Send to Number</button>
+                            <button class="sms-tab-btn" onclick="switchSMSMode('accounts')">Send to Accounts</button>
+                        </div>
+
+                        <!-- Manual SMS Mode -->
+                        <div id="sms-manual-mode" class="sms-mode-content">
+                            <div class="form-group">
+                                <label>Recipient Phone Number *</label>
+                                <input type="text" id="sms-recipient-number" class="reminder-input" placeholder="+989120000000">
+                                <small>Enter phone number in E.164 format (e.g., +989120000000)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Message *</label>
+                                <textarea id="sms-manual-message" rows="4" class="reminder-textarea" maxlength="500" placeholder="Type your SMS message here..."></textarea>
+                                <small><span id="sms-manual-char-count">0</span>/500 characters</small>
+                            </div>
+
+                            <button class="btn-primary" onclick="sendManualSMS()">📱 Send SMS</button>
+                        </div>
+
+                        <!-- Accounts SMS Mode -->
+                        <div id="sms-accounts-mode" class="sms-mode-content" style="display:none;">
+                            <div class="form-group">
+                                <label>Select Accounts *</label>
+
+                                <!-- Search Box -->
+                                <div class="sms-account-search">
+                                    <input type="text" id="sms-account-search-input" placeholder="Search by name, phone, or MAC..." oninput="filterSMSAccounts()">
+                                    <span class="sms-search-icon">🔍</span>
+                                </div>
+
+                                <!-- Account Count -->
+                                <div class="sms-account-count">
+                                    <span id="sms-account-count-text">Loading accounts...</span>
+                                </div>
+
+                                <!-- Select All -->
+                                <div style="margin-bottom: 12px; padding: 0 4px;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="select-all-sms" onchange="toggleSelectAllSMS()">
+                                        <span>Select All Visible Accounts</span>
+                                    </label>
+                                </div>
+
+                                <!-- Accounts List -->
+                                <div id="sms-accounts-list">
+                                    <p style="color: var(--text-tertiary); padding: 20px; text-align: center;">Loading accounts...</p>
+                                </div>
+
+                                <small style="display: block; margin-top: 8px;">Only accounts with phone numbers will be shown</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Message Template *</label>
+                                <select id="sms-template-select" class="reminder-input" onchange="loadSMSTemplate()">
+                                    <option value="">-- Select a template or type custom message --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Message *</label>
+                                <textarea id="sms-accounts-message" rows="4" class="reminder-textarea" maxlength="500" placeholder="Type your SMS message. Use {name}, {mac}, {expiry_date} for personalization..."></textarea>
+                                <small><span id="sms-accounts-char-count">0</span>/500 characters | Variables: {name}, {mac}, {expiry_date}</small>
+                            </div>
+
+                            <button class="btn-primary" onclick="sendAccountsSMS()">📱 Send SMS to Selected Accounts</button>
+                        </div>
+
+                        <div id="sms-send-status" class="reminder-status" style="display:none;"></div>
+                    </div>
+
+                    <!-- SMS Template Management -->
+                    <div class="sms-templates-section" style="margin-top: 30px;">
+                        <h3>SMS Message Templates</h3>
+                        <p>Create and manage reusable SMS message templates with variables</p>
+
+                        <div style="margin-bottom: 20px;">
+                            <button class="btn-primary" onclick="showAddTemplateModal()">+ Add New Template</button>
+                        </div>
+
+                        <!-- Templates List -->
+                        <div id="sms-templates-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                            <p style="color: var(--text-tertiary); padding: 20px; text-align: center; grid-column: 1 / -1;">Loading templates...</p>
+                        </div>
+                    </div>
+
+                    <!-- SMS History Log -->
+                    <div class="sms-history-section" style="margin-top: 30px;">
+                        <h3>SMS History</h3>
+                        <p>View all sent SMS messages with filtering options</p>
+
+                        <div class="history-controls">
+                            <div class="date-browser">
+                                <input type="date" id="sms-history-date" onchange="loadSMSHistory()" class="history-date-input">
+                                <button class="btn-today" onclick="setSMSHistoryToday()">📅 Today</button>
+                                <button class="btn-today" onclick="loadSMSHistory()">🔄 Refresh</button>
+                            </div>
+                            <div class="history-stats">
+                                <span id="sms-history-total-count" class="stat-badge">0 SMS</span>
+                                <span id="sms-history-sent-count" class="stat-badge stat-success">0 sent</span>
+                                <span id="sms-history-failed-count" class="stat-badge stat-error">0 failed</span>
+                            </div>
+                        </div>
+
+                        <div class="history-search-controls">
+                            <input type="text" id="sms-history-search" placeholder="Search by name, number, or MAC..." class="history-search-input" oninput="filterSMSHistory()">
+                            <select id="sms-history-status-filter" class="history-filter-select" onchange="filterSMSHistory()">
+                                <option value="">All Status</option>
+                                <option value="sent">✓ Sent Only</option>
+                                <option value="failed">✗ Failed Only</option>
+                                <option value="pending">⏳ Pending Only</option>
+                            </select>
+                            <select id="sms-history-type-filter" class="history-filter-select" onchange="filterSMSHistory()">
+                                <option value="">All Types</option>
+                                <option value="manual">Manual</option>
+                                <option value="expiry_reminder">Expiry Reminder</option>
+                                <option value="renewal">Renewal</option>
+                                <option value="new_account">New Account</option>
+                            </select>
+                        </div>
+
+                        <div id="sms-history-table-container" class="history-table-container">
+                            <table id="sms-history-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Recipient</th>
+                                        <th>Phone Number</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Message</th>
+                                        <th>Sent By</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sms-history-tbody">
+                                    <tr>
+                                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+                                            Click refresh to load SMS history
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="history-pagination" id="sms-history-pagination" style="display:none;">
+                            <div class="pagination-info">
+                                <span id="sms-history-page-info">Showing 0-0 of 0</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn-pagination" onclick="changeSMSHistoryPage(-1)" id="sms-history-prev-btn" disabled>Previous</button>
+                                <span id="sms-history-page-numbers"></span>
+                                <button class="btn-pagination" onclick="changeSMSHistoryPage(1)" id="sms-history-next-btn" disabled>Next</button>
+                            </div>
+                            <div class="pagination-size">
+                                <label>Show:</label>
+                                <select id="sms-history-page-size" onchange="changeSMSHistoryPageSize()">
+                                    <option value="10">10</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                <span>per page</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMS Statistics -->
+                    <div class="sms-stats-section" style="margin-top: 30px;">
+                        <h3>SMS Statistics</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="sms-stats-total">0</div>
+                                <div class="stat-label">Total Sent</div>
+                            </div>
+                            <div class="stat-card stat-success-card">
+                                <div class="stat-value" id="sms-stats-successful">0</div>
+                                <div class="stat-label">Successful</div>
+                            </div>
+                            <div class="stat-card stat-error-card">
+                                <div class="stat-value" id="sms-stats-failed">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="sms-stats-pending">0</div>
+                                <div class="stat-label">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End SMS Messages Content -->
             </div>
         </div>
     </div>
@@ -1140,6 +1400,48 @@
         </div>
     </div>
 
+    <!-- SMS Template Editor Modal -->
+    <div id="sms-template-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="closeTemplateModal()">&times;</span>
+            <h2 id="template-modal-title">Add SMS Template</h2>
+
+            <form id="sms-template-form" onsubmit="saveTemplate(event)">
+                <div class="form-group">
+                    <label>Template Name *</label>
+                    <input type="text" id="template-name" required placeholder="e.g., Payment Reminder">
+                    <small>Give your template a descriptive name</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Description (Optional)</label>
+                    <input type="text" id="template-description" placeholder="Brief description of when to use this template">
+                </div>
+
+                <div class="form-group">
+                    <label>Message Template *</label>
+                    <textarea id="template-message" rows="6" required placeholder="Type your message here..." oninput="updateTemplatePreview()"></textarea>
+                    <small>Available variables: <code>{name}</code>, <code>{mac}</code>, <code>{expiry_date}</code>, <code>{days}</code></small>
+                    <div style="margin-top: 8px;">
+                        <span id="template-char-count">0</span> characters
+                    </div>
+                </div>
+
+                <div class="form-group" style="background: var(--bg-secondary); padding: 12px; border-radius: var(--radius-md);">
+                    <label style="margin-bottom: 8px; display: block; font-weight: 600;">Preview:</label>
+                    <div id="template-preview" style="white-space: pre-wrap; color: var(--text-secondary); font-size: 14px; font-family: monospace;">
+                        Enter a message to see preview...
+                    </div>
+                </div>
+
+                <input type="hidden" id="template-id" value="">
+                <button type="submit" class="btn-primary">Save Template</button>
+                <button type="button" class="btn-secondary" onclick="closeTemplateModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <script src="dashboard.js"></script>
+    <script src="sms-functions.js"></script>
 </body>
 </html>

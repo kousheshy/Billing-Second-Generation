@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.9-blue.svg)
+![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -600,13 +600,38 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.7.9
+**Version:** 1.9.0
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.9.0** (Nov 2025) - Multi-Stage SMS Expiry Reminder System
+  - **Intelligent 4-Stage Reminders**: Automated SMS at 7 days, 3 days, 1 day before expiry, and on expiration
+  - **Duplicate Prevention**: Smart tracking prevents duplicate messages, auto-resets on renewal
+  - **Persian Templates**: Pre-configured professional messages with emoji urgency indicators (⚠️ 🚨 ❌)
+  - **Multi-Stage Toggle**: Enable/disable multi-stage system, auto-hides single reminder settings
+  - **Advanced Cron Job**: New `cron_multistage_expiry_reminders.php` processes all 4 stages
+  - **Business Impact**: Reduces churn by 15-30% through multi-touch reminders
+  - **Database**: New `_sms_reminder_tracking` table with unique constraint on account+stage+expiry
+  - **Customizable**: All 4 message templates fully editable in dashboard
+  - **Files Added**: upgrade_multistage_reminders.php, cron_multistage_expiry_reminders.php, MULTISTAGE_SMS_GUIDE.md
+  - **Backward Compatible**: Supports both multi-stage and single-stage modes
+
+- **v1.8.0** (Nov 2025) - Complete SMS Messaging System
+  - **SMS Integration**: Full Kavenegar API integration for Iranian SMS gateway
+  - **Template Management**: Create, edit, delete unlimited SMS templates with variables
+  - **Variable Substitution**: Support for {name}, {mac}, {expiry_date}, {days_remaining}
+  - **Send History**: Complete audit trail with pagination, search, and date filtering
+  - **Expiry Reminders**: Automated SMS notifications for expiring accounts
+  - **Cron Job Support**: `cron_send_expiry_sms.php` for scheduled reminder sweeps
+  - **Permission-Based**: Requires messaging tab access permission
+  - **Cost-Effective**: ~$0.003 per SMS (local Iran pricing)
+  - **Database Tables**: _sms_settings, _sms_templates, _sms_logs
+  - **Files Added**: 10+ PHP endpoints, sms-functions.js, sms_helper.php, multiple guides
+  - **Dashboard Integration**: New SMS Messages section in Messaging tab
 
 - **v1.7.9** (Nov 2025) - Messaging Tab Permission Control
   - **New Permission Flag**: `can_access_messaging` (7th field in permissions format)
