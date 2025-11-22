@@ -98,6 +98,7 @@
             <button class="tab" onclick="switchTab('resellers')">Resellers</button>
             <button class="tab" onclick="switchTab('plans')">Plans</button>
             <button class="tab" onclick="switchTab('transactions')">Transactions</button>
+            <button class="tab" onclick="switchTab('stb-control')">STB Control</button>
             <button class="tab" onclick="switchTab('reports')">Reports</button>
             <button class="tab" onclick="switchTab('settings')">Settings</button>
         </div>
@@ -211,6 +212,76 @@
                         <tr><td colspan="6" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- STB Control Tab -->
+            <div id="stb-control-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>STB Device Control</h2>
+                    <p style="color: #666; font-size: 14px; margin-top: 8px;">Send commands and messages to Set-Top Box devices</p>
+                </div>
+
+                <div class="stb-control-container">
+                    <!-- Send Event Section -->
+                    <div class="stb-control-section">
+                        <h3>Send Event to Device</h3>
+                        <form id="stbEventForm" onsubmit="sendStbEvent(event)">
+                            <div class="form-group">
+                                <label>MAC Address *</label>
+                                <input type="text" id="event-mac" name="mac" required placeholder="00:1A:79:XX:XX:XX">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Event Type *</label>
+                                <select id="event-type" name="event" required>
+                                    <option value="">-- Select Event --</option>
+                                    <option value="reboot">Reboot</option>
+                                    <option value="reload_portal">Reload Portal</option>
+                                    <option value="update_channels">Update Channels</option>
+                                    <option value="play_channel">Play Channel</option>
+                                    <option value="play_radio_channel">Play Radio Channel</option>
+                                    <option value="update_image">Update Image</option>
+                                    <option value="show_menu">Show Menu</option>
+                                    <option value="cut_off">Cut Off</option>
+                                </select>
+                            </div>
+
+                            <!-- Additional fields for specific events -->
+                            <div id="channel-field" class="form-group" style="display: none;">
+                                <label>Channel ID</label>
+                                <input type="text" id="channel-id" name="channel_id" placeholder="Enter channel ID">
+                            </div>
+
+                            <button type="submit" class="btn-primary">Send Event</button>
+                        </form>
+                    </div>
+
+                    <!-- Send Message Section -->
+                    <div class="stb-control-section">
+                        <h3>Send Message to Device</h3>
+                        <form id="stbMessageForm" onsubmit="sendStbMessage(event)">
+                            <div class="form-group">
+                                <label>MAC Address *</label>
+                                <input type="text" id="message-mac" name="mac" required placeholder="00:1A:79:XX:XX:XX">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Message *</label>
+                                <textarea id="message-text" name="message" rows="4" required placeholder="Enter message to display on device..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn-primary">Send Message</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Recent STB Actions -->
+                <div class="stb-actions-history" style="margin-top: 30px;">
+                    <h3>Recent Actions</h3>
+                    <div id="stb-history" class="stb-history-list">
+                        <p style="color: #999; text-align: center; padding: 20px;">No recent actions</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Reports Tab -->

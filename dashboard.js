@@ -425,9 +425,206 @@ function generateRandomString() {
     return result;
 }
 
+// ===========================
+// MAC Address Input Component
+// ===========================
+
+const MAC_PREFIX = '00:1A:79:';
+
+/**
+ * Validate MAC address format
+ * Must be 00:1A:79:XX:XX:XX where X is a hex digit (0-9, A-F)
+ */
+function validateMacAddress(mac) {
+    // Check if it starts with the required prefix
+    if (!mac.startsWith(MAC_PREFIX)) {
+        return { valid: false, error: 'MAC must start with 00:1A:79:' };
+    }
+
+    // Check full format: 00:1A:79:XX:XX:XX
+    const macPattern = /^00:1A:79:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}$/;
+    if (!macPattern.test(mac)) {
+        return { valid: false, error: 'Invalid MAC format. Expected: 00:1A:79:XX:XX:XX (hex digits only)' };
+    }
+
+    return { valid: true, error: null };
+}
+
+/**
+ * Initialize MAC address input field
+ * Makes the prefix non-editable and handles user input
+ */
+function initMacAddressInput(inputElement) {
+    if (!inputElement) return;
+
+    // Set initial value with prefix and placeholder
+    inputElement.value = MAC_PREFIX;
+    inputElement.setAttribute('data-mac-initialized', 'true');
+
+    // Add visual styling
+    inputElement.classList.add('mac-input');
+    inputElement.setAttribute('placeholder', '00:1A:79:XX:XX:XX');
+    inputElement.setAttribute('maxlength', '17'); // 00:1A:79:XX:XX:XX = 17 chars
+
+    // Create error message element if it doesn't exist
+    let errorElement = inputElement.parentElement.querySelector('.mac-error');
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'mac-error';
+        errorElement.style.display = 'none';
+        inputElement.parentElement.appendChild(errorElement);
+    }
+
+    // Handle focus - move cursor after prefix
+    inputElement.addEventListener('focus', function(e) {
+        if (this.value === MAC_PREFIX || this.value === '') {
+            this.value = MAC_PREFIX;
+        }
+        // Set cursor position after prefix
+        setTimeout(() => {
+            this.setSelectionRange(MAC_PREFIX.length, MAC_PREFIX.length);
+        }, 0);
+    });
+
+    // Handle input - ensure prefix is always there
+    inputElement.addEventListener('input', function(e) {
+        let value = this.value;
+
+        // If user tries to delete the prefix, restore it
+        if (!value.startsWith(MAC_PREFIX)) {
+            this.value = MAC_PREFIX;
+            this.setSelectionRange(MAC_PREFIX.length, MAC_PREFIX.length);
+            return;
+        }
+
+        // Get the user-entered part (after prefix)
+        let userPart = value.substring(MAC_PREFIX.length);
+
+        // Remove any invalid characters (not hex or colon)
+        userPart = userPart.replace(/[^0-9A-Fa-f:]/g, '');
+
+        // Auto-format: add colons after every 2 characters
+        let formatted = '';
+        let cleanUserPart = userPart.replace(/:/g, ''); // Remove existing colons
+
+        for (let i = 0; i < cleanUserPart.length && i < 6; i++) {
+            if (i > 0 && i % 2 === 0) {
+                formatted += ':';
+            }
+            formatted += cleanUserPart[i].toUpperCase();
+        }
+
+        this.value = MAC_PREFIX + formatted;
+
+        // Hide error on input
+        errorElement.style.display = 'none';
+    });
+
+    // Handle keydown - prevent deleting/modifying prefix
+    inputElement.addEventListener('keydown', function(e) {
+        const selectionStart = this.selectionStart;
+        const selectionEnd = this.selectionEnd;
+
+        // Prevent backspace/delete if it would affect the prefix
+        if ((e.key === 'Backspace' || e.key === 'Delete') && selectionStart <= MAC_PREFIX.length) {
+            if (selectionEnd <= MAC_PREFIX.length) {
+                e.preventDefault();
+                return;
+            }
+        }
+
+        // Prevent left arrow or home key from going into prefix
+        if (e.key === 'ArrowLeft' || e.key === 'Home') {
+            if (selectionStart <= MAC_PREFIX.length) {
+                e.preventDefault();
+                this.setSelectionRange(MAC_PREFIX.length, MAC_PREFIX.length);
+            }
+        }
+    });
+
+    // Handle click - don't let user click into prefix
+    inputElement.addEventListener('click', function(e) {
+        if (this.selectionStart < MAC_PREFIX.length) {
+            this.setSelectionRange(MAC_PREFIX.length, MAC_PREFIX.length);
+        }
+    });
+
+    // Validate on blur
+    inputElement.addEventListener('blur', function(e) {
+        const validation = validateMacAddress(this.value);
+
+        if (!validation.valid && this.value !== MAC_PREFIX) {
+            showMacError(this, validation.error);
+        } else {
+            hideMacError(this);
+        }
+    });
+}
+
+/**
+ * Show MAC validation error
+ */
+function showMacError(inputElement, message) {
+    const errorElement = inputElement.parentElement.querySelector('.mac-error');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+    inputElement.classList.add('mac-input-error');
+}
+
+/**
+ * Hide MAC validation error
+ */
+function hideMacError(inputElement) {
+    const errorElement = inputElement.parentElement.querySelector('.mac-error');
+    if (errorElement) {
+        errorElement.style.display = 'none';
+    }
+    inputElement.classList.remove('mac-input-error');
+}
+
+/**
+ * Validate MAC input before form submission
+ * Returns true if valid, false if invalid
+ */
+function validateMacInput(inputElement) {
+    if (!inputElement) return false;
+
+    const validation = validateMacAddress(inputElement.value);
+
+    if (!validation.valid) {
+        showMacError(inputElement, validation.error);
+        inputElement.focus();
+        return false;
+    }
+
+    hideMacError(inputElement);
+    return true;
+}
+
+/**
+ * Initialize all MAC address inputs on the page
+ */
+function initAllMacInputs() {
+    // Find all MAC address input fields
+    const macInputs = document.querySelectorAll('input[name="mac"], input[id*="mac"], input[placeholder*="1A:79"]');
+
+    macInputs.forEach(input => {
+        if (!input.getAttribute('data-mac-initialized')) {
+            initMacAddressInput(input);
+        }
+    });
+}
+
 // Modal functions
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('show');
+
+    // Initialize MAC address inputs in the modal
+    setTimeout(() => {
+        initAllMacInputs();
+    }, 10);
 
     // Auto-generate username and password when opening add account modal
     if(modalId === 'addAccountModal') {
@@ -1215,6 +1412,12 @@ async function loadTransactions() {
 // Add Account
 async function addAccount(e) {
     e.preventDefault();
+
+    // Validate MAC address before submission
+    const macInput = e.target.querySelector('input[name="mac"]');
+    if (!validateMacInput(macInput)) {
+        return;
+    }
 
     const formData = new FormData(e.target);
 
@@ -2150,6 +2353,143 @@ function exportToPDF(accounts, reportInfo) {
 }
 
 // ===========================
+// STB Control Functions
+// ===========================
+
+/**
+ * Send event to STB device
+ */
+async function sendStbEvent(event) {
+    event.preventDefault();
+
+    // Validate MAC address before submission
+    const macInput = event.target.querySelector('input[name="mac"]');
+    if (!validateMacInput(macInput)) {
+        return;
+    }
+
+    const formData = new FormData(event.target);
+
+    try {
+        const response = await fetch('send_stb_event.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if(result.error == 0) {
+            showAlert(result.message, 'success');
+            event.target.reset();
+
+            // Add to history
+            addStbHistory('Event', formData.get('event'), formData.get('mac'));
+        } else {
+            showAlert(result.err_msg || 'Error sending event', 'error');
+        }
+    } catch(error) {
+        console.error('Error sending STB event:', error);
+        showAlert('Error sending event: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Send message to STB device
+ */
+async function sendStbMessage(event) {
+    event.preventDefault();
+
+    // Validate MAC address before submission
+    const macInput = event.target.querySelector('input[name="mac"]');
+    if (!validateMacInput(macInput)) {
+        return;
+    }
+
+    const formData = new FormData(event.target);
+
+    try {
+        const response = await fetch('send_stb_message.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if(result.error == 0) {
+            showAlert(result.message, 'success');
+            event.target.reset();
+
+            // Add to history
+            addStbHistory('Message', formData.get('message').substring(0, 50) + '...', formData.get('mac'));
+        } else {
+            showAlert(result.err_msg || 'Error sending message', 'error');
+        }
+    } catch(error) {
+        console.error('Error sending STB message:', error);
+        showAlert('Error sending message: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Handle event type change to show/hide channel field
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const eventTypeSelect = document.getElementById('event-type');
+    const channelField = document.getElementById('channel-field');
+
+    if(eventTypeSelect && channelField) {
+        eventTypeSelect.addEventListener('change', function() {
+            const eventType = this.value;
+
+            // Show channel field for events that need it
+            if(eventType === 'play_channel' || eventType === 'play_radio_channel') {
+                channelField.style.display = 'block';
+                document.getElementById('channel-id').required = true;
+            } else {
+                channelField.style.display = 'none';
+                document.getElementById('channel-id').required = false;
+                document.getElementById('channel-id').value = '';
+            }
+        });
+    }
+});
+
+/**
+ * Add action to STB history
+ */
+function addStbHistory(type, action, mac) {
+    const historyContainer = document.getElementById('stb-history');
+
+    if(!historyContainer) return;
+
+    // Remove "no actions" message if present
+    if(historyContainer.querySelector('p')) {
+        historyContainer.innerHTML = '';
+    }
+
+    const historyItem = document.createElement('div');
+    historyItem.className = 'stb-history-item';
+
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+
+    historyItem.innerHTML = `
+        <div class="stb-history-time">${timeString}</div>
+        <div class="stb-history-details">
+            <strong>${type}:</strong> ${action} → <code>${mac}</code>
+        </div>
+    `;
+
+    // Add to top of list
+    historyContainer.insertBefore(historyItem, historyContainer.firstChild);
+
+    // Keep only last 10 items
+    while(historyContainer.children.length > 10) {
+        historyContainer.removeChild(historyContainer.lastChild);
+    }
+}
+
+// ===========================
 // Permission Management Functions
 // ===========================
 
@@ -2370,4 +2710,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Setup permission toggles
     setupAddResellerPermissions();
+
+    // Initialize MAC address inputs
+    setTimeout(() => {
+        initAllMacInputs();
+    }, 500);
 });
