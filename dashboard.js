@@ -182,6 +182,9 @@ async function checkAuth() {
                 }
             });
 
+            // Check messaging tab permission
+            checkMessagingTabPermission();
+
             // Hide admin-only stat cards for regular resellers
             document.querySelector('.stat-card:nth-child(3)').style.display = 'none'; // Total Resellers
             document.querySelector('.stat-card:nth-child(4)').style.display = 'none'; // Total Plans
@@ -1661,14 +1664,16 @@ async function addReseller(e) {
     const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
     const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
     const canToggleStatus = formData.get('can_toggle_status') === '1' ? '1' : '0';
+    const canAccessMessaging = formData.get('can_access_messaging') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // If admin is checked, grant all permissions including STB control and status toggle
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status
+    // If admin is checked, grant all permissions including STB control, status toggle, and messaging access
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
     const finalCanControlStb = isAdmin === '1' ? '1' : canControlStb;
     const finalCanToggleStatus = isAdmin === '1' ? '1' : canToggleStatus;
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}`;
+    const finalCanAccessMessaging = isAdmin === '1' ? '1' : canAccessMessaging;
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}|${finalCanAccessMessaging}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -1896,14 +1901,15 @@ async function editReseller(resellerId) {
                 const themeToSet = reseller.theme || (defaultTheme ? defaultTheme.id : 'HenSoft-TV Realistic-Centered SHOWBOX');
                 document.getElementById('edit-reseller-theme').value = themeToSet;
 
-                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status)
-                const permissions = (reseller.permissions || '0|0|0|0|0|0').split('|');
+                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging)
+                const permissions = (reseller.permissions || '0|0|0|0|0|0|0').split('|');
                 document.getElementById('edit-can-edit-accounts').checked = permissions[0] === '1';
                 document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
                 document.getElementById('edit-is-admin').checked = permissions[2] === '1';
                 document.getElementById('edit-can-delete-accounts').checked = permissions[3] === '1';
                 document.getElementById('edit-can-control-stb').checked = permissions[4] === '1';
                 document.getElementById('edit-can-toggle-status').checked = permissions[5] === '1';
+                document.getElementById('edit-can-access-messaging').checked = permissions[6] === '1';
 
                 // Set observer checkbox
                 document.getElementById('edit-is-observer').checked = reseller.is_observer == 1;
@@ -1933,14 +1939,16 @@ async function updateReseller(e) {
     const canDeleteAccounts = formData.get('can_delete_accounts') === '1' ? '1' : '0';
     const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
     const canToggleStatus = formData.get('can_toggle_status') === '1' ? '1' : '0';
+    const canAccessMessaging = formData.get('can_access_messaging') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // If admin is checked, grant all permissions including STB control and status toggle
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status
+    // If admin is checked, grant all permissions including STB control, status toggle, and messaging access
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
     const finalCanControlStb = isAdmin === '1' ? '1' : canControlStb;
     const finalCanToggleStatus = isAdmin === '1' ? '1' : canToggleStatus;
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}`;
+    const finalCanAccessMessaging = isAdmin === '1' ? '1' : canAccessMessaging;
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}|${finalCanAccessMessaging}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -2786,7 +2794,7 @@ function hideObserverActions() {
  * Toggle other permissions based on admin checkbox state
  * Preserves the checkbox states when hiding/showing them
  */
-function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox) {
+function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox) {
     const isAdmin = adminCheckbox ? adminCheckbox.checked : false;
     const isObserver = observerCheckbox ? observerCheckbox.checked : false;
 
@@ -2808,12 +2816,16 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canToggleStatusCheckbox) {
             canToggleStatusCheckbox.closest('.permission-item').style.display = 'none';
         }
+        if (canAccessMessagingCheckbox) {
+            canAccessMessagingCheckbox.closest('.permission-item').style.display = 'none';
+        }
         // Uncheck all permissions when observer is checked
         canEditCheckbox.checked = false;
         canAddCheckbox.checked = false;
         if (canDeleteCheckbox) canDeleteCheckbox.checked = false;
         if (canControlStbCheckbox) canControlStbCheckbox.checked = false;
         if (canToggleStatusCheckbox) canToggleStatusCheckbox.checked = false;
+        if (canAccessMessagingCheckbox) canAccessMessagingCheckbox.checked = false;
     } else if (isAdmin) {
         // Admin is checked - hide and uncheck Observer and all other permissions
         // Observer and Admin are mutually exclusive
@@ -2833,6 +2845,9 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canToggleStatusCheckbox) {
             canToggleStatusCheckbox.closest('.permission-item').style.display = 'none';
         }
+        if (canAccessMessagingCheckbox) {
+            canAccessMessagingCheckbox.closest('.permission-item').style.display = 'none';
+        }
     } else {
         // Neither admin nor observer is checked - show all permission items
         if (adminCheckbox) adminCheckbox.closest('.permission-item').style.display = 'flex';
@@ -2848,6 +2863,9 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canToggleStatusCheckbox) {
             canToggleStatusCheckbox.closest('.permission-item').style.display = 'flex';
         }
+        if (canAccessMessagingCheckbox) {
+            canAccessMessagingCheckbox.closest('.permission-item').style.display = 'flex';
+        }
     }
 }
 
@@ -2862,16 +2880,17 @@ function setupAddResellerPermissions() {
     const canDeleteCheckbox = document.querySelector('#addResellerModal input[name="can_delete_accounts"]');
     const canControlStbCheckbox = document.querySelector('#addResellerModal input[name="can_control_stb"]');
     const canToggleStatusCheckbox = document.querySelector('#addResellerModal input[name="can_toggle_status"]');
+    const canAccessMessagingCheckbox = document.querySelector('#addResellerModal input[name="can_access_messaging"]');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox);
         });
     }
 
     if (observerCheckbox) {
         observerCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, this);
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, this);
         });
     }
 }
@@ -2887,19 +2906,20 @@ function setupEditResellerPermissions() {
     const canDeleteCheckbox = document.getElementById('edit-can-delete-accounts');
     const canControlStbCheckbox = document.getElementById('edit-can-control-stb');
     const canToggleStatusCheckbox = document.getElementById('edit-can-toggle-status');
+    const canAccessMessagingCheckbox = document.getElementById('edit-can-access-messaging');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox);
         });
 
         // Initial state check when modal is opened
-        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, observerCheckbox);
+        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox);
     }
 
     if (observerCheckbox) {
         observerCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, this);
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, this);
         });
     }
 }
@@ -3240,19 +3260,42 @@ function showReminderStatus(type, message) {
 }
 
 /**
+ * Check messaging tab permission and hide tab if not allowed (v1.7.9)
+ */
+function checkMessagingTabPermission() {
+    const permissions = currentUser?.permissions?.split('|') || [];
+    const isSuperAdmin = currentUser?.super_user == 1;
+    const isResellerAdmin = currentUser?.is_reseller_admin === true || currentUser?.is_reseller_admin === '1';
+    const canAccessMessaging = permissions[6] === '1';
+
+    // Super admin and reseller admin always have access to messaging
+    // Regular resellers need explicit permission
+    const hasAccess = isSuperAdmin || isResellerAdmin || canAccessMessaging;
+
+    const messagingTab = document.querySelector('.tab[onclick*="messaging"]');
+    if(messagingTab) {
+        messagingTab.style.display = hasAccess ? '' : 'none';
+    }
+}
+
+/**
  * Show/hide reminder section based on permissions
  * Call this in checkAuth() function
  */
 function showReminderSection() {
-    // Check if user has STB control permission
+    // Check if user has STB control permission OR messaging permission
     const permissions = currentUser?.permissions?.split('|') || [];
     const isSuperAdmin = currentUser?.super_user == 1;
+    const isResellerAdmin = currentUser?.is_reseller_admin === true || currentUser?.is_reseller_admin === '1';
     const canControlStb = permissions[4] === '1';
+    const canAccessMessaging = permissions[6] === '1';
 
     const reminderSection = document.getElementById('reminder-section');
     const historySection = document.getElementById('reminder-history-section');
 
-    if(isSuperAdmin || canControlStb) {
+    // Show reminder section if user has STB control permission (for backward compatibility)
+    // Super admin and reseller admin always have access
+    if(isSuperAdmin || isResellerAdmin || canControlStb || canAccessMessaging) {
         if(reminderSection) reminderSection.style.display = 'block';
         if(historySection) {
             historySection.style.display = 'block';

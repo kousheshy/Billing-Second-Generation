@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.9] - 2025-11-22
+
+### Added - Messaging Tab Permission Control
+
+**Overview**
+New granular permission control for the Messaging tab, allowing administrators to grant or restrict access to messaging features (including expiry reminders) for individual resellers.
+
+**Features**
+- **New Permission Flag**: `can_access_messaging` (7th field in permissions format)
+- **Admin Control**: Checkbox in Add/Edit Reseller modals: "Can Access Messaging Tab"
+- **Automatic Access**: Super admin and reseller admin automatically have full messaging access
+- **Regular Resellers**: Need explicit permission to access Messaging tab
+- **Backward Compatibility**: Existing resellers with STB control permission maintain access to reminder features
+
+**Technical Details**
+- **Permission Format**: Updated from 6 fields to 7 fields: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging`
+- **Tab Visibility**: Messaging tab is automatically hidden for resellers without permission
+- **Reseller Admin Benefit**: Automatically granted messaging access when admin checkbox is selected
+- **UI Updates**:
+  - Added "Can Access Messaging Tab" checkbox to Add Reseller modal
+  - Added "Can Access Messaging Tab" checkbox to Edit Reseller modal with proper state loading
+  - Updated permission parsing logic to handle 7-field format
+
+**Use Cases**
+- Grant messaging access to trusted resellers for customer retention campaigns
+- Restrict messaging features from resellers who should only manage accounts
+- Maintain clean dashboard UI by hiding unused tabs from unauthorized users
+
+---
+
 ## [1.7.8] - 2025-11-22
 
 ### Added - Automated Expiry Reminder System (Churn Prevention)

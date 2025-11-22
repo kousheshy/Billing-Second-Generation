@@ -432,10 +432,22 @@ GET /toggle_account_status.php?username=user001&status=0
   "max_users": "200",
   "theme": "HenSoft-TV Realistic-Dark",
   "currency": "USD",
-  "permissions": "1|1|0|0|1|1",
+  "permissions": "1|1|0|0|1|1|1",
   "is_observer": 0
 }
 ```
+
+**Permission Format (v1.7.9):**
+The `permissions` field is a pipe-delimited string with 7 fields:
+`can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging`
+
+- **Field 1**: `can_edit` - Can edit accounts (0 or 1)
+- **Field 2**: `can_add` - Can add accounts (0 or 1)
+- **Field 3**: `is_reseller_admin` - Reseller admin status (0 or 1)
+- **Field 4**: `can_delete` - Can delete accounts (0 or 1)
+- **Field 5**: `can_control_stb` - Can send STB events & messages (0 or 1)
+- **Field 6**: `can_toggle_status` - Can toggle account status (0 or 1)
+- **Field 7**: `can_access_messaging` - Can access messaging tab (0 or 1) **[Added v1.7.9]**
 
 **Response (Normal Update):**
 ```json

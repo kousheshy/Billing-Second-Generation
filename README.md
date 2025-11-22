@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.8-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.9-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -178,25 +178,26 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Manual assignment required for proper reseller ownership
   - Prevents automatic admin assignment during sync
 
-### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5, v1.7.0, v1.7.4)
+### Reseller Admin Permissions (v1.6.0, Enhanced v1.6.5, v1.7.0, v1.7.4, v1.7.9)
 - **Three-Tier Permission System**:
   - Super Admin: Full system access including assign reseller
   - Reseller Admin: Admin-level permissions within reseller scope (now includes assign reseller)
   - Regular Reseller: Limited permissions based on settings
 - **Full Admin Features for Reseller Admins (v1.7.0)**:
-  - Access to all tabs (Accounts, Resellers, Plans, Reports, Transactions, Settings)
+  - Access to all tabs (Accounts, Resellers, Plans, Reports, Transactions, Settings, Messaging)
   - View and manage all resellers
   - Access tariffs from Stalker Portal
   - Sync accounts functionality
   - Assign accounts to resellers
   - Delete accounts (if permission granted)
-- **Granular Permission Control (v1.6.5, Enhanced v1.7.4, v1.7.5)**:
+- **Granular Permission Control (v1.6.5, Enhanced v1.7.4, v1.7.5, v1.7.9)**:
   - Can Edit Accounts: Permission to modify existing accounts
   - Can Add Accounts: Permission to create new accounts
   - Can Delete Accounts: Permission to delete accounts (new in v1.6.5)
   - **Can Send STB Events & Messages (v1.7.4)**: Permission to send events and messages to customers' STB devices
   - **Can Toggle Account Status (v1.7.5)**: Permission to enable/disable customer accounts
-  - Admin Permissions: Full admin-level access (hides other checkboxes and auto-grants all permissions)
+  - **Can Access Messaging Tab (v1.7.9)**: Permission to access messaging center and expiry reminder features
+  - Admin Permissions: Full admin-level access (hides other checkboxes and auto-grants all permissions including messaging)
   - Observer: Read-only access (mutually exclusive with Admin - v1.7.0)
 - **View Mode Toggle**: Reseller admins can switch between:
   - "My Accounts" - View only their own accounts
@@ -599,13 +600,24 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.7.7
+**Version:** 1.7.9
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.7.9** (Nov 2025) - Messaging Tab Permission Control
+  - **New Permission Flag**: `can_access_messaging` (7th field in permissions format)
+  - **Granular Access Control**: Administrators can grant or restrict messaging tab access per reseller
+  - **Automatic Access**: Super admin and reseller admin have full messaging access by default
+  - **Permission Format Updated**: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging`
+  - **Tab Visibility**: Messaging tab automatically hidden for unauthorized resellers
+  - **Backward Compatibility**: Existing resellers with STB control maintain access
+  - **UI Integration**: New checkbox in Add/Edit Reseller modals
+  - **Use Cases**: Grant messaging for retention campaigns, restrict for account-only management
+  - **Files Modified**: `dashboard.html`, `dashboard.js`, `README.md`, `CHANGELOG.md`, `API_DOCUMENTATION.md`
 
 - **v1.7.8** (Nov 2025) - Automated Expiry Reminder System (Churn Prevention)
   - **Messaging Tab**: New dedicated "Messaging" tab for all messaging features (moved from Settings)
@@ -655,7 +667,7 @@ Unauthorized copying, modification, or distribution is prohibited.
   - **Expanded Authorization**: Reseller admins can now create plans (`add_plan.php`) and retrieve tariffs (`get_tariffs.php`) (previously super admin only)
   - **Unified Permission Logic**: Backend checks allow super admin OR reseller admin for plan/tariff endpoints
   - **Auto-Grant STB & Status Toggle**: Selecting Admin permission auto-enables both STB control (`can_control_stb`) and status toggle (`can_toggle_status`) flags in the permission string
-  - **Permission String (6 Fields)**: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status`
+  - **Permission String (7 Fields as of v1.7.9)**: `can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging`
   - **Dashboard Logic Update**: `dashboard.js` derives STB/status toggle flags when Admin is checked (preventing accidental omission)
   - **Security & Consistency**: Ensures reseller admins with full admin rights have complete operational control including device and account status management
   - **Files Modified**: `add_plan.php`, `get_tariffs.php`, `dashboard.js`
