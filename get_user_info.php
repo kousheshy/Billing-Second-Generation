@@ -37,8 +37,8 @@ try {
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Parse permissions to check if reseller has admin-level permissions
-    // Format: can_edit|can_add|is_reseller_admin|reserved|reserved
-    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0');
     $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
 
     $user_info['is_reseller_admin'] = $is_reseller_admin;

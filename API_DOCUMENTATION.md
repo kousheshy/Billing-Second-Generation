@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.7.3
+**Version:** 1.7.5
 **Last Updated:** November 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -266,6 +266,61 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 
 ---
 
+### Toggle Account Status (v1.7.5)
+**Endpoint:** `GET /toggle_account_status.php`
+
+**Description:** Quick toggle account status (enable/disable) with permission-based access control.
+
+**Headers:** Requires active session.
+
+**Query Parameters:**
+- `username` (required, string) - Target account username
+- `status` (required, integer) - New status value (1 = active, 0 = disabled)
+
+**Example:**
+```
+GET /toggle_account_status.php?username=user001&status=0
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "err_msg": "",
+  "message": "John Doe is now disabled"
+}
+```
+
+**Success Response Format:**
+- Displays customer's full name (not username)
+- Shows current status text ("active" or "disabled")
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Permission denied. You do not have permission to toggle account status."
+}
+```
+
+**Permission Requirements:**
+- **Super Admin**: Can toggle any account status
+- **Reseller Admin**: Can toggle status of accounts under them (automatic permission)
+- **Regular Reseller**: Requires explicit "Can Toggle Account Status" permission
+- **Observer**: Cannot toggle account status
+
+**Security:**
+- Resellers can only toggle accounts that belong to them
+- Updates both Stalker Portal Server 1 and Server 2
+- Uses API method with MAC address and PUT operation
+- Full audit logging of all status changes
+
+**Permissions Field:** Index 5 in permissions string (`can_toggle_status`)
+
+**New in v1.7.5:** This endpoint provides one-click status toggle functionality with granular permission control.
+
+---
+
 ### Sync Accounts
 **Endpoint:** `POST /sync_accounts.php`
 
@@ -377,7 +432,7 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
   "max_users": "200",
   "theme": "HenSoft-TV Realistic-Dark",
   "currency": "USD",
-  "permissions": "1|1|0|0|1",
+  "permissions": "1|1|0|0|1|1",
   "is_observer": 0
 }
 ```
@@ -419,7 +474,9 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 - If password is empty, the existing password is retained
 - Theme propagation only occurs when theme value actually changes
 - Plans are NOT updated here - they are managed separately via `assign_plans.php`
-- Permissions format: `can_edit|can_add|is_admin|can_delete|can_control_stb` (v1.7.4: changed from `reserved` to `can_control_stb`)
+- Permissions format: `can_edit|can_add|is_admin|can_delete|can_control_stb|can_toggle_status`
+  - v1.7.4: changed field 4 from `reserved` to `can_control_stb`
+  - v1.7.5: added field 5 `can_toggle_status` for account status toggle permission
 
 ---
 

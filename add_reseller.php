@@ -66,7 +66,7 @@ try {
     $balance = isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
     $use_ip_ranges = isset($_POST['use_ip_ranges']) ? $_POST['use_ip_ranges'] : '';
     $plans = isset($_POST['plans']) ? $_POST['plans'] : '';
-    $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|0|1';
+    $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|0|1|0';
     $is_observer = isset($_POST['is_observer']) ? intval($_POST['is_observer']) : 0;
 
     // All resellers are created with super_user = 0

@@ -83,7 +83,7 @@ try {
     $theme = trim($_POST['theme']);
     $use_ip_ranges = isset($_POST['use_ip_ranges']) ? $_POST['use_ip_ranges'] : '';
     $currency = $_POST['currency'];
-    $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|0|1';
+    $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|0|1|0';
     $is_observer = isset($_POST['is_observer']) ? intval($_POST['is_observer']) : 0;
 
     // Check if theme has changed

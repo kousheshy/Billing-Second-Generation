@@ -45,8 +45,8 @@ try {
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Check permissions
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb
-    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0');
     $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
     $can_control_stb = isset($permissions[4]) && $permissions[4] === '1';
 

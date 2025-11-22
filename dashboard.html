@@ -134,8 +134,8 @@
                             <th>MAC Address</th>
                             <th>Tariff Plan</th>
                             <th>Reseller</th>
+                            <th>Status</th>
                             <th>Expiration Date</th>
-                            <th>Creation Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -471,13 +471,13 @@
 
                 <!-- Sync Accounts Section (Admin Only) -->
                 <div id="sync-section" class="sync-section" style="display:none;">
-                    <h3 style="margin-bottom: 20px; color: #333;">Sync Accounts</h3>
-                    <p style="margin-bottom: 15px; color: #666;">Sync all accounts from Stalker Portal. This will delete all existing accounts and fetch fresh data from the server.</p>
+                    <h3>Sync Accounts</h3>
+                    <p>Sync all accounts from Stalker Portal. This will delete all existing accounts and fetch fresh data from the server.</p>
                     <button class="btn-sync" onclick="syncAccounts()">
-                        <span id="sync-icon">⟳</span> Sync Accounts from Server
+                        <span id="sync-icon">⟳</span> Sync from Server
                     </button>
-                    <div id="sync-status" class="sync-status"></div>
                 </div>
+                <div id="sync-status" class="sync-status" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -642,6 +642,13 @@
                             </label>
                             <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to send events and messages to their customers' devices</small>
                         </div>
+                        <div class="permission-item permission-status">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="can_toggle_status" value="1">
+                                <span>Can Toggle Account Status</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to enable or disable their customers' accounts</small>
+                        </div>
                     </div>
                 </div>
 
@@ -742,6 +749,13 @@
                                 <span>Can Send STB Events & Messages</span>
                             </label>
                             <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to send events and messages to their customers' devices</small>
+                        </div>
+                        <div class="permission-item permission-status">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edit-can-toggle-status" name="can_toggle_status" value="1">
+                                <span>Can Toggle Account Status</span>
+                            </label>
+                            <small style="margin-left: 24px; color: var(--text-tertiary);">Allow reseller to enable or disable their customers' accounts</small>
                         </div>
                     </div>
                 </div>
