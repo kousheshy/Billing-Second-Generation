@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.2] - 2025-11-22
+
+### Added - STB Device Control System
+
+**STB Control Features**
+- New "STB Control" tab in dashboard for managing Set-Top Box devices
+- Send events to STB devices via Stalker Portal API:
+  - Reboot device
+  - Reload portal
+  - Update channels
+  - Play channel (with channel ID)
+  - Play radio channel (with channel ID)
+  - Update image
+  - Show menu
+  - Cut off device
+- Send custom messages to STB devices
+- Real-time action history showing last 10 commands
+- Event-specific input fields (e.g., channel ID for play channel events)
+- Responsive grid layout for control forms
+- Timestamp tracking for all actions
+
+**Smart MAC Address Input Component**
+- Intelligent MAC address input with enforced prefix (00:1A:79:)
+- Auto-formatting with colons after every 2 hex digits
+- Real-time validation as user types
+- Visual error feedback with red borders and error messages
+- Prevents modification of required prefix
+- Cursor management to maintain prefix integrity
+- Hex-only input validation (0-9, A-F)
+- Applied to all MAC input fields system-wide
+- Validates on blur with detailed error messages
+
+**New API Endpoints**
+- `send_stb_event.php` - Send events to Stalker Portal STB devices
+- `send_stb_message.php` - Send messages to Stalker Portal STB devices
+
+### Changed
+
+**UI/UX Improvements**
+- Added STB Control tab to main navigation
+- Responsive two-column layout for STB forms
+- Clean form design with consistent styling
+- History list with hover effects and smooth transitions
+- Mobile-responsive single-column layout
+- Monospace font for MAC address inputs
+- Enhanced visual feedback for form interactions
+
+**Form Validation**
+- MAC address validation integrated into all forms
+- Pre-submission validation prevents invalid API calls
+- Error messages displayed inline with animations
+- Focus management after validation errors
+
+### Fixed
+
+**Input Handling**
+- MAC address inputs now prevent invalid characters
+- Prefix enforcement prevents accidental deletion
+- Proper cursor positioning in MAC inputs
+- Auto-uppercase conversion for hex digits
+
+---
+
 ## [1.7.1] - 2025-11-22
 
 ### Added - Phone Number Support

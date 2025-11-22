@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.2-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -517,7 +517,7 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.7.1
+**Version:** 1.7.2
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
@@ -525,6 +525,14 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ## Version History
 
+- **v1.7.2** (Nov 2025) - STB Device Control System with smart MAC address input
+  - New STB Control tab for managing Set-Top Box devices
+  - Send events to devices (reboot, reload portal, update channels, play channel)
+  - Send custom messages to devices
+  - Real-time action history tracking
+  - Smart MAC address input with auto-formatting (00:1A:79:XX:XX:XX)
+  - Real-time validation with visual feedback
+  - New API endpoints: send_stb_event.php, send_stb_message.php
 - **v1.7.1** (Nov 2025) - Phone number support with Stalker Portal integration
   - Phone number field added to accounts table
   - Phone number synced from Stalker Portal (single source of truth)
