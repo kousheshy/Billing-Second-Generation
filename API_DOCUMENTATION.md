@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.7.5
+**Version:** 1.7.7
 **Last Updated:** November 2025
 **Base URL:** `http://your-domain.com/`
 

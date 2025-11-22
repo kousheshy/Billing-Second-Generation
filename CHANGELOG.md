@@ -9,43 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.7] - 2025-11-22
 
-### Added - Account Table Column Sorting
+### Added - Account Table Column Sorting (Limited to 3 Columns)
 
 **Interactive Sortable Columns**
-- Click column headers to sort accounts by Full Name, Reseller, or Expiration Date
+- **3 Sortable Columns**: Full Name, Reseller, and Expiration Date (intentionally limited scope)
 - Visual indicators (▲ ▼) show current sort column and direction
 - Toggle between ascending and descending order by clicking same column repeatedly
-- Reset Sort button appears when sorting is active for quick return to default order
+- **Reset Sort Button**: "⟲ Reset Sort" button appears when sorting is active, restores original server order
+- Non-sortable columns: Username, Phone, MAC Address, Tariff Plan, Status, Actions
 
 **Smart Sorting Logic**
-- Date sorting with proper chronological order
-- Null/empty values automatically sorted to end of list
-- Case-insensitive string comparison for names
-- Numeric status sorting support
+- **Strings** (Full Name, Reseller): Case-insensitive alphabetical sorting
+- **Dates** (Expiration Date): Chronological order with empty dates sorted to end
+- **Null Handling**: Empty/null values properly managed and sorted to end of list
+- Server reload ensures original order is restored on reset
 
 **UI/UX Enhancements**
 - Hover effects on sortable column headers (color highlight + pointer cursor)
-- Sort icons with opacity states (dim when inactive, bright when active)
-- Reset button with visual feedback and hover effects
+- Sort icons with opacity states (dim: 0.3 when inactive, bright: 1.0 when active)
+- Reset button with icon (⟲) and hover effects, auto-hides when not sorting
 - Seamless integration with existing search and pagination
+- Search container redesigned with flexbox to accommodate reset button
 
 **Technical Implementation**
 - New sorting state in `accountsPagination` object: `sortColumn` and `sortDirection`
-- `sortAccounts(column)` - Main sorting function with toggle logic
+- `sortAccounts(column)` - Main sorting function with toggle logic, shows reset button
 - `getCompareFunction(column, direction)` - Returns appropriate comparator for each column type
 - `updateSortIndicators()` - Updates visual sort indicators in table headers
-- `initializeAccountsSorting()` - Attaches click handlers to sortable headers
-- `resetSorting()` - Clears sort state and reloads accounts in default order
+- `initializeAccountsSorting()` - Attaches click handlers to sortable headers on load
+- `resetSorting()` - Clears sort state, reloads accounts from server, hides reset button
 - Sorting maintained across pagination and search operations
 
 **Files Modified**
-- `dashboard.html` - Added sortable class, data-sort attributes, sort icons, reset button
-- `dashboard.js` - Implemented complete sorting logic with 6 new functions (~120 lines)
-- `dashboard.css` - Added sortable header styles, sort icon states, reset button styles (~80 lines)
+- `dashboard.html` - Added sortable class to 3 columns, data-sort attributes, sort icons, reset button in search container
+- `dashboard.js` - Implemented complete sorting logic with 6 functions (~130 lines)
+- `dashboard.css` - Sortable header styles, sort icon states, reset button styles, flexbox search container (~90 lines)
 
 **User Benefits**
 - Quick account discovery by name, owner, or expiration
-- Improved data analysis and account management efficiency
+- Focused sorting on most useful columns (avoiding clutter)
+- One-click return to default order
 - No performance impact - client-side sorting of already-loaded data
 
 ---

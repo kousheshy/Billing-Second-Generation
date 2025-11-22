@@ -608,14 +608,18 @@ Unauthorized copying, modification, or distribution is prohibited.
 ## Version History
 
 - **v1.7.7** (Nov 2025) - Account Table Column Sorting
-  - **Interactive Column Headers**: Click column headers to sort accounts by Full Name, Reseller, or Expiration Date
-  - **Visual Sort Indicators**: Clear up/down arrows show current sort column and direction
+  - **Interactive Column Headers**: Click to sort accounts by **Full Name**, **Reseller**, or **Expiration Date** (3 sortable columns)
+  - **Visual Sort Indicators**: Clear up/down arrows (▲/▼) show current sort column and direction
   - **Toggle Sort Direction**: Click same column to reverse sort order (ascending ↔ descending)
-  - **Reset Sort Button**: One-click button to restore default table order
-  - **Smart Null Handling**: Empty dates and null values properly sorted to end of list
-  - **Search Integration**: Sorting works seamlessly with search and pagination
+  - **Reset Sort Button**: One-click "⟲ Reset Sort" button appears when sorting is active, restores original server order
+  - **Smart Sorting Logic**:
+    - Strings: Case-insensitive alphabetical sorting
+    - Dates: Chronological ordering with empty dates sorted to end
+    - Null handling: Properly manages empty/null values
+  - **Search Integration**: Sorting works seamlessly with search filters and pagination
   - **Persistent State**: Sort state maintained while navigating pages and searching
-  - **Responsive Design**: Hover effects and visual feedback on sortable columns
+  - **Responsive Design**: Hover effects and cursor changes indicate clickable columns
+  - **Limited Scope**: Only 3 columns sortable to maintain focus on most useful sorting options
   - **Files Modified**: `dashboard.html`, `dashboard.js`, `dashboard.css`
   - **User Experience**: Improved data discovery and account management efficiency
 
