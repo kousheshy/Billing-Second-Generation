@@ -5,6 +5,51 @@ All notable changes to the ShowBox Billing Panel will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+---
+
+## [1.7.7] - 2025-11-22
+
+### Added - Account Table Column Sorting
+
+**Interactive Sortable Columns**
+- Click column headers to sort accounts by Full Name, Reseller, or Expiration Date
+- Visual indicators (▲ ▼) show current sort column and direction
+- Toggle between ascending and descending order by clicking same column repeatedly
+- Reset Sort button appears when sorting is active for quick return to default order
+
+**Smart Sorting Logic**
+- Date sorting with proper chronological order
+- Null/empty values automatically sorted to end of list
+- Case-insensitive string comparison for names
+- Numeric status sorting support
+
+**UI/UX Enhancements**
+- Hover effects on sortable column headers (color highlight + pointer cursor)
+- Sort icons with opacity states (dim when inactive, bright when active)
+- Reset button with visual feedback and hover effects
+- Seamless integration with existing search and pagination
+
+**Technical Implementation**
+- New sorting state in `accountsPagination` object: `sortColumn` and `sortDirection`
+- `sortAccounts(column)` - Main sorting function with toggle logic
+- `getCompareFunction(column, direction)` - Returns appropriate comparator for each column type
+- `updateSortIndicators()` - Updates visual sort indicators in table headers
+- `initializeAccountsSorting()` - Attaches click handlers to sortable headers
+- `resetSorting()` - Clears sort state and reloads accounts in default order
+- Sorting maintained across pagination and search operations
+
+**Files Modified**
+- `dashboard.html` - Added sortable class, data-sort attributes, sort icons, reset button
+- `dashboard.js` - Implemented complete sorting logic with 6 new functions (~120 lines)
+- `dashboard.css` - Added sortable header styles, sort icon states, reset button styles (~80 lines)
+
+**User Benefits**
+- Quick account discovery by name, owner, or expiration
+- Improved data analysis and account management efficiency
+- No performance impact - client-side sorting of already-loaded data
+
+---
+
 ## [1.7.6] - 2025-11-22
 
 ### Added - Reseller Admin Plan & Tariff Access + Permission Auto-Grant Enhancements

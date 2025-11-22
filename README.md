@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.6-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.7-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -599,13 +599,25 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.7.6
+**Version:** 1.7.7
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.7.7** (Nov 2025) - Account Table Column Sorting
+  - **Interactive Column Headers**: Click column headers to sort accounts by Full Name, Reseller, or Expiration Date
+  - **Visual Sort Indicators**: Clear up/down arrows show current sort column and direction
+  - **Toggle Sort Direction**: Click same column to reverse sort order (ascending ↔ descending)
+  - **Reset Sort Button**: One-click button to restore default table order
+  - **Smart Null Handling**: Empty dates and null values properly sorted to end of list
+  - **Search Integration**: Sorting works seamlessly with search and pagination
+  - **Persistent State**: Sort state maintained while navigating pages and searching
+  - **Responsive Design**: Hover effects and visual feedback on sortable columns
+  - **Files Modified**: `dashboard.html`, `dashboard.js`, `dashboard.css`
+  - **User Experience**: Improved data discovery and account management efficiency
 
 - **v1.7.6** (Nov 2025) - Reseller Admin Plan & Tariff Access + STB Auto-Grant
   - **Expanded Authorization**: Reseller admins can now create plans (`add_plan.php`) and retrieve tariffs (`get_tariffs.php`) (previously super admin only)

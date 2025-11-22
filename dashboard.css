@@ -578,6 +578,47 @@ table th {
     border-bottom: 2px solid var(--border-color);
 }
 
+table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+table th.sortable:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--primary);
+}
+
+table th.sortable .sort-icon {
+    display: inline-block;
+    margin-left: 4px;
+    opacity: 0.3;
+    font-size: 10px;
+}
+
+table th.sortable .sort-icon::before {
+    content: '⬍';
+}
+
+table th.sortable.sort-asc .sort-icon {
+    opacity: 1;
+    color: var(--primary);
+}
+
+table th.sortable.sort-asc .sort-icon::before {
+    content: '▲';
+}
+
+table th.sortable.sort-desc .sort-icon {
+    opacity: 1;
+    color: var(--primary);
+}
+
+table th.sortable.sort-desc .sort-icon::before {
+    content: '▼';
+}
+
 table td {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
@@ -1339,6 +1380,9 @@ input[type="number"] {
 /* Search Container */
 .search-container {
     margin: var(--spacing-lg) 0;
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
 }
 
 .search-container input[type="text"] {
@@ -1365,6 +1409,35 @@ input[type="number"] {
 
 .search-container input[type="text"]::placeholder {
     color: var(--text-tertiary);
+}
+
+/* Reset Sort Button */
+.btn-reset-sort {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-reset-sort:hover {
+    background: var(--bg-primary);
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-reset-sort:active {
+    transform: translateY(0);
 }
 
 /* Responsive Design */

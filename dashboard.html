@@ -114,6 +114,9 @@
                 </div>
                 <div class="search-container">
                     <input type="text" id="accounts-search" placeholder="Search by username, name, MAC, or tariff..." onkeyup="searchAccounts()">
+                    <button id="reset-sort-btn" class="btn-reset-sort" onclick="resetSorting()" style="display:none;" title="Reset to default order">
+                        ⟲ Reset Sort
+                    </button>
                 </div>
                 <div class="pagination-controls">
                     <div class="per-page-selector">
@@ -129,13 +132,13 @@
                     <thead>
                         <tr>
                             <th>Username</th>
-                            <th>Full Name</th>
+                            <th class="sortable" data-sort="full_name">Full Name <span class="sort-icon"></span></th>
                             <th>Phone</th>
                             <th>MAC Address</th>
                             <th>Tariff Plan</th>
-                            <th>Reseller</th>
+                            <th class="sortable" data-sort="reseller_name">Reseller <span class="sort-icon"></span></th>
                             <th>Status</th>
-                            <th>Expiration Date</th>
+                            <th class="sortable" data-sort="end_date">Expiration Date <span class="sort-icon"></span></th>
                             <th>Actions</th>
                         </tr>
                     </thead>

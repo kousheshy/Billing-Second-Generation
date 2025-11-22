@@ -56,7 +56,9 @@ let accountsPagination = {
     totalItems: 0,
     allAccounts: [],
     filteredAccounts: [],
-    searchTerm: ''
+    searchTerm: '',
+    sortColumn: null,
+    sortDirection: 'asc'
 };
 
 // Theme Management
@@ -695,6 +697,9 @@ async function loadAccounts() {
 
             // Render current page
             renderAccountsPage();
+
+            // Initialize sorting event listeners (only needs to be done once)
+            initializeAccountsSorting();
         } else {
             const tbody = document.getElementById('accounts-tbody');
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
@@ -1074,6 +1079,117 @@ function renderAccountsPage() {
 
     // Render pagination buttons
     renderPaginationButtons();
+
+    // Update sort indicators
+    updateSortIndicators();
+}
+
+// Sort accounts by column
+function sortAccounts(column) {
+    const { sortColumn, sortDirection } = accountsPagination;
+
+    // Toggle direction if clicking same column, otherwise default to asc
+    if (sortColumn === column) {
+        accountsPagination.sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        accountsPagination.sortColumn = column;
+        accountsPagination.sortDirection = 'asc';
+    }
+
+    // Sort both allAccounts and filteredAccounts
+    const compareFunction = getCompareFunction(column, accountsPagination.sortDirection);
+    accountsPagination.allAccounts.sort(compareFunction);
+    if (accountsPagination.searchTerm) {
+        accountsPagination.filteredAccounts.sort(compareFunction);
+    }
+
+    // Reset to first page and re-render
+    accountsPagination.currentPage = 1;
+    renderAccountsPage();
+
+    // Show reset button
+    const resetBtn = document.getElementById('reset-sort-btn');
+    if(resetBtn) {
+        resetBtn.style.display = 'inline-flex';
+    }
+}
+
+// Get comparison function for sorting
+function getCompareFunction(column, direction) {
+    const multiplier = direction === 'asc' ? 1 : -1;
+
+    return (a, b) => {
+        let aVal = a[column];
+        let bVal = b[column];
+
+        // Handle null/undefined values
+        if (aVal === null || aVal === undefined) aVal = '';
+        if (bVal === null || bVal === undefined) bVal = '';
+
+        // Special handling for dates
+        if (column === 'end_date') {
+            if (!aVal) return 1 * multiplier; // Empty dates go to end
+            if (!bVal) return -1 * multiplier;
+            return (new Date(aVal) - new Date(bVal)) * multiplier;
+        }
+
+        // Special handling for status (numeric)
+        if (column === 'status') {
+            return (Number(aVal) - Number(bVal)) * multiplier;
+        }
+
+        // String comparison (case-insensitive)
+        aVal = String(aVal).toLowerCase();
+        bVal = String(bVal).toLowerCase();
+
+        if (aVal < bVal) return -1 * multiplier;
+        if (aVal > bVal) return 1 * multiplier;
+        return 0;
+    };
+}
+
+// Update visual sort indicators
+function updateSortIndicators() {
+    const { sortColumn, sortDirection } = accountsPagination;
+
+    // Remove all sort classes
+    document.querySelectorAll('#accounts-table th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Add sort class to active column
+    if (sortColumn) {
+        const activeHeader = document.querySelector(`#accounts-table th[data-sort="${sortColumn}"]`);
+        if (activeHeader) {
+            activeHeader.classList.add(`sort-${sortDirection}`);
+        }
+    }
+}
+
+// Initialize sorting on page load
+function initializeAccountsSorting() {
+    document.querySelectorAll('#accounts-table th.sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-sort');
+            sortAccounts(column);
+        });
+    });
+}
+
+// Reset sorting to default (original order)
+function resetSorting() {
+    // Clear sort state
+    accountsPagination.sortColumn = null;
+    accountsPagination.sortDirection = 'asc';
+
+    // Reload accounts from server to get original order
+    loadAccounts();
+
+    // Hide reset button
+    const resetBtn = document.getElementById('reset-sort-btn');
+    if(resetBtn) {
+        resetBtn.style.display = 'none';
+    }
 }
 
 function renderPaginationButtons() {
