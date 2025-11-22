@@ -7,6 +7,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.8] - 2025-11-22
+
+### Added - Automated Expiry Reminder System (Churn Prevention)
+
+**Overview**
+Comprehensive churn-prevention messaging system that automatically sends alerts to customers whose accounts are expiring soon, helping reduce customer attrition and improve retention rates.
+
+### Changed
+- **Messaging Tab**: Created dedicated "Messaging" tab and moved expiry reminder feature from Settings to Messaging. This provides a centralized location for all current and future messaging features.
+
+### Fixed
+- **send_message() Function**: Added missing `send_message()` helper function in `api.php` to properly send STB messages via Stalker Portal API. This function wraps `api_send_request()` and handles dual-server message delivery.
+- **Reminder Persistence After Account Sync**: Changed deduplication from `account_id` to `mac` address. Reminders now persist correctly even after syncing accounts from Stalker Portal, preventing duplicate messages to the same device.
+- **Toggle Auto-Save Behavior**: Removed automatic save-on-toggle behavior. Auto-send toggle now only saves when "Save Reminder Configuration" button is clicked, giving users explicit control over configuration changes.
+
+**Core Features**
+- **Configurable Reminder Timing**: Set days before expiry (1-90 days, default: 7)
+- **Custom Message Templates**: Personalize with variables: `{days}`, `{name}`, `{username}`, `{date}`
+- **Manual Campaign Trigger**: One-click "Send Reminders Now" button in Messaging tab
+- **Smart Duplicate Prevention**: Database tracking ensures no duplicate reminders for same expiry cycle
+- **Batch Processing**: Rate-limited sending (300ms delay between messages) prevents server overload
+- **Detailed Campaign Results**: Real-time feedback showing sent/skipped/failed counts per account
+- **Reminder History Log**: Date-based browsing of all sent reminders with calendar navigation, statistics, and full audit trail including sent/failed status and message content
+
+**Technical Implementation**
+- **Database Tables**:
+  - `_expiry_reminders`: Audit log tracking all sent reminders with status (sent/failed)
+  - `_reminder_settings`: Per-user configuration (days before expiry, message template)
+- **Backend APIs**:
+  - `send_expiry_reminders.php`: Main reminder sweep endpoint with permission checks
+  - `update_reminder_settings.php`: Save user reminder configuration
+  - `get_reminder_settings.php`: Retrieve current settings for logged-in user
+  - `get_reminder_history.php`: Retrieve sent reminder history by date with permission filtering
+  - `add_reminder_tracking.php`: Database migration script
+  - `fix_reminder_deduplication.php`: Migration script to change unique constraint from account_id to MAC address
+- **Frontend Integration**:
+  - New "Messaging" tab with "Expiry Reminder Settings" section
+  - Input field for days before expiry (1-90 validation)
+  - Textarea for message template with variable hints
+  - "Save Reminder Configuration" and "Send Reminders Now" action buttons
+  - Status messages (success/error/info/warning) with auto-hide
+  - Scrollable results panel showing per-account outcomes
+  - Reminder History section with date browser (Previous/Next day navigation, date picker, Today button)
+  - Real-time statistics display (total reminders, sent count, failed count)
+  - Sortable history table showing: Time, Account, Full Name, MAC, Expiry Date, Days Before, Status, Message
+  - Message truncation with full text on hover for readability
+
+**Permission & Security**
+- **Requires STB Control Permission**: Only super admin or users with `can_control_stb` flag
+- **Ownership Validation**: Regular resellers can only send to their own accounts
+- **Reseller Admin Access**: Full access to all accounts, similar to super admin
+- **Observer Restriction**: Reminder section hidden for read-only observers
+
+**PWA Notifications**
+- Service worker integration for desktop notifications
+- Shows summary when reminders are sent (even if tab unfocused)
+- Click notification to focus/open dashboard
+- Notification includes: sent count, skipped count, failed count
+
+**User Experience**
+- Loading state: Button shows "⏳ Sending..." during operation
+- Last sweep timestamp displayed below settings
+- Color-coded result items: green (sent), yellow (skipped), red (failed)
+- Icons for visual clarity: ✓ sent, ⊗ skipped, ✗ failed
+- Info panel explaining how the system works
+- Variable substitution examples in placeholder text
+
+**Files Added**
+- `send_expiry_reminders.php` (~240 lines)
+- `update_reminder_settings.php` (~122 lines)
+- `get_reminder_settings.php` (~85 lines)
+- `get_reminder_history.php` (~121 lines)
+- `add_reminder_tracking.php` (~95 lines)
+- `fix_reminder_deduplication.php` (~83 lines)
+- `cron_check_expiry_reminders.php` (~229 lines) - Automated daily cron job for sending reminders
+
+**Files Modified**
+- `dashboard.html`: Added reminder settings UI and history section (~90 lines)
+- `dashboard.js`: Added reminder functions including history management (~380 lines)
+- `dashboard.css`: Added reminder-specific styles including history table (~340 lines)
+- `service-worker.js`: Added notification handling (~60 lines)
+- `api.php`: Added send_message() helper function (~24 lines)
+- `README.md`: Added v1.7.8 documentation
+- `CHANGELOG.md`: This entry
+
+**Migration Required**
+1. Run `php add_reminder_tracking.php` to create required database tables
+2. Run `php fix_reminder_deduplication.php` to update unique constraint for MAC-based deduplication
+
+**Use Cases**
+- Reduce churn by proactively reminding customers before expiration
+- Automated retention campaigns without manual intervention
+- Track reminder effectiveness through audit logs
+- Customize messaging per reseller or admin preferences
+- Browse reminder history by date to audit sent messages
+- Monitor reminder success/failure rates over time
+
+**Automated Sending**
+- **Cron Job**: Use `cron_check_expiry_reminders.php` for automated daily reminder sweeps
+- **Setup Example**: `0 9 * * * /usr/bin/php /path/to/cron_check_expiry_reminders.php`
+- **Auto-Send Toggle**: Users can enable/disable automatic sending in their reminder settings
+- **Permission-Based**: Only users with STB control permission can enable auto-send
+
+**Future Enhancements**
+- Multiple reminder waves (e.g., 14 days, 7 days, 3 days)
+- Email fallback when STB message fails
+- Analytics dashboard showing reminder effectiveness and conversion rates
+
+---
+
 ## [1.7.7] - 2025-11-22
 
 ### Added - Account Table Column Sorting (Limited to 3 Columns)

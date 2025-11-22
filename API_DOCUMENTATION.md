@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.7.7
+**Version:** 1.7.8
 **Last Updated:** November 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -1254,7 +1254,259 @@ curl -X POST http://localhost:8000/update_account.php \
 
 ---
 
+## Expiry Reminder System (v1.7.8)
+
+### Send Expiry Reminders
+**Endpoint:** `POST /send_expiry_reminders.php`
+
+**Description:** Send expiry reminder messages to all accounts expiring on a specific target date (today + configured days before expiry).
+
+**Version:** Added in v1.7.8
+
+**Permissions:** Super admin OR users with `can_control_stb` permission
+
+**Behavior:**
+- Calculates target expiry date based on user's configured "days before expiry" setting
+- Finds all active accounts (status=1) with end_date matching target date
+- Sends personalized messages to each account via Stalker Portal
+- Tracks sent reminders in database to prevent duplicates
+- Rate-limited sending (300ms delay between messages)
+- Filters by ownership for non-admin users
+
+**Request:**
+```
+POST /send_expiry_reminders.php
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "sent": 15,
+  "skipped": 3,
+  "failed": 1,
+  "total": 19,
+  "days_before": 7,
+  "target_date": "2025-11-29",
+  "results": [
+    {
+      "account": "john_smith",
+      "full_name": "John Smith",
+      "mac": "00:1A:79:AB:CD:EF",
+      "expiry_date": "2025-11-29",
+      "status": "sent",
+      "message": "Your subscription expires in 7 days..."
+    },
+    {
+      "account": "jane_doe",
+      "full_name": "Jane Doe",
+      "status": "skipped",
+      "reason": "Already sent reminder for this expiry date"
+    },
+    {
+      "account": "bob_jones",
+      "full_name": "Bob Jones",
+      "status": "failed",
+      "error": "MAC address not found on server"
+    }
+  ]
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Permission denied. You need STB control permission to send reminders."
+}
+```
+
+---
+
+### Update Reminder Settings
+**Endpoint:** `POST /update_reminder_settings.php`
+
+**Description:** Configure expiry reminder preferences for the current user.
+
+**Version:** Added in v1.7.8
+
+**Permissions:** Super admin OR users with `can_control_stb` permission
+
+**Request Body:**
+```json
+{
+  "days_before_expiry": 7,
+  "message_template": "Dear {name}, your subscription expires in {days} days. Please renew soon to maintain uninterrupted service. Thank you for choosing us.",
+  "auto_send_enabled": 0
+}
+```
+
+**Template Variables:**
+- `{days}` - Number of days until expiration
+- `{name}` - Customer's full name
+- `{username}` - Customer's username
+- `{date}` - Expiration date (YYYY-MM-DD)
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Reminder settings updated successfully",
+  "settings": {
+    "days_before_expiry": 7,
+    "message_template": "Your subscription expires in {days} days...",
+    "auto_send_enabled": 0
+  }
+}
+```
+
+**Validation:**
+- `days_before_expiry`: Must be between 1 and 90
+- `message_template`: Required, cannot be empty
+
+---
+
+### Get Reminder Settings
+**Endpoint:** `GET /get_reminder_settings.php`
+
+**Description:** Retrieve current reminder configuration for logged-in user.
+
+**Version:** Added in v1.7.8
+
+**Permissions:** Authenticated users only
+
+**Response:**
+```json
+{
+  "error": 0,
+  "settings": {
+    "days_before_expiry": 7,
+    "message_template": "Dear {name}, your subscription expires in {days} days. Please renew soon to maintain uninterrupted service. Thank you for choosing us.",
+    "auto_send_enabled": 0,
+    "last_sweep_at": "2025-11-22 14:30:00"
+  }
+}
+```
+
+**Default Settings (if none configured):**
+```json
+{
+  "error": 0,
+  "settings": {
+    "days_before_expiry": 7,
+    "message_template": "Dear {name}, your subscription expires in {days} days. Please renew soon to maintain uninterrupted service. Thank you for choosing us.",
+    "auto_send_enabled": 0,
+    "last_sweep_at": null
+  }
+}
+```
+
+### Get Reminder History
+**Endpoint:** `GET /get_reminder_history.php`
+
+**Description:** Retrieve sent reminder history for a specific date with statistics and filtering.
+
+**Version:** Added in v1.7.8
+
+**Permissions:** Super admin OR users with `can_control_stb` permission
+
+**Query Parameters:**
+- `date` (optional): Date to retrieve history for (YYYY-MM-DD format, defaults to today)
+
+**Request:**
+```
+GET /get_reminder_history.php?date=2025-11-22
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "date": "2025-11-22",
+  "total": 25,
+  "sent": 22,
+  "failed": 3,
+  "reminders": [
+    {
+      "id": 123,
+      "account_id": 456,
+      "mac": "00:1A:79:AB:CD:EF",
+      "username": "john_smith",
+      "full_name": "John Smith",
+      "end_date": "2025-11-29",
+      "days_before": 7,
+      "reminder_date": "2025-11-22",
+      "sent_at": "2025-11-22 09:15:30",
+      "sent_by": 1,
+      "message": "Dear John Smith, your subscription expires in 7 days...",
+      "status": "sent",
+      "error_message": null,
+      "reseller": 1
+    },
+    {
+      "id": 124,
+      "mac": "00:1A:79:12:34:56",
+      "username": "jane_doe",
+      "full_name": "Jane Doe",
+      "end_date": "2025-11-29",
+      "days_before": 7,
+      "sent_at": "2025-11-22 09:16:15",
+      "status": "failed",
+      "error_message": "MAC address not found on server"
+    }
+  ]
+}
+```
+
+**Empty Response (no reminders for date):**
+```json
+{
+  "error": 0,
+  "date": "2025-11-20",
+  "total": 0,
+  "sent": 0,
+  "failed": 0,
+  "reminders": []
+}
+```
+
+**Filtering Behavior:**
+- **Super Admin**: Sees all reminders for the date
+- **Reseller Admin**: Sees all reminders for the date
+- **Regular Reseller**: Only sees reminders they sent (`sent_by = user_id`)
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Permission denied. You need STB control permission."
+}
+```
+
+**Validation:**
+- `date` must be in YYYY-MM-DD format
+- Invalid date format returns error
+
+---
+
 ## Changelog
+
+### Version 1.7.8 (November 2025)
+- **Added Expiry Reminder System** (Churn Prevention)
+- **New Messaging Tab**: Dedicated tab for all messaging features
+- New endpoint: `POST /send_expiry_reminders.php` - Send reminders to expiring accounts
+- New endpoint: `POST /update_reminder_settings.php` - Configure reminder settings
+- New endpoint: `GET /get_reminder_settings.php` - Retrieve reminder configuration
+- New endpoint: `GET /get_reminder_history.php` - Browse reminder history by date
+- New database tables: `_expiry_reminders`, `_reminder_settings`
+- **Reminder History Log**: Date-based browsing with calendar navigation, statistics, and detailed audit trail
+- **Auto-Send Toggle**: Enable/disable automated daily reminders via cron job
+- Template variable support: {days}, {name}, {username}, {date}
+- **MAC-based Deduplication**: Prevents duplicate reminders even after account sync
+- Rate-limited batch processing (300ms delay)
+- PWA notification integration via service worker
+- Permission-based access (STB control required)
+- **Bug Fixes**: Added missing `send_message()` function, fixed reminder persistence after account sync
 
 ### Version 1.7.2 (November 2025)
 - Added STB Device Control section

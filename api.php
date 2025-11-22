@@ -29,4 +29,40 @@ function api_send_request($url, $username, $password, $case, $op, $mac, $data)
     return $result;
 }
 
+/**
+ * Send message to STB device via Stalker Portal API
+ *
+ * @param string $mac MAC address of the device
+ * @param string $message Message text to send
+ * @param array $server_config Server configuration array with WEBSERVICE_URLs, username, password
+ * @return array Response with 'error' and 'err_msg' keys
+ */
+function send_message($mac, $message, $server_config) {
+    $data = 'msg=' . urlencode($message);
+    $case = 'stb_msg';
+    $op = "POST";
+
+    try {
+        $res = api_send_request(
+            $server_config['WEBSERVICE_URLs'][$case],
+            $server_config['WEBSERVICE_USERNAME'],
+            $server_config['WEBSERVICE_PASSWORD'],
+            $case,
+            $op,
+            $mac,
+            $data
+        );
+
+        $decoded = json_decode($res);
+
+        if(isset($decoded->status) && $decoded->status == 'OK') {
+            return ['error' => 0, 'err_msg' => ''];
+        } else {
+            return ['error' => 1, 'err_msg' => $decoded->error ?? 'Unknown error'];
+        }
+    } catch(Exception $e) {
+        return ['error' => 1, 'err_msg' => $e->getMessage()];
+    }
+}
+
 ?>

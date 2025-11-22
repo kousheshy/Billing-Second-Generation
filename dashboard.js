@@ -187,6 +187,9 @@ async function checkAuth() {
             document.querySelector('.stat-card:nth-child(4)').style.display = 'none'; // Total Plans
         }
 
+        // Show/hide reminder section based on permissions (v1.7.8)
+        showReminderSection();
+
         document.getElementById('total-accounts').textContent = result.total_accounts;
 
         // Auto-sync accounts on login (for both admin and resellers, but not observers)
@@ -270,6 +273,11 @@ function switchTab(tabName) {
     // Refresh dynamic reports when switching to reports tab
     if(tabName === 'reports' && accountsPagination.allAccounts) {
         updateDynamicReports();
+    }
+
+    // Load reminder settings when switching to messaging tab
+    if(tabName === 'messaging') {
+        loadReminderSettings();
     }
 }
 
@@ -2991,4 +2999,385 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('[Dashboard] Final MAC input initialization');
         initAllMacInputs();
     }, 2000);
+
+    // Load reminder settings on dashboard load
+    loadReminderSettings();
 });
+
+/**
+ * ============================================================================
+ * EXPIRY REMINDER SYSTEM (v1.7.8)
+ * ============================================================================
+ * Automated churn-prevention messaging for accounts expiring soon
+ */
+
+/**
+ * Load reminder settings for current user
+ */
+async function loadReminderSettings() {
+    try {
+        const response = await fetch('get_reminder_settings.php');
+        const result = await response.json();
+
+        if(result.error == 0) {
+            const settings = result.settings;
+
+            // Populate form fields
+            document.getElementById('reminder-days').value = settings.days_before_expiry;
+            document.getElementById('reminder-template').value = settings.message_template;
+            document.getElementById('auto-send-enabled').checked = settings.auto_send_enabled == 1;
+
+            // Update last sweep info
+            if(settings.last_sweep_at) {
+                const lastSweep = new Date(settings.last_sweep_at);
+                const lastSweepStr = lastSweep.toLocaleString();
+                document.getElementById('last-sweep-info').textContent = `Last automatic sweep: ${lastSweepStr}`;
+            } else {
+                document.getElementById('last-sweep-info').textContent = 'Automatic reminders not sent yet';
+            }
+
+            // Show status based on auto-send
+            if(settings.auto_send_enabled == 1) {
+                document.getElementById('last-sweep-info').innerHTML += ' <span style="color: var(--success); font-weight: 600;">● ACTIVE</span>';
+            }
+        }
+    } catch(error) {
+        console.error('Error loading reminder settings:', error);
+    }
+}
+
+/**
+ * Save reminder settings (toggle, days, and template)
+ */
+async function saveReminderSettings() {
+    const daysBeforeInput = document.getElementById('reminder-days');
+    const templateInput = document.getElementById('reminder-template');
+    const autoSendCheckbox = document.getElementById('auto-send-enabled');
+
+    const daysBefore = parseInt(daysBeforeInput.value);
+    const template = templateInput.value.trim();
+    const autoSendEnabled = autoSendCheckbox.checked ? 1 : 0;
+
+    // Validation
+    if(daysBefore < 1 || daysBefore > 90) {
+        showReminderStatus('error', 'Days before expiry must be between 1 and 90');
+        return;
+    }
+
+    if(!template) {
+        showReminderStatus('error', 'Message template is required');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('days_before_expiry', daysBefore);
+        formData.append('message_template', template);
+        formData.append('auto_send_enabled', autoSendEnabled);
+
+        const response = await fetch('update_reminder_settings.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if(result.error == 0) {
+            let message = 'Settings saved successfully';
+            if(autoSendEnabled) {
+                message += '. Automatic reminders ENABLED.';
+            } else {
+                message += '. Automatic reminders DISABLED.';
+            }
+            showReminderStatus('success', message);
+
+            // Reload settings to update status display
+            loadReminderSettings();
+        } else {
+            showReminderStatus('error', result.err_msg || 'Failed to save settings');
+        }
+    } catch(error) {
+        console.error('Error saving reminder settings:', error);
+        showReminderStatus('error', 'Network error while saving settings');
+    }
+}
+
+/**
+ * Send expiry reminders - manual sweep
+ */
+async function sendExpiryReminders() {
+    const sendBtn = document.querySelector('.btn-reminder-send');
+    const originalContent = sendBtn.innerHTML;
+
+    // Disable button and show loading
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span>⏳</span> Sending...';
+
+    // Hide previous results
+    document.getElementById('reminder-results').style.display = 'none';
+
+    try {
+        console.log('[Reminder Debug] Attempting to fetch send_expiry_reminders.php...');
+
+        const response = await fetch('send_expiry_reminders.php', {
+            method: 'POST'
+        });
+
+        console.log('[Reminder Debug] Response status:', response.status);
+        console.log('[Reminder Debug] Response headers:', [...response.headers.entries()]);
+
+        if(!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const text = await response.text();
+        console.log('[Reminder Debug] Raw response:', text);
+
+        const result = JSON.parse(text);
+
+        if(result.error == 0) {
+            const { sent, skipped, failed, total, days_before, target_date, results } = result;
+
+            // Show summary status
+            let statusClass = 'success';
+            let statusMessage = `Sweep complete: ${sent} sent, ${skipped} skipped, ${failed} failed (${total} accounts expiring on ${target_date})`;
+
+            if(failed > 0) {
+                statusClass = 'warning';
+            } else if(sent === 0 && skipped === 0) {
+                statusClass = 'info';
+                statusMessage = `No accounts found expiring in ${days_before} days (target date: ${target_date})`;
+            }
+
+            showReminderStatus(statusClass, statusMessage);
+
+            // Show detailed results
+            displayReminderResults(results);
+
+            // Update last sweep info
+            const now = new Date();
+            document.getElementById('last-sweep-info').textContent = `Last sweep: ${now.toLocaleString()}`;
+
+            // Send notification via service worker
+            if('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'REMINDER_SENT',
+                    data: {
+                        sent,
+                        skipped,
+                        failed,
+                        total
+                    }
+                });
+            }
+
+        } else {
+            showReminderStatus('error', result.err_msg || 'Failed to send reminders');
+        }
+    } catch(error) {
+        console.error('[Reminder Debug] Full error object:', error);
+        console.error('[Reminder Debug] Error name:', error.name);
+        console.error('[Reminder Debug] Error message:', error.message);
+        console.error('[Reminder Debug] Error stack:', error.stack);
+        showReminderStatus('error', `Network error: ${error.message}`);
+    } finally {
+        // Re-enable button
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = originalContent;
+    }
+}
+
+/**
+ * Display reminder results in detailed view
+ */
+function displayReminderResults(results) {
+    if(!results || results.length === 0) {
+        return;
+    }
+
+    const resultsContainer = document.getElementById('reminder-results');
+    resultsContainer.innerHTML = '';
+    resultsContainer.style.display = 'block';
+
+    results.forEach(result => {
+        const item = document.createElement('div');
+        item.className = `reminder-result-item ${result.status}`;
+
+        let icon = '';
+        let message = '';
+
+        if(result.status === 'sent') {
+            icon = '✓';
+            message = `${result.full_name || result.account} (${result.mac}) - Message sent`;
+        } else if(result.status === 'skipped') {
+            icon = '⊗';
+            message = `${result.full_name || result.account} - ${result.reason}`;
+        } else if(result.status === 'failed') {
+            icon = '✗';
+            message = `${result.full_name || result.account} - ${result.error}`;
+        }
+
+        item.innerHTML = `<span class="icon">${icon}</span><span>${message}</span>`;
+        resultsContainer.appendChild(item);
+    });
+}
+
+/**
+ * Show reminder status message
+ */
+function showReminderStatus(type, message) {
+    const statusDiv = document.getElementById('reminder-status');
+    statusDiv.className = `reminder-status ${type}`;
+    statusDiv.textContent = message;
+    statusDiv.style.display = 'block';
+
+    // Auto-hide after 5 seconds for non-error messages
+    if(type !== 'error') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+/**
+ * Show/hide reminder section based on permissions
+ * Call this in checkAuth() function
+ */
+function showReminderSection() {
+    // Check if user has STB control permission
+    const permissions = currentUser?.permissions?.split('|') || [];
+    const isSuperAdmin = currentUser?.super_user == 1;
+    const canControlStb = permissions[4] === '1';
+
+    const reminderSection = document.getElementById('reminder-section');
+    const historySection = document.getElementById('reminder-history-section');
+
+    if(isSuperAdmin || canControlStb) {
+        if(reminderSection) reminderSection.style.display = 'block';
+        if(historySection) {
+            historySection.style.display = 'block';
+            // Set default date to today
+            setHistoryToday();
+        }
+    } else {
+        if(reminderSection) reminderSection.style.display = 'none';
+        if(historySection) historySection.style.display = 'none';
+    }
+}
+
+/**
+ * ============================================================================
+ * REMINDER HISTORY SYSTEM
+ * ============================================================================
+ */
+
+/**
+ * Load reminder history for selected date
+ */
+async function loadReminderHistory() {
+    const dateInput = document.getElementById('history-date');
+    const date = dateInput.value;
+
+    if(!date) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`get_reminder_history.php?date=${date}`);
+        const result = await response.json();
+
+        if(result.error == 0) {
+            // Update stats
+            document.getElementById('history-total-count').textContent = `${result.total} reminder${result.total !== 1 ? 's' : ''}`;
+            document.getElementById('history-sent-count').textContent = `${result.sent} sent`;
+            document.getElementById('history-failed-count').textContent = `${result.failed} failed`;
+
+            // Update table
+            displayReminderHistoryTable(result.reminders);
+        } else {
+            console.error('Error loading reminder history:', result.err_msg);
+            displayReminderHistoryTable([]);
+        }
+    } catch(error) {
+        console.error('Error loading reminder history:', error);
+        displayReminderHistoryTable([]);
+    }
+}
+
+/**
+ * Display reminder history in table
+ */
+function displayReminderHistoryTable(reminders) {
+    const tbody = document.getElementById('history-tbody');
+
+    if(!reminders || reminders.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+                    No reminders found for this date
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = reminders.map(r => {
+        const time = new Date(r.sent_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const statusClass = r.status === 'sent' ? 'status-active' : 'status-inactive';
+        const statusText = r.status === 'sent' ? '✓ Sent' : '✗ Failed';
+        const message = r.message.length > 80 ? r.message.substring(0, 80) + '...' : r.message;
+
+        return `
+            <tr>
+                <td>${time}</td>
+                <td>${r.username}</td>
+                <td>${r.full_name || '-'}</td>
+                <td>${r.mac}</td>
+                <td>${r.end_date}</td>
+                <td>${r.days_before} days</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td title="${escapeHtml(r.message)}">${escapeHtml(message)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Change history date by offset (days)
+ */
+function changeHistoryDate(offset) {
+    const dateInput = document.getElementById('history-date');
+    const currentDate = new Date(dateInput.value || new Date());
+    currentDate.setDate(currentDate.getDate() + offset);
+
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+
+    dateInput.value = `${year}-${month}-${day}`;
+    loadReminderHistory();
+}
+
+/**
+ * Set history date to today
+ */
+function setHistoryToday() {
+    const dateInput = document.getElementById('history-date');
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    dateInput.value = `${year}-${month}-${day}`;
+    loadReminderHistory();
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}

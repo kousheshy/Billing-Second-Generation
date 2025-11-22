@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.0.5';
+const CACHE_NAME = 'showbox-billing-v1.7.8';
 const urlsToCache = [
   '/dashboard.html',
   '/index.html',
@@ -96,4 +96,59 @@ self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+
+  // Handle expiry reminder notifications (v1.7.8)
+  if (event.data && event.data.type === 'REMINDER_SENT') {
+    const { sent, skipped, failed, total } = event.data.data;
+
+    // Show notification if permission granted
+    if (Notification.permission === 'granted') {
+      const title = 'Expiry Reminders Sent';
+      let body = `Sent: ${sent}, Skipped: ${skipped}`;
+
+      if (failed > 0) {
+        body += `, Failed: ${failed}`;
+      }
+
+      const options = {
+        body: body,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-72x72.png',
+        tag: 'reminder-notification',
+        requireInteraction: false,
+        silent: false,
+        data: {
+          sent,
+          skipped,
+          failed,
+          total,
+          timestamp: Date.now()
+        }
+      };
+
+      self.registration.showNotification(title, options);
+    }
+  }
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  // Open or focus the dashboard
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clientList => {
+        // If dashboard is already open, focus it
+        for (let client of clientList) {
+          if (client.url.includes('dashboard.html') && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Otherwise, open a new window
+        if (clients.openWindow) {
+          return clients.openWindow('/dashboard.html');
+        }
+      })
+  );
 });

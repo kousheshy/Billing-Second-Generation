@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.7-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.8-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -606,6 +606,34 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.7.8** (Nov 2025) - Automated Expiry Reminder System (Churn Prevention)
+  - **Messaging Tab**: New dedicated "Messaging" tab for all messaging features (moved from Settings)
+  - **Automated Messaging**: Send expiry reminders to customers whose accounts are expiring soon
+  - **Auto-Send Toggle**: Enable/disable automated daily reminders via cron job
+  - **Configurable Days**: Set number of days before expiry to send reminders (1-90 days, default: 7)
+  - **Custom Message Templates**: Personalize messages with variables: {days}, {name}, {username}, {date}
+  - **Manual Sweep**: "Send Reminders Now" button to trigger immediate reminder campaign
+  - **Reminder History Log**: Browse sent reminders by date with calendar navigation
+    - Date picker with Previous/Next day navigation and "Today" quick jump
+    - Real-time statistics (total reminders, sent count, failed count)
+    - Detailed table: Time, Account, Full Name, MAC, Expiry Date, Days Before, Status, Message
+    - Message truncation with full text on hover
+    - Permission-based filtering (users see only their reminders)
+  - **Duplicate Prevention**: MAC address-based deduplication persists across account syncs
+  - **Batch Processing**: Rate-limited sending (300ms delay between messages) to avoid server overload
+  - **Detailed Results**: View sent/skipped/failed counts with per-account status
+  - **PWA Notifications**: Desktop notifications via service worker when reminders are sent
+  - **Permission-Based**: Only super admin and users with STB control permission can use reminders
+  - **Database Tracking**: Two tables: `_expiry_reminders` (audit log) and `_reminder_settings` (user config)
+  - **Comprehensive Logging**: Track sent date, message content, status (sent/failed), error messages
+  - **Bug Fixes**:
+    - Fixed missing `send_message()` function in `api.php`
+    - Fixed reminder persistence after account sync (changed from account_id to MAC-based deduplication)
+    - Removed auto-save behavior from toggle (requires explicit "Save Reminder Configuration" button)
+  - **Files Added**: `send_expiry_reminders.php`, `update_reminder_settings.php`, `get_reminder_settings.php`, `get_reminder_history.php`, `add_reminder_tracking.php`, `fix_reminder_deduplication.php`, `cron_check_expiry_reminders.php`
+  - **Files Modified**: `dashboard.html`, `dashboard.js`, `dashboard.css`, `service-worker.js`, `api.php`
+  - **Migration Required**: Run `add_reminder_tracking.php` and `fix_reminder_deduplication.php` to setup database
 
 - **v1.7.7** (Nov 2025) - Account Table Column Sorting
   - **Interactive Column Headers**: Click to sort accounts by **Full Name**, **Reseller**, or **Expiration Date** (3 sortable columns)

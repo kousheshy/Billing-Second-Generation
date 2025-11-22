@@ -99,6 +99,7 @@
             <button class="tab" onclick="switchTab('plans')">Plans</button>
             <button class="tab" onclick="switchTab('transactions')">Transactions</button>
             <button class="tab" onclick="switchTab('stb-control')">STB Control</button>
+            <button class="tab" onclick="switchTab('messaging')">Messaging</button>
             <button class="tab" onclick="switchTab('reports')">Reports</button>
             <button class="tab" onclick="switchTab('settings')">Settings</button>
         </div>
@@ -482,7 +483,112 @@
                 </div>
                 <div id="sync-status" class="sync-status" style="display:none;"></div>
             </div>
+
+            <!-- Messaging Tab -->
+            <div id="messaging-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Messaging Center</h2>
+                    <p style="color: var(--text-secondary); margin-top: 8px;">Manage automated and manual messaging to your customers</p>
+                </div>
+
+                <!-- Expiry Reminder Section (STB Permission Required) -->
+                <div id="reminder-section" class="reminder-section" style="display:none;">
+                    <h3>Expiry Reminder Settings</h3>
+                    <p>Automatically send reminders to customers whose accounts are expiring soon.</p>
+
+                    <div class="reminder-config">
+                        <div class="form-group">
+                            <label class="toggle-label-horizontal">
+                                <span class="toggle-text">Enable Automatic Reminders</span>
+                                <div class="reminder-toggle">
+                                    <input type="checkbox" id="auto-send-enabled">
+                                    <span class="toggle-slider-reminder round"></span>
+                                </div>
+                            </label>
+                            <small>When enabled, system will automatically send reminders daily to accounts expiring in configured days</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Days Before Expiry</label>
+                            <input type="number" id="reminder-days" min="1" max="90" value="7" class="reminder-input">
+                            <small>Send reminders when accounts expire in this many days (1-90)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Message Template</label>
+                            <textarea id="reminder-template" rows="3" class="reminder-textarea" placeholder="Use {days}, {name}, {username}, {date} as variables">Dear {name}, your subscription expires in {days} days. Please renew soon to maintain uninterrupted service. Thank you for choosing us.</textarea>
+                            <small>Available variables: {days}, {name}, {username}, {date}</small>
+                        </div>
+
+                        <div class="reminder-actions">
+                            <button class="btn-primary" onclick="saveReminderSettings()">Save Reminder Configuration</button>
+                            <button class="btn-reminder-send" onclick="sendExpiryReminders()">
+                                <span id="reminder-icon">📧</span> Send Reminders Now (Manual)
+                            </button>
+                        </div>
+
+                        <div id="reminder-status" class="reminder-status" style="display:none;"></div>
+                        <div id="reminder-results" class="reminder-results" style="display:none;"></div>
+                    </div>
+
+                    <div class="reminder-info">
+                        <p><strong>How it works:</strong></p>
+                        <ul>
+                            <li>Click "Send Reminders Now" to find accounts expiring in N days</li>
+                            <li>Each customer receives a personalized message on their device</li>
+                            <li>Duplicate reminders are prevented automatically</li>
+                            <li>View sent/skipped/failed counts after each sweep</li>
+                        </ul>
+                        <p id="last-sweep-info" class="last-sweep"></p>
+                    </div>
+                </div>
+
+                <!-- Reminder History Log -->
+                <div id="reminder-history-section" class="reminder-history-section" style="display:none; margin-top: 30px;">
+                    <h3>Reminder History</h3>
+                    <p>View all sent reminder messages with date filtering</p>
+
+                    <div class="history-controls">
+                        <div class="date-browser">
+                            <button class="btn-date-nav" onclick="changeHistoryDate(-1)" title="Previous day">◀</button>
+                            <input type="date" id="history-date" onchange="loadReminderHistory()" class="history-date-input">
+                            <button class="btn-date-nav" onclick="changeHistoryDate(1)" title="Next day">▶</button>
+                            <button class="btn-today" onclick="setHistoryToday()">📅 Today</button>
+                        </div>
+                        <div class="history-stats">
+                            <span id="history-total-count" class="stat-badge">0 reminders</span>
+                            <span id="history-sent-count" class="stat-badge stat-success">0 sent</span>
+                            <span id="history-failed-count" class="stat-badge stat-error">0 failed</span>
+                        </div>
+                    </div>
+
+                    <div id="history-table-container" class="history-table-container">
+                        <table id="reminder-history-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Account</th>
+                                    <th>Full Name</th>
+                                    <th>MAC Address</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Before</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+                                        Select a date to view reminder history
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
     </div>
 
     <!-- Add Account Modal -->

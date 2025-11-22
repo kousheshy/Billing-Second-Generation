@@ -1269,6 +1269,306 @@ input[type="number"] {
     border: 1px solid var(--info);
 }
 
+/* Expiry Reminder Section */
+.reminder-section {
+    padding: var(--spacing-md);
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-top: var(--spacing-lg);
+}
+
+.reminder-section h3 {
+    margin: 0 0 6px 0;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.reminder-section > p {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.reminder-config {
+    background: var(--bg-secondary);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.reminder-config .form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.reminder-config .form-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.reminder-config label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.reminder-config small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+}
+
+.reminder-input,
+.reminder-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.reminder-input:focus,
+.reminder-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.reminder-textarea {
+    resize: vertical;
+    min-height: 70px;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+/* Auto-send toggle */
+.toggle-label-horizontal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.toggle-text {
+    flex: 1;
+}
+
+.reminder-toggle {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.reminder-toggle input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider-reminder {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+}
+
+.toggle-slider-reminder:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+}
+
+.reminder-toggle input:checked + .toggle-slider-reminder {
+    background-color: var(--success);
+}
+
+.reminder-toggle input:focus + .toggle-slider-reminder {
+    box-shadow: 0 0 1px var(--success);
+}
+
+.reminder-toggle input:checked + .toggle-slider-reminder:before {
+    transform: translateX(24px);
+}
+
+.toggle-slider-reminder.round {
+    border-radius: 24px;
+}
+
+.toggle-slider-reminder.round:before {
+    border-radius: 50%;
+}
+
+.reminder-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.btn-reminder-send {
+    background: var(--gradient-success);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn-reminder-send:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-reminder-send:active {
+    transform: translateY(0);
+}
+
+.btn-reminder-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.reminder-status {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 13px;
+    animation: slideDown var(--transition-normal);
+}
+
+.reminder-status.success {
+    background: var(--success-bg);
+    color: var(--success-text);
+    border: 1px solid var(--success);
+}
+
+.reminder-status.error {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+    border: 1px solid var(--danger);
+}
+
+.reminder-status.info {
+    background: var(--info-bg);
+    color: var(--info-text);
+    border: 1px solid var(--info);
+}
+
+.reminder-status.warning {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    border: 1px solid var(--warning);
+}
+
+.reminder-results {
+    margin-top: var(--spacing-md);
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+}
+
+.reminder-result-item {
+    padding: 8px;
+    margin-bottom: 6px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reminder-result-item:last-child {
+    margin-bottom: 0;
+}
+
+.reminder-result-item.sent {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-text);
+}
+
+.reminder-result-item.skipped {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-text);
+}
+
+.reminder-result-item.failed {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-text);
+}
+
+.reminder-result-item .icon {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.reminder-info {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--primary);
+}
+
+.reminder-info p {
+    margin: 0 0 8px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.reminder-info ul {
+    margin: 8px 0 12px 20px;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.reminder-info li {
+    margin-bottom: 4px;
+}
+
+.last-sweep {
+    margin: 12px 0 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-style: italic;
+}
+
 /* Pagination */
 .pagination-controls {
     display: flex;
@@ -2069,4 +2369,153 @@ input[type="number"] {
 /* Reduce padding for better fit */
 #accounts-table td {
     padding: 10px 8px;
+}
+
+/* ============================================================================
+ * MESSAGING TAB STYLES
+ * ============================================================================ */
+
+.messaging-placeholder {
+    transition: all 0.3s ease;
+}
+
+.messaging-placeholder:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+/* Reminder History Section */
+.reminder-history-section {
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.history-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.date-browser {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-date-nav {
+    padding: 8px 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-date-nav:hover {
+    background: var(--primary-dark);
+    transform: scale(1.05);
+}
+
+.btn-today {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-today:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.btn-today:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+}
+
+.history-date-input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    color-scheme: dark;
+}
+
+.history-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+.history-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.stat-badge {
+    padding: 6px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.stat-badge.stat-success {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+}
+
+.stat-badge.stat-error {
+    background: var(--error);
+    color: white;
+    border-color: var(--error);
+}
+
+.history-table-container {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+#reminder-history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#reminder-history-table th {
+    background: var(--primary);
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+#reminder-history-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+}
+
+#reminder-history-table tbody tr:hover {
+    background: var(--bg-hover);
 }
