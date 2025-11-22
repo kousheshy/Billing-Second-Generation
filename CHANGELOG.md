@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.4] - 2025-11-22
+
+### Added - Theme Propagation & Enhanced MAC Input
+
+**Automatic Theme Propagation**
+- **Theme Change Propagation**: When admin changes a reseller's theme, ALL existing accounts under that reseller are automatically updated
+- **Warning System**: Clear warning message in Edit Reseller modal informing admins that theme changes affect all accounts
+- **Bulk Update Process**: Efficient batch processing of account theme updates with detailed logging
+- **Progress Feedback**: Success/failure statistics for theme propagation operations
+- **Smart Detection**: Only triggers propagation when theme actually changes (not on every reseller edit)
+- **Error Handling**: Graceful handling of partial failures with detailed error reporting
+- **Server-Safe Delays**: 0.1 second delay between updates to prevent server overload
+
+**Enhanced MAC Address Input**
+- **Robust Initialization**: Triple-layer initialization strategy ensures MAC input component works for all users
+- **Immediate Init**: MAC inputs initialized right when DOM loads
+- **Delayed Init**: Re-initialization after 500ms to catch dynamically loaded elements
+- **Final Init**: Final initialization after 2 seconds to ensure everything is loaded
+- **Debug Logging**: Console logging for troubleshooting MAC input initialization
+- **Universal Application**: Works identically for both admin and reseller users
+- **Smart Duplicate Prevention**: Prevents re-initializing already initialized inputs
+
+**Warning Messages**
+- **Edit Reseller Modal**: "⚠️ Warning: Changing the theme will update the Stalker Portal theme for ALL existing accounts under this reseller. This change will take effect immediately."
+- **Update Feedback**:
+  - Full success: "Reseller updated successfully. Theme changed for all X accounts."
+  - Partial success: "Reseller updated. Theme changed for X/Y accounts (Z failed)."
+
+**Technical Implementation**
+- New endpoint: `update_reseller_accounts_theme.php` - Standalone bulk theme update endpoint (for future use)
+- Updated `update_reseller.php`:
+  - Theme change detection logic
+  - Bulk account update on theme change
+  - Detailed error logging with success/failure tracking
+  - Conditional response messages based on update results
+- Updated `dashboard.html`:
+  - Warning caption in Edit Reseller form
+- Updated `dashboard.js`:
+  - Enhanced `initAllMacInputs()` with console logging
+  - Triple initialization strategy for MAC inputs
+  - Warning message handling for theme updates
+
+**Files Modified**
+- `update_reseller_accounts_theme.php` - NEW (standalone bulk update endpoint)
+- `update_reseller.php` - Added theme propagation logic
+- `dashboard.html` - Added warning message in Edit Reseller modal
+- `dashboard.js` - Enhanced MAC input initialization and theme update feedback
+
+---
+
 ## [1.7.3] - 2025-11-22
 
 ### Added - Reseller Theme Management

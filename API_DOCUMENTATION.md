@@ -364,26 +364,62 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 ### Update Reseller
 **Endpoint:** `POST /update_reseller.php`
 
-**Description:** Update reseller details.
+**Description:** Update reseller details. **[v1.7.4]** Automatically propagates theme changes to all accounts under the reseller.
 
 **Request Body:**
 ```json
 {
-  "reseller_id": 2,
-  "full_name": "Reseller One Updated",
+  "id": "2",
+  "username": "reseller1",
+  "password": "newpass123",
+  "name": "Reseller One Updated",
   "email": "new@example.com",
-  "max_users": 200,
-  "currency": "USD"
+  "max_users": "200",
+  "theme": "HenSoft-TV Realistic-Dark",
+  "currency": "USD",
+  "permissions": "1|1|0|0|1",
+  "is_observer": 0
 }
 ```
 
-**Response:**
+**Response (Normal Update):**
 ```json
 {
   "error": 0,
-  "err_msg": "Reseller updated successfully"
+  "err_msg": ""
 }
 ```
+
+**Response (Theme Changed - Success):**
+```json
+{
+  "error": 0,
+  "err_msg": "Reseller updated successfully. Theme changed for all 10 accounts."
+}
+```
+
+**Response (Theme Changed - Partial Failure):**
+```json
+{
+  "error": 0,
+  "warning": 1,
+  "err_msg": "Reseller updated. Theme changed for 8/10 accounts (2 failed)."
+}
+```
+
+**Automatic Theme Propagation (v1.7.4):**
+- Detects when reseller's theme has changed
+- Automatically updates ALL accounts under that reseller with the new theme
+- Updates are sent to Stalker Portal via `/stalker_portal/update_account.php`
+- Includes 0.1 second delay between updates to prevent server overload
+- Returns detailed success/failure statistics
+- Comprehensive error logging for troubleshooting
+
+**Notes:**
+- If password is empty, the existing password is retained
+- Theme propagation only occurs when theme value actually changes
+- Plans are NOT updated here - they are managed separately via `assign_plans.php`
+- Permissions format: `can_edit|can_add|is_admin|can_delete|reserved`
 
 ---
 
@@ -930,6 +966,7 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 - When creating a reseller, selected theme is stored in `_users.theme` column
 - When creating an account, reseller's theme is automatically applied via server-side script
 - When editing an account, theme is synced to ensure consistency with reseller's current theme
+- **[v1.7.4]** When editing a reseller's theme, ALL existing accounts under that reseller are automatically updated
 - Theme is sent to Stalker Portal using custom `/stalker_portal/update_account.php` endpoint
 
 **Technical Details:**
@@ -937,6 +974,77 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 - Default theme: "HenSoft-TV Realistic-Centered SHOWBOX"
 - Theme IDs must match exactly with Stalker Portal theme names
 - No API method available from Stalker Portal for dynamic theme fetching (as of v5.2)
+
+---
+
+### Update Reseller Accounts Theme (Bulk)
+**Endpoint:** `POST /update_reseller_accounts_theme.php`
+
+**Description:** Bulk update themes for all accounts under a specific reseller.
+
+**Version:** Added in v1.7.4
+
+**Permissions:** Super admin only
+
+**Request Body:**
+```json
+{
+  "reseller_id": "5",
+  "theme": "HenSoft-TV Realistic-Dark"
+}
+```
+
+**Success Response:**
+```json
+{
+  "error": 0,
+  "err_msg": "Theme updated successfully for all 10 accounts.",
+  "details": {
+    "total": 10,
+    "updated": 10,
+    "failed": 0
+  }
+}
+```
+
+**Partial Success Response:**
+```json
+{
+  "error": 0,
+  "warning": 1,
+  "err_msg": "Theme updated for 8/10 accounts. 2 failed.",
+  "details": {
+    "total": 10,
+    "updated": 8,
+    "failed": 2,
+    "errors": [
+      "account1: Connection timeout",
+      "account2: Invalid response"
+    ]
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Missing required fields"
+}
+```
+
+**Usage:**
+- Standalone endpoint for bulk theme updates (currently for future use)
+- Main theme propagation happens automatically via `update_reseller.php` when theme changes
+- Useful for manual bulk updates or re-sync operations
+- Each account update includes 0.1 second delay to prevent server overload
+- Comprehensive error logging for troubleshooting
+
+**Automatic Propagation (v1.7.4):**
+- Theme propagation is now built into `update_reseller.php`
+- When admin changes reseller theme in Edit Reseller form, propagation happens automatically
+- No need to call this endpoint separately for normal workflow
+- This endpoint remains available for manual/bulk operations
 
 ---
 

@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.7.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.4-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -136,9 +136,12 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Timestamped Files**: Auto-generated filenames with dates
 - **Export Libraries**: Integrated XLSX.js, jsPDF, and jsPDF-autoTable
 
-### Reseller Theme Management (v1.7.3)
+### Reseller Theme Management (v1.7.3 - Enhanced in v1.7.4)
 - **Portal Theme Assignment**: Assign specific Stalker Portal themes to resellers
 - **Theme Inheritance**: All subscribers under a reseller automatically receive the reseller's theme
+- **Automatic Theme Propagation (v1.7.4)**: When admin changes a reseller's theme, ALL existing accounts under that reseller are automatically updated on the Stalker Portal
+- **Warning System (v1.7.4)**: Clear warnings inform admins that theme changes will affect all accounts
+- **Bulk Update Processing (v1.7.4)**: Efficient batch processing with detailed success/failure statistics
 - **9 Available Themes**:
   - HenSoft-TV Realistic-Centered SHOWBOX (Default)
   - HenSoft-TV Realistic-Centered
@@ -152,6 +155,7 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Smart Theme Dropdown**: Themes dynamically loaded from server with default pre-selected
 - **Automatic Application**: Theme applied to Stalker Portal when creating accounts
 - **Theme Sync**: Ensures theme consistency when editing accounts
+- **Smart Detection**: Theme propagation only triggers when theme actually changes
 - **Reseller Management**: Theme selection available in both Add and Edit Reseller forms
 - **Visual Customization**: Customize the portal interface appearance for each reseller's customers
 - **Server-Side Updates**: Uses reliable server-side script for theme synchronization
@@ -268,7 +272,7 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Real-Time Feedback**: Instant success/error messages
 - **Comprehensive Logging**: All actions logged for audit trail
 
-### Smart MAC Address Input (v1.7.2)
+### Smart MAC Address Input (v1.7.2 - Enhanced in v1.7.4)
 - **Enforced Prefix**: Fixed vendor prefix (00:1A:79:) cannot be modified
 - **Auto-Formatting**: Colons inserted automatically after every 2 hex digits
 - **Real-Time Validation**: Validates input as user types
@@ -280,6 +284,9 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Pattern Validation**: Enforces 00:1A:79:XX:XX:XX format
 - **Pre-Submission Check**: Blocks form submission if invalid
 - **Reusable Components**: Easy integration via JavaScript functions
+- **Robust Initialization (v1.7.4)**: Triple-layer initialization ensures component works for all users
+- **Debug Logging (v1.7.4)**: Console logging for troubleshooting initialization issues
+- **Works for All Users (v1.7.4)**: Identical functionality for both admin and reseller accounts
 
 ### Phone Number Support (v1.7.1)
 - **Phone Number Field**: Added to account creation and editing forms
@@ -590,7 +597,7 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.7.2
+**Version:** 1.7.4
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
@@ -598,6 +605,23 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ## Version History
 
+- **v1.7.4** (Nov 2025) - Reseller Theme Bulk Propagation & Enhanced MAC Initialization
+  - **Automatic Theme Propagation**: Changing a reseller's theme now updates ALL existing subscriber accounts on Stalker Portal
+  - **Warning System**: Prominent warning in Edit Reseller modal about global impact of theme changes
+  - **Partial Success Handling**: Displays counts of updated vs failed accounts with warning style if any failures
+  - **Server-Friendly Batch**: 0.1s delay between theme updates to reduce API pressure
+  - **Smart Change Detection**: Propagation only runs when the theme actually changes
+  - **Detailed Logging**: Success (✓) and failure (✗) entries logged for each account; summary totals logged
+  - **Enhanced Feedback**: Success message vs warning message based on outcome
+  - **Robust MAC Input Init**: Triple-pass initialization (immediate, 500ms, 2000ms) to catch dynamically injected fields
+  - **Debug Console Output**: Initialization progress and skips now visible for diagnostics
+- **v1.7.3** (Nov 2025) - Reseller Theme Management System
+  - **Theme Dropdowns**: Dynamic theme selection in Add/Edit Reseller forms (9 curated themes)
+  - **Theme Inheritance**: New accounts automatically receive reseller's theme
+  - **Account Edit Sync**: Theme re-applied when editing accounts to ensure consistency
+  - **Default Theme Logic**: Fallback to HenSoft-TV Realistic-Centered SHOWBOX when reseller has none
+  - **Server Integration**: Uses Stalker `update_account.php` for reliable theme application
+  - **Utilities Added**: `get_themes.php`, `fix_account_themes.php` for maintenance/migration
 - **v1.7.2** (Nov 2025) - STB Device Control System with smart MAC address input
   - **New STB Control Tab**: Complete device management interface
   - **8 Control Events**: Reboot, reload portal, update channels, play channel, play radio, update image, show menu, cut off
@@ -609,18 +633,15 @@ Unauthorized copying, modification, or distribution is prohibited.
   - **Device Ownership**: Resellers can only control their own devices
   - **New API Endpoints**: send_stb_event.php, send_stb_message.php
   - **Comprehensive Logging**: All actions logged for audit trail
-  - **208 Lines of CSS**: Responsive design with mobile support
-  - **JavaScript Functions**: Reusable MAC validation and STB control functions
+  - **Responsive Design**: Mobile-friendly layout and styling
 - **v1.7.1** (Nov 2025) - Phone number support with Stalker Portal integration
   - **Phone Number Field**: Added to accounts table (VARCHAR 50)
   - **Bidirectional Sync**: Phone numbers sync between billing panel and Stalker Portal
-  - **Single Source of Truth**: Stalker Portal is authoritative source
+  - **Single Source of Truth**: Stalker Portal authoritative
   - **UI Integration**: Phone column in accounts table, blank if not set
   - **Export Support**: Included in PDF and Excel exports
-  - **Database Migration**: add_phone_column.php utility (safe and idempotent)
-  - **Fixed Pagination Bug**: Deleted accounts now disappear immediately
-  - **Fixed Search State**: Search term cleared after deletion
-  - **Data Integrity**: Automatic sync ensures consistency
+  - **Migration Script**: `add_phone_column.php` utility
+  - **Deletion UX Fixes**: Pagination & search reset after deletion
 - **v1.7.0** (Nov 2025) - Account-to-Reseller assignment system with full admin features for reseller admins
   - **Assign Reseller Button**: One-click assignment for admins and reseller admins
   - **Reseller Column**: Shows current owner in accounts table
@@ -628,10 +649,9 @@ Unauthorized copying, modification, or distribution is prohibited.
   - **Not Assigned Option**: Accounts can be unassigned (NULL)
   - **Smart Sync**: New accounts sync as "Not Assigned" by default
   - **Full Admin Features**: Reseller admins get all tabs, sync, manage resellers
-  - **Mutually Exclusive Permissions**: Cannot select Observer AND Admin
-  - **Enhanced Permission System**: Proper role separation
-  - **New API**: assign_reseller.php endpoint
-  - **Account Ownership**: Reseller admins can assign accounts
+  - **Mutually Exclusive Permissions**: Observer vs Admin cannot co-exist
+  - **New API**: `assign_reseller.php` endpoint
+  - **Ownership Controls**: Reseller admins manage account ownership
 - **v1.6.6** (Nov 2025) - Stalker Portal reseller integration with bidirectional sync
 - **v1.6.5** (Nov 2025) - Granular delete permissions, dark mode default, sync bug fixes
 - **v1.6.4** (Nov 2025) - Observer Mode UI improvements with disabled buttons and transaction reseller column

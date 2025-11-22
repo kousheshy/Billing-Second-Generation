@@ -612,11 +612,18 @@ function initAllMacInputs() {
     // Find all MAC address input fields
     const macInputs = document.querySelectorAll('input[name="mac"], input[id*="mac"], input[placeholder*="1A:79"]');
 
+    console.log(`[MAC Init] Found ${macInputs.length} MAC input fields to initialize`);
+
     macInputs.forEach(input => {
         if (!input.getAttribute('data-mac-initialized')) {
+            console.log(`[MAC Init] Initializing MAC input:`, input.name || input.id || 'unnamed');
             initMacAddressInput(input);
+        } else {
+            console.log(`[MAC Init] Skipping already initialized input:`, input.name || input.id || 'unnamed');
         }
     });
+
+    console.log(`[MAC Init] Initialization complete`);
 }
 
 // Modal functions
@@ -1786,7 +1793,12 @@ async function updateReseller(e) {
         const result = await response.json();
 
         if (result.error == 0) {
-            showAlert('Reseller updated successfully!', 'success');
+            // If there's a warning (partial success), show warning message
+            if (result.warning) {
+                showAlert(result.err_msg || 'Reseller updated with warnings', 'warning');
+            } else {
+                showAlert(result.err_msg || 'Reseller updated successfully!', 'success');
+            }
             closeModal('editResellerModal');
             loadResellers();
         } else {
@@ -2775,14 +2787,26 @@ async function updateAccountCount(viewAllAccounts) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[Dashboard] DOMContentLoaded - Starting initialization');
+
     initTheme();
     checkAuth();
 
     // Setup permission toggles
     setupAddResellerPermissions();
 
-    // Initialize MAC address inputs
+    // Initialize MAC address inputs immediately
+    initAllMacInputs();
+
+    // Initialize again after a delay to catch any dynamically loaded elements
     setTimeout(() => {
+        console.log('[Dashboard] Re-initializing MAC inputs after delay');
         initAllMacInputs();
     }, 500);
+
+    // Initialize again after 2 seconds to ensure everything is loaded
+    setTimeout(() => {
+        console.log('[Dashboard] Final MAC input initialization');
+        initAllMacInputs();
+    }, 2000);
 });

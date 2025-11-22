@@ -86,6 +86,9 @@ try {
     $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|0|1';
     $is_observer = isset($_POST['is_observer']) ? intval($_POST['is_observer']) : 0;
 
+    // Check if theme has changed
+    $theme_changed = ($reseller_info['theme'] !== $theme);
+
     // All resellers remain with super_user = 0
     // Admin-level permissions are stored in permissions string (index 2)
     // Delete permission is stored in permissions string (index 3)
@@ -94,7 +97,67 @@ try {
     $stmt = $pdo->prepare('UPDATE _users SET username=?, password=?, name=?, email=?, max_users=?, theme=?, ip_ranges=?, currency_id=?, super_user=?, is_observer=?, permissions=? WHERE id=?');
     $stmt->execute([$username, $password, $name, $email, $max_users, $theme, $use_ip_ranges, $currency, 0, $is_observer, $permissions, $id]);
 
-    echo json_encode(['error' => 0, 'err_msg' => '']);
+    // If theme changed, update all accounts under this reseller
+    if ($theme_changed && !empty($theme)) {
+        error_log("Theme changed for reseller {$id} from '{$reseller_info['theme']}' to '{$theme}'. Updating all accounts...");
+
+        // Get all accounts under this reseller
+        $stmt = $pdo->prepare('SELECT username FROM _accounts WHERE reseller = ?');
+        $stmt->execute([$id]);
+        $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $updated_accounts = 0;
+        $failed_accounts = 0;
+
+        foreach ($accounts as $account) {
+            $account_username = $account['username'];
+
+            // Update theme on Stalker Portal server
+            $data = "key=f4H75Sgf53GH4dd&login={$account_username}&theme={$theme}";
+            $url = $SERVER_1_ADDRESS . "/stalker_portal/update_account.php";
+
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
+            curl_setopt($curl, CURLOPT_POSTREDIR, 3);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+
+            $result = curl_exec($curl);
+            curl_close($curl);
+
+            if ($result === 'OK') {
+                $updated_accounts++;
+                error_log("✓ Updated theme for account: {$account_username}");
+            } else {
+                $failed_accounts++;
+                error_log("✗ Failed to update theme for account: {$account_username} - Response: {$result}");
+            }
+
+            // Small delay to avoid overwhelming the server
+            usleep(100000); // 0.1 second delay
+        }
+
+        error_log("Theme update summary: {$updated_accounts} updated, {$failed_accounts} failed out of " . count($accounts) . " total accounts");
+
+        if ($failed_accounts > 0) {
+            echo json_encode([
+                'error' => 0,
+                'warning' => 1,
+                'err_msg' => "Reseller updated. Theme changed for {$updated_accounts}/" . count($accounts) . " accounts ({$failed_accounts} failed)."
+            ]);
+        } else {
+            echo json_encode([
+                'error' => 0,
+                'err_msg' => "Reseller updated successfully. Theme changed for all {$updated_accounts} accounts."
+            ]);
+        }
+    } else {
+        echo json_encode(['error' => 0, 'err_msg' => '']);
+    }
 
 } catch(PDOException $e) {
     echo json_encode(['error' => 1, 'err_msg' => 'Database error: ' . $e->getMessage()]);
