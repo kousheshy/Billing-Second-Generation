@@ -21,15 +21,17 @@ Comprehensive churn-prevention messaging system that automatically sends alerts 
 - **send_message() Function**: Added missing `send_message()` helper function in `api.php` to properly send STB messages via Stalker Portal API. This function wraps `api_send_request()` and handles dual-server message delivery.
 - **Reminder Persistence After Account Sync**: Changed deduplication from `account_id` to `mac` address. Reminders now persist correctly even after syncing accounts from Stalker Portal, preventing duplicate messages to the same device.
 - **Toggle Auto-Save Behavior**: Removed automatic save-on-toggle behavior. Auto-send toggle now only saves when "Save Reminder Configuration" button is clicked, giving users explicit control over configuration changes.
+- **Time-Based Deduplication**: Added 60-day time window to deduplication logic. Now only prevents duplicate reminders within 60 days, allowing customers who renew and expire again (next month/year) to receive new reminders.
 
 **Core Features**
 - **Configurable Reminder Timing**: Set days before expiry (1-90 days, default: 7)
 - **Custom Message Templates**: Personalize with variables: `{days}`, `{name}`, `{username}`, `{date}`
 - **Manual Campaign Trigger**: One-click "Send Reminders Now" button in Messaging tab
-- **Smart Duplicate Prevention**: Database tracking ensures no duplicate reminders for same expiry cycle
+- **Smart Duplicate Prevention**: Time-windowed deduplication (60 days) prevents spam while allowing future renewal reminders
 - **Batch Processing**: Rate-limited sending (300ms delay between messages) prevents server overload
 - **Detailed Campaign Results**: Real-time feedback showing sent/skipped/failed counts per account
 - **Reminder History Log**: Date-based browsing of all sent reminders with calendar navigation, statistics, and full audit trail including sent/failed status and message content
+- **Automatic Cleanup**: Optional cleanup script removes reminders older than 90 days to maintain database performance
 
 **Technical Implementation**
 - **Database Tables**:
@@ -82,6 +84,7 @@ Comprehensive churn-prevention messaging system that automatically sends alerts 
 - `add_reminder_tracking.php` (~95 lines)
 - `fix_reminder_deduplication.php` (~83 lines)
 - `cron_check_expiry_reminders.php` (~229 lines) - Automated daily cron job for sending reminders
+- `cleanup_old_reminders.php` (~73 lines) - Optional monthly cleanup script for old reminder records
 
 **Files Modified**
 - `dashboard.html`: Added reminder settings UI and history section (~90 lines)

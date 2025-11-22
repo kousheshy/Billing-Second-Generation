@@ -114,9 +114,14 @@ try {
     $results = [];
 
     foreach($expiring_accounts as $account) {
-        // Check if reminder already sent for this MAC/date/days combination
+        // Check if reminder already sent for this MAC/date/days combination within the last 60 days
         // Using MAC address ensures deduplication works even after account sync
-        $stmt = $pdo->prepare('SELECT id, sent_at FROM _expiry_reminders WHERE mac = ? AND end_date = ? AND days_before = ?');
+        // Time window prevents blocking future renewals (e.g., if they renew next month/year)
+        $stmt = $pdo->prepare('SELECT id, sent_at FROM _expiry_reminders
+                               WHERE mac = ?
+                               AND end_date = ?
+                               AND days_before = ?
+                               AND sent_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)');
         $stmt->execute([$account['mac'], $account['end_date'], $days_before]);
         $existing_reminder = $stmt->fetch();
 
