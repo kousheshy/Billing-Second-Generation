@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.9.1-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -595,20 +595,31 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Current Version: 1.9.0 - November 2025
+- Current Version: 1.9.1 - November 2025
 - **Lead Developer:** Kambiz Koosheshi
 - **GitHub:** [@kousheshy](https://github.com/kousheshy)
 - **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
-**Version:** 1.9.0
+**Version:** 1.9.1
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.9.1** (Nov 2025) - Persian RTL Support & Typography
+  - **Automatic RTL Detection**: Added `dir="auto"` to all SMS text inputs and displays
+  - **BYekan+ Font Integration**: Professional Persian typography throughout SMS system
+  - **Bidirectional Text Support**: Persian text displays RTL, English remains LTR
+  - **Font Loading**: Optimized with `font-display: swap` for instant text visibility
+  - **UI Enhancements**: Inline sort icons, improved header alignment
+  - **Browser Compatibility**: Works in all modern browsers (Chrome 26+, Firefox 17+, Safari 6.1+, Edge 79+)
+  - **Performance**: Zero impact on load time with graceful font fallback
+  - **Files Modified**: dashboard.css, dashboard.html, sms-functions.js
+  - **Documentation Added**: PERSIAN_RTL_TYPOGRAPHY.md with complete implementation guide
 
 - **v1.9.0** (Nov 2025) - Multi-Stage SMS Expiry Reminder System
   - **Intelligent 4-Stage Reminders**: Automated SMS at 7 days, 3 days, 1 day before expiry, and on expiration

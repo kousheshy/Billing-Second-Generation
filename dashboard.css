@@ -1,3 +1,12 @@
+/* Persian Font */
+@font-face {
+    font-family: 'BYekan';
+    src: url('BYekan+.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* Root Variables */
 :root {
     /* Light Mode Colors */
@@ -644,6 +653,7 @@ table th.sortable {
     user-select: none;
     transition: all var(--transition-fast);
     position: relative;
+    white-space: nowrap;
 }
 
 table th.sortable:hover {
@@ -653,9 +663,10 @@ table th.sortable:hover {
 
 table th.sortable .sort-icon {
     display: inline-block;
-    margin-left: 4px;
+    margin-left: 6px;
     opacity: 0.3;
     font-size: 10px;
+    vertical-align: middle;
 }
 
 table th.sortable .sort-icon::before {
@@ -3037,7 +3048,7 @@ input[type="number"] {
 }
 
 .template-card-message {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'BYekan', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 13px;
     line-height: 1.5;
     color: var(--text-secondary);
@@ -3047,6 +3058,8 @@ input[type="number"] {
     overflow: hidden;
     margin: 0;
     position: relative;
+    direction: auto;
+    text-align: start;
 }
 
 .template-card-message::after {
@@ -3081,5 +3094,16 @@ input[type="number"] {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Persian Font Support for SMS-related elements */
+#template-message,
+#template-preview,
+#sms-manual-message,
+#sms-accounts-message,
+.reminder-textarea,
+.template-card-message,
+.sms-history-message {
+    font-family: 'BYekan', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 

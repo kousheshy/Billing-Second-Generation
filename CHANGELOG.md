@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.1] - 2025-11-23
+
+### Added - Persian RTL Support & Typography
+
+**Overview**
+Enhanced Persian language support with automatic RTL detection and professional BYekan+ font integration for all SMS-related text.
+
+**Features**
+- **Automatic RTL Text Direction**:
+  - Added `dir="auto"` to all SMS text inputs and displays
+  - Browser automatically detects Persian text and applies RTL
+  - English text remains LTR
+  - No JavaScript required - native HTML5 feature
+- **BYekan+ Persian Font**:
+  - Integrated BYekan+ font (BYekan+.ttf)
+  - Applied to all SMS templates, messages, and history
+  - Graceful fallback to system fonts
+  - Professional Persian typography throughout
+- **UI Improvements**:
+  - Sort icons now display inline with column headers
+  - Added `white-space: nowrap` to prevent header wrapping
+  - Better vertical alignment of sort indicators
+  - Improved spacing and visual consistency
+
+**Files Modified**
+- `dashboard.css`:
+  - Added @font-face declaration for BYekan+
+  - Updated `.template-card-message` with BYekan font family
+  - Added global Persian font support for SMS elements
+  - Enhanced `.sort-icon` with vertical-align and better spacing
+  - Added `white-space: nowrap` to `th.sortable`
+- `dashboard.html`:
+  - Added `dir="auto"` to `#template-message` textarea
+  - Added `dir="auto"` to `#template-preview` div
+  - Added `dir="auto"` to `#sms-manual-message` textarea
+  - Added `dir="auto"` to `#sms-accounts-message` textarea
+- `sms-functions.js`:
+  - Added `dir="auto"` to template card message display
+  - Added `dir="auto"` to SMS history table message column
+
+**Technical Details**
+- Font file: `BYekan+.ttf` (already in project root)
+- Font loading strategy: `font-display: swap` for immediate text visibility
+- RTL detection: Automatic based on Unicode character ranges
+- Fallback fonts: System fonts (-apple-system, BlinkMacSystemFont, Segoe UI, Roboto)
+
+---
+
 ## [1.9.0] - 2025-11-23
 
 ### Added - Multi-Stage SMS Expiry Reminder System

@@ -472,7 +472,7 @@ function renderSMSHistory() {
             <td>${log.recipient_number}</td>
             <td>${typeLabel}</td>
             <td>${statusBadge}</td>
-            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;" title="${log.message}">${log.message}</td>
+            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;" title="${log.message}" dir="auto">${log.message}</td>
             <td>${log.sent_by_name || log.sent_by_username || 'N/A'}</td>
         `;
         tbody.appendChild(row);
@@ -630,7 +630,7 @@ function loadTemplatesList() {
                 </div>
             </div>
             <div class="template-card-body">
-                <div class="template-card-message">${template.template}</div>
+                <div class="template-card-message" dir="auto">${template.template}</div>
             </div>
             <div class="template-card-footer">
                 <span>${template.template.length} chars</span>

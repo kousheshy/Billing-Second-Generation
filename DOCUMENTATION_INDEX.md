@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.0.0!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.9.1!
 
 ---
 
@@ -61,13 +61,33 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.0.0!
 
 6. **[CHANGELOG.md](CHANGELOG.md)** (10 KB)
    - Version history
-   - Release notes for v1.0.0
+   - Release notes for v1.9.1, v1.9.0, v1.8.0, etc.
    - Breaking changes
    - Future roadmap
    - Migration guides
    - Known limitations
-   
+
    **Check this** for version updates and changes!
+
+7. **[PERSIAN_RTL_TYPOGRAPHY.md](PERSIAN_RTL_TYPOGRAPHY.md)** (15 KB) **NEW in v1.9.1**
+   - Persian RTL support implementation
+   - BYekan+ font integration guide
+   - Automatic text direction detection
+   - Browser compatibility details
+   - Troubleshooting guide
+   - Testing checklist
+
+   **Read this** for Persian language features!
+
+8. **[VERSION_1.9.1_SUMMARY.md](VERSION_1.9.1_SUMMARY.md)** (10 KB) **NEW in v1.9.1**
+   - Complete technical summary of v1.9.1
+   - Detailed file changes with line numbers
+   - Deployment instructions
+   - Rollback procedures
+   - Testing checklist
+   - Performance metrics
+
+   **Use this** for upgrading to v1.9.1!
 
 ---
 
@@ -174,10 +194,10 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.0.0!
 
 | Attribute | Value |
 |-----------|-------|
-| Product Version | 1.0.0 |
-| Release Date | January 17, 2025 |
-| Documentation Version | 1.0.0 |
-| Last Updated | January 21, 2025 |
+| Product Version | 1.9.1 |
+| Release Date | November 23, 2025 |
+| Documentation Version | 1.9.1 |
+| Last Updated | November 23, 2025 |
 | Status | Production Ready ✅ |
 
 ---

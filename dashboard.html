@@ -706,7 +706,7 @@
 
                             <div class="form-group">
                                 <label>Message *</label>
-                                <textarea id="sms-manual-message" rows="4" class="reminder-textarea" maxlength="500" placeholder="Type your SMS message here..."></textarea>
+                                <textarea id="sms-manual-message" rows="4" class="reminder-textarea" maxlength="500" placeholder="Type your SMS message here..." dir="auto"></textarea>
                                 <small><span id="sms-manual-char-count">0</span>/500 characters</small>
                             </div>
 
@@ -754,7 +754,7 @@
 
                             <div class="form-group">
                                 <label>Message *</label>
-                                <textarea id="sms-accounts-message" rows="4" class="reminder-textarea" maxlength="500" placeholder="Type your SMS message. Use {name}, {mac}, {expiry_date} for personalization..."></textarea>
+                                <textarea id="sms-accounts-message" rows="4" class="reminder-textarea" maxlength="500" placeholder="Type your SMS message. Use {name}, {mac}, {expiry_date} for personalization..." dir="auto"></textarea>
                                 <small><span id="sms-accounts-char-count">0</span>/500 characters | Variables: {name}, {mac}, {expiry_date}</small>
                             </div>
 
@@ -1424,7 +1424,7 @@
 
                 <div class="form-group">
                     <label>Message Template *</label>
-                    <textarea id="template-message" rows="6" required placeholder="Type your message here..." oninput="updateTemplatePreview()"></textarea>
+                    <textarea id="template-message" rows="6" required placeholder="Type your message here..." oninput="updateTemplatePreview()" dir="auto"></textarea>
                     <small>Available variables: <code>{name}</code>, <code>{mac}</code>, <code>{expiry_date}</code>, <code>{days}</code></small>
                     <div style="margin-top: 8px;">
                         <span id="template-char-count">0</span> characters
@@ -1433,7 +1433,7 @@
 
                 <div class="form-group" style="background: var(--bg-secondary); padding: 12px; border-radius: var(--radius-md);">
                     <label style="margin-bottom: 8px; display: block; font-weight: 600;">Preview:</label>
-                    <div id="template-preview" style="white-space: pre-wrap; color: var(--text-secondary); font-size: 14px; font-family: monospace;">
+                    <div id="template-preview" style="white-space: pre-wrap; color: var(--text-secondary); font-size: 14px; font-family: monospace;" dir="auto">
                         Enter a message to see preview...
                     </div>
                 </div>
