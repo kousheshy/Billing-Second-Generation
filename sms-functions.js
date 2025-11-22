@@ -33,6 +33,9 @@ function switchMessagingTab(tab) {
         loadAccountsWithPhone();
         loadSMSHistory();
     }
+
+    // Save current messaging sub-tab to localStorage
+    localStorage.setItem('messagingSubTab', tab);
 }
 
 // Switch between manual and accounts SMS modes
@@ -620,21 +623,18 @@ function loadTemplatesList() {
         card.className = 'template-card';
         card.innerHTML = `
             <div class="template-card-header">
-                <div>
-                    <h4 class="template-card-title">${template.name}</h4>
-                    ${template.description ? `<p class="template-card-description">${template.description}</p>` : ''}
-                </div>
+                <h4 class="template-card-title">${template.name}</h4>
                 <div class="template-card-actions">
-                    <button class="btn-edit-template" onclick="editTemplate(${template.id})" title="Edit">✏️ Edit</button>
-                    <button class="btn-delete-template" onclick="deleteTemplate(${template.id})" title="Delete">🗑️ Delete</button>
+                    <button class="btn-edit-template" onclick="editTemplate(${template.id})">Edit</button>
+                    <button class="btn-delete-template" onclick="deleteTemplate(${template.id})">Delete</button>
                 </div>
             </div>
             <div class="template-card-body">
-                <pre class="template-card-message">${template.template}</pre>
+                <div class="template-card-message">${template.template}</div>
             </div>
             <div class="template-card-footer">
-                <span>${template.template.length} characters</span>
-                <span>Created: ${new Date(template.created_at).toLocaleDateString()}</span>
+                <span>${template.template.length} chars</span>
+                ${template.description ? `<span class="template-system-badge">${template.description}</span>` : ''}
             </div>
         `;
         listContainer.appendChild(card);
@@ -781,4 +781,25 @@ window.onclick = function(event) {
         closeTemplateModal();
     }
 }
+
+// Close all modals when pressing Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' || event.keyCode === 27) {
+        // Close SMS template modal
+        const smsTemplateModal = document.getElementById('sms-template-modal');
+        if (smsTemplateModal && smsTemplateModal.style.display === 'block') {
+            closeTemplateModal();
+            return;
+        }
+
+        // Close any other modals that might be open
+        const allModals = document.querySelectorAll('.modal');
+        allModals.forEach(modal => {
+            if (modal.style.display === 'block' || modal.classList.contains('show')) {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+        });
+    }
+});
 

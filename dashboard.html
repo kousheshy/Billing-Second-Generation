@@ -53,6 +53,9 @@
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
                 <span id="theme-icon">☀️</span>
             </button>
+            <button class="refresh-btn" onclick="refreshPage()" title="Refresh Page">
+                🔄
+            </button>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
     </nav>
@@ -762,16 +765,17 @@
                     </div>
 
                     <!-- SMS Template Management -->
-                    <div class="sms-templates-section" style="margin-top: 30px;">
-                        <h3>SMS Message Templates</h3>
-                        <p>Create and manage reusable SMS message templates with variables</p>
-
-                        <div style="margin-bottom: 20px;">
-                            <button class="btn-primary" onclick="showAddTemplateModal()">+ Add New Template</button>
+                    <div class="sms-templates-section" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div>
+                                <h3 style="margin: 0 0 4px 0;">SMS Message Templates</h3>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Create and manage reusable message templates with variables</p>
+                            </div>
+                            <button class="btn-primary" onclick="showAddTemplateModal()">+ Add Template</button>
                         </div>
 
                         <!-- Templates List -->
-                        <div id="sms-templates-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                        <div id="sms-templates-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
                             <p style="color: var(--text-tertiary); padding: 20px; text-align: center; grid-column: 1 / -1;">Loading templates...</p>
                         </div>
                     </div>

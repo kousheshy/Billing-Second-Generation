@@ -273,6 +273,9 @@ function switchTab(tabName) {
     document.getElementById(tabName + '-tab').classList.add('active');
     event.target.classList.add('active');
 
+    // Save current tab to localStorage for persistence across refreshes
+    localStorage.setItem('currentTab', tabName);
+
     // Refresh dynamic reports when switching to reports tab
     if(tabName === 'reports' && accountsPagination.allAccounts) {
         updateDynamicReports();
@@ -2999,6 +3002,10 @@ async function updateAccountCount(viewAllAccounts) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[Dashboard] DOMContentLoaded - Starting initialization');
 
+    // IMPORTANT: Restore tab FIRST before anything else
+    // This must run before any tab initialization
+    restoreActiveTab();
+
     initTheme();
     checkAuth();
 
@@ -3560,4 +3567,93 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Global keyboard event handler for all modals
+ * Close modals when Escape key is pressed
+ */
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' || event.keyCode === 27) {
+        // Find and close all open modals
+        const allModals = document.querySelectorAll('.modal');
+        allModals.forEach(modal => {
+            if (modal.style.display === 'block' || modal.classList.contains('show')) {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+
+                // Clear modal content if needed
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    // Call specific close handlers if they exist
+                    const modalId = modal.id;
+                    if (modalId === 'editAccountModal' && typeof closeEditModal === 'function') {
+                        closeEditModal();
+                    } else if (modalId === 'addAccountModal' && typeof closeAddModal === 'function') {
+                        closeAddModal();
+                    } else if (modalId === 'editResellerModal' && typeof closeEditResellerModal === 'function') {
+                        closeEditResellerModal();
+                    }
+                }
+            }
+        });
+    }
+});
+
+/**
+ * Refresh the current page
+ */
+function refreshPage() {
+    location.reload();
+}
+
+/**
+ * Restore the last active tab after page load/refresh
+ */
+function restoreActiveTab() {
+    console.log('[Tab Restore] Starting...');
+
+    // Check if this is a fresh login (set by login page)
+    const isFreshLogin = sessionStorage.getItem('freshLogin');
+    console.log('[Tab Restore] Fresh login flag:', isFreshLogin);
+
+    if (isFreshLogin === 'true') {
+        console.log('[Tab Restore] Fresh login detected - clearing saved tabs');
+        // Clear the flag
+        sessionStorage.removeItem('freshLogin');
+        // Clear saved tabs to start fresh
+        localStorage.removeItem('currentTab');
+        localStorage.removeItem('messagingSubTab');
+        // Don't restore anything - stay on default (Accounts) tab
+        console.log('[Tab Restore] Staying on default Accounts tab');
+        return;
+    }
+
+    // Get saved main tab
+    const savedTab = localStorage.getItem('currentTab');
+    console.log('[Tab Restore] Saved tab:', savedTab);
+
+    if (savedTab) {
+        console.log('[Tab Restore] Restoring tab:', savedTab);
+        // Find the tab button and click it to restore the tab
+        const tabButtons = document.querySelectorAll('.tab');
+        tabButtons.forEach(btn => {
+            if (btn.textContent.toLowerCase().includes(savedTab.toLowerCase()) ||
+                btn.getAttribute('onclick')?.includes(savedTab)) {
+                console.log('[Tab Restore] Clicking tab button:', btn.textContent);
+                btn.click();
+            }
+        });
+    }
+
+    // If we're on the messaging tab, restore the sub-tab (STB/SMS)
+    if (savedTab === 'messaging') {
+        setTimeout(() => {
+            const savedMessagingTab = localStorage.getItem('messagingSubTab');
+            console.log('[Tab Restore] Restoring messaging sub-tab:', savedMessagingTab);
+            if (savedMessagingTab && typeof switchMessagingTab === 'function') {
+                switchMessagingTab(savedMessagingTab);
+            }
+        }, 100);
+    }
 }

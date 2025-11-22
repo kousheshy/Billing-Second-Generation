@@ -192,6 +192,9 @@
 
                 if(result.error == 0) {
                     showAlert('Login successful! Redirecting...', 'success');
+                    // Set flag to indicate this is a fresh login
+                    sessionStorage.setItem('freshLogin', 'true');
+                    console.log('[Login] Set freshLogin flag to:', sessionStorage.getItem('freshLogin'));
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
                     }, 1000);
