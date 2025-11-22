@@ -12,61 +12,128 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - STB Device Control System
 
 **STB Control Features**
-- New "STB Control" tab in dashboard for managing Set-Top Box devices
-- Send events to STB devices via Stalker Portal API:
-  - Reboot device
-  - Reload portal
-  - Update channels
-  - Play channel (with channel ID)
-  - Play radio channel (with channel ID)
-  - Update image
-  - Show menu
-  - Cut off device
-- Send custom messages to STB devices
-- Real-time action history showing last 10 commands
-- Event-specific input fields (e.g., channel ID for play channel events)
-- Responsive grid layout for control forms
-- Timestamp tracking for all actions
+- New "STB Control" tab in dashboard for managing Set-Top Box devices via Stalker Portal API
+- Send 8 different control events to STB devices:
+  - **Reboot** - Restart the device
+  - **Reload Portal** - Refresh the portal interface
+  - **Update Channels** - Sync latest channel list
+  - **Play Channel** - Switch to specific TV channel (requires channel ID input)
+  - **Play Radio Channel** - Switch to specific radio channel (requires channel ID input)
+  - **Update Image** - Update device firmware/image
+  - **Show Menu** - Display portal menu on device
+  - **Cut Off** - Disable service to device
+- Send custom text messages to STB devices with real-time delivery
+- Recent Actions history panel showing last 10 commands with timestamps
+- Event-specific dynamic input fields (channel ID field appears only for play channel events)
+- Responsive two-column grid layout for control forms
+- Permission-based access (super admin and reseller admin only)
+- Device ownership verification (resellers can only control their own devices)
+- Real-time success/error feedback with detailed messages
+- Comprehensive logging of all STB actions
 
 **Smart MAC Address Input Component**
-- Intelligent MAC address input with enforced prefix (00:1A:79:)
-- Auto-formatting with colons after every 2 hex digits
+- Intelligent MAC address input with enforced vendor prefix (00:1A:79:)
+- Non-editable prefix that cannot be deleted or modified by user
+- Auto-formatting with colons inserted automatically after every 2 hex digits
 - Real-time validation as user types
-- Visual error feedback with red borders and error messages
-- Prevents modification of required prefix
-- Cursor management to maintain prefix integrity
-- Hex-only input validation (0-9, A-F)
-- Applied to all MAC input fields system-wide
-- Validates on blur with detailed error messages
+- Visual error feedback with red borders, background highlighting, and inline error messages
+- Cursor management to maintain prefix integrity and prevent accidental prefix modification
+- Hex-only input validation (accepts 0-9, A-F, case insensitive)
+- Automatic uppercase conversion for all hex characters
+- Applied universally to all MAC input fields:
+  - Add Account form
+  - STB Event form
+  - STB Message form
+  - Edit Account form (future)
+- Validates on blur with detailed, actionable error messages
+- Pattern validation: `00:1A:79:XX:XX:XX` where X = hex digit
+- Prevents form submission if MAC address is invalid
+- Reusable JavaScript functions for easy integration
 
 **New API Endpoints**
-- `send_stb_event.php` - Send events to Stalker Portal STB devices
-- `send_stb_message.php` - Send messages to Stalker Portal STB devices
+- `send_stb_event.php` - Send control events to Stalker Portal STB devices
+  - Validates user permissions (admin or reseller admin)
+  - Verifies device ownership for resellers
+  - Validates event type and required parameters
+  - Formats data correctly for Stalker API (uses `$` separator for channel events)
+  - Returns success/error response with detailed messages
+- `send_stb_message.php` - Send text messages to Stalker Portal STB devices
+  - Validates user permissions
+  - Verifies device ownership
+  - URL-encodes message content
+  - Logs all message delivery attempts
 
 ### Changed
 
 **UI/UX Improvements**
-- Added STB Control tab to main navigation
-- Responsive two-column layout for STB forms
-- Clean form design with consistent styling
-- History list with hover effects and smooth transitions
-- Mobile-responsive single-column layout
-- Monospace font for MAC address inputs
-- Enhanced visual feedback for form interactions
+- Added STB Control tab to main navigation (6th tab in dashboard)
+- Responsive two-column layout for STB forms that stacks on mobile
+- Clean form design with consistent styling matching existing panels
+- History list with hover effects and smooth CSS transitions
+- Mobile-responsive single-column layout (breakpoint at 768px)
+- Monospace font (Courier New) for MAC address inputs for clear character alignment
+- Enhanced visual feedback for all form interactions
+- Professional card-based layout matching system design
+- Gradient headers and modern shadows
+- Accessible form labels and helpful placeholders
 
 **Form Validation**
-- MAC address validation integrated into all forms
-- Pre-submission validation prevents invalid API calls
-- Error messages displayed inline with animations
-- Focus management after validation errors
+- MAC address validation integrated into all forms before submission
+- Pre-submission validation prevents invalid API calls and server errors
+- Error messages displayed inline with smooth slide-down animations
+- Focus management after validation errors for better UX
+- Clear error messages specify exact problem (e.g., "semicolon instead of colon")
+- Form submission blocked until all validation passes
+
+**JavaScript Architecture**
+- Added reusable MAC validation functions:
+  - `validateMacAddress(mac)` - Core validation logic
+  - `initMacAddressInput(inputElement)` - Initialize MAC input behavior
+  - `showMacError(inputElement, message)` - Display validation errors
+  - `hideMacError(inputElement)` - Clear error messages
+  - `validateMacInput(inputElement)` - Pre-submission check
+  - `initAllMacInputs()` - Auto-detect and initialize all MAC inputs
+- Added STB control functions:
+  - `sendStbEvent(event)` - Handle event form submission
+  - `sendStbMessage(event)` - Handle message form submission
+  - `addStbHistory(type, action, mac)` - Update history list
+- Event listeners for dynamic form behavior (channel ID field toggle)
+- Auto-initialization on page load and modal open events
+
+**CSS Styling**
+- Added 208 lines of new CSS for STB Control and MAC input components
+- STB control container with responsive grid layout
+- Form sections with clean borders and padding
+- History list with alternating row highlights
+- MAC input error styles with red theme
+- Smooth animations for error messages (slideDown keyframe)
+- Disabled state styles for submit buttons
+- Mobile breakpoints for optimal viewing on all devices
 
 ### Fixed
 
 **Input Handling**
-- MAC address inputs now prevent invalid characters
-- Prefix enforcement prevents accidental deletion
-- Proper cursor positioning in MAC inputs
-- Auto-uppercase conversion for hex digits
+- MAC address inputs now prevent invalid characters (only 0-9, A-F, colon allowed)
+- Prefix enforcement prevents accidental deletion via backspace or delete keys
+- Proper cursor positioning in MAC inputs (always after prefix)
+- Auto-uppercase conversion for hex digits ensures consistent format
+- Click handlers prevent cursor placement before prefix
+- Input sanitization removes spaces, semicolons, and other invalid characters
+
+**API Integration**
+- Fixed Stalker Portal API endpoint for sending events (use `send_event` not `stb_event`)
+- Fixed parameter format for channel events (use `$` separator not `&`)
+  - Correct: `event=play_channel$channel_number=123`
+  - Incorrect: `event=play_channel&channel_number=123`
+- Fixed parameter name for channel selection (`channel_number` not `channel_id`)
+- Improved error handling with try-catch blocks
+- Added comprehensive error logging for debugging
+
+**Permission System**
+- Fixed permission checks for STB control (allow reseller admin)
+- Added device ownership verification for resellers
+- Prevented regular users from accessing STB control features
+- Clear permission denied messages with helpful guidance
 
 ---
 
@@ -75,38 +142,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Phone Number Support
 
 **Phone Number Integration**
-- Added `phone_number` column to accounts table
-- Phone number field in Add Account and Edit Account forms
-- Phone number sent to Stalker Portal API during account creation
-- Phone number synced from Stalker Portal during account sync (single source of truth)
-- Phone number displayed in accounts table (new column)
-- Phone number included in Excel and PDF export reports
+- Added `phone_number` VARCHAR(50) column to `_accounts` table (after email column)
+- Phone number field in Add Account form (optional field)
+- Phone number field in Edit Account form (optional field)
+- Phone number sent to Stalker Portal API during account creation via `&phone=` parameter
+- Phone number synced FROM Stalker Portal during account sync (Stalker is single source of truth)
+- Phone number displayed in accounts table as new column (shows blank if NULL)
+- Phone number included in Excel export reports (XLSX format)
+- Phone number included in PDF export reports (with proper formatting)
 - New database migration utility: `add_phone_column.php`
+  - Checks if column exists before adding
+  - Safe to run multiple times (idempotent)
+  - Provides user-friendly console output
+  - No data loss during migration
 
-**Data Integrity**
-- Stalker Portal is the single source of truth for phone numbers
-- Local database phone numbers are always overwritten during sync
-- If Stalker has no phone number, local database sets to NULL
-- Prevents data inconsistencies between systems
+**Data Integrity & Sync Logic**
+- **Stalker Portal is the single source of truth** for phone numbers
+- Local database phone numbers are always overwritten during account sync
+- If Stalker Portal has no phone number, local database sets field to NULL
+- No fallback to local values - ensures data consistency
+- Prevents data inconsistencies between billing panel and Stalker server
+- Phone numbers sent TO Stalker when creating/editing accounts
+- Phone numbers fetched FROM Stalker when syncing accounts
+- Bidirectional sync maintains data integrity across systems
 
 ### Fixed
 
 **UI/UX Improvements**
 - Fixed pagination not resetting after account deletion
+  - Issue: Deleted account remained visible until page navigation
+  - Solution: Clear `filteredAccounts` array and reset `currentPage` to 1
 - Fixed search term persisting after account deletion
+  - Issue: Search filter stayed active showing deleted account
+  - Solution: Clear `searchTerm` when loading accounts after deletion
 - Cleared filtered accounts state when accounts are deleted
+  - Ensures immediate visual feedback when deleting accounts
+  - No need to refresh page or navigate to see changes
 - Improved colspan values in table rendering (8 → 9 columns)
+  - Fixed "No accounts found" message spanning wrong number of columns
+  - Ensures proper table formatting with new phone column
 - Better user experience when managing accounts
+  - Instant feedback on all operations
+  - Consistent table display across all states
+
+**Delete Account Bug**
+- Root cause: `filteredAccounts` array not cleared after deletion
+- Symptom: "Account deleted successfully" message shown but account still visible
+- Fix applied in `dashboard.js` lines 476-479:
+  ```javascript
+  // Clear any active filters/search so deleted items disappear immediately
+  accountsPagination.filteredAccounts = [];
+  accountsPagination.searchTerm = '';
+  accountsPagination.currentPage = 1; // Reset to first page
+  ```
 
 ### Changed
 
 **Database Schema**
-- Updated `add_account.php` to INSERT phone_number field
-- Updated `edit_account.php` to UPDATE phone_number field
-- Updated `sync_accounts.php` to sync phone numbers from Stalker
-- Updated `get_accounts.php` query (implicit - returns all columns)
-- Modified dashboard.js to display phone_number in UI and exports
-- Updated dashboard.html to include phone column in accounts table
+- Updated `add_account.php` to INSERT phone_number field (line 425-426)
+  - Captures phone from POST data
+  - Sends to Stalker Portal as `&phone=` parameter
+  - Stores in local database during INSERT
+- Updated `edit_account.php` to UPDATE phone_number field (lines 150, 190-192)
+  - Updates phone in local database
+  - Sends updated phone to Stalker Portal via API
+  - Maintains sync between systems
+- Updated `sync_accounts.php` to sync phone numbers from Stalker (line 157)
+  - Fetches phone from Stalker Portal response: `$stalker_user->phone`
+  - Sets to NULL if Stalker has no phone number
+  - No fallback to local values (removed in v1.7.1)
+  - Example: `$phone_number = $stalker_user->phone ?? null;`
+- Updated `get_accounts.php` query (implicit - SELECT a.* returns all columns)
+  - Automatically includes phone_number in results
+  - No code changes needed due to SELECT * pattern
+- Modified `dashboard.js` to display phone_number in UI and exports
+  - Line 833: Added phone column to account table rendering
+  - Line 1563: Fixed Edit Account modal to use `phone_number` field
+  - Line 2056: Added phone to Excel export (XLSX library)
+  - Line 2109: Added phone to PDF export (jsPDF autoTable)
+- Updated `dashboard.html` to include phone column in accounts table
+  - Line 132: Added `<th>Phone</th>` column header
+  - Displays phone number or empty cell if NULL
+  - Maintains consistent table layout
+
+**File Changes Summary**
+- `add_phone_column.php` - Created (new migration utility)
+- `add_account.php` - Modified (send phone to Stalker, save to DB)
+- `edit_account.php` - Modified (update phone in Stalker and DB)
+- `sync_accounts.php` - Modified (fetch phone from Stalker only)
+- `get_accounts.php` - No changes needed (SELECT * includes new column)
+- `dashboard.html` - Modified (added phone column header)
+- `dashboard.js` - Modified (display and export phone number)
+- `dashboard.css` - No changes needed (column inherits existing styles)
 
 ---
 

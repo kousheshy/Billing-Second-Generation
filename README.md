@@ -3,6 +3,7 @@
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
 ![Version](https://img.shields.io/badge/version-1.7.2-blue.svg)
+![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-green.svg)
@@ -227,6 +228,47 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - Ensures proper role separation and prevents permission conflicts
 - **Security**: Perfect for auditors, accountants, or monitoring staff
 
+### STB Device Control (v1.7.2)
+- **Device Management**: Complete control over Set-Top Box devices via Stalker Portal API
+- **8 Control Events**:
+  - Reboot - Restart the device remotely
+  - Reload Portal - Refresh portal interface on device
+  - Update Channels - Sync latest channel list to device
+  - Play Channel - Switch device to specific TV channel
+  - Play Radio Channel - Switch device to specific radio channel
+  - Update Image - Trigger firmware/image update
+  - Show Menu - Display portal menu on device screen
+  - Cut Off - Disable service to device
+- **Messaging System**: Send custom text messages to devices in real-time
+- **Action History**: Track last 10 commands with timestamps
+- **Dynamic Forms**: Channel ID input appears only for play channel events
+- **Permission-Based**: Accessible only to super admin and reseller admin
+- **Device Ownership**: Resellers can only control their own devices
+- **Real-Time Feedback**: Instant success/error messages
+- **Comprehensive Logging**: All actions logged for audit trail
+
+### Smart MAC Address Input (v1.7.2)
+- **Enforced Prefix**: Fixed vendor prefix (00:1A:79:) cannot be modified
+- **Auto-Formatting**: Colons inserted automatically after every 2 hex digits
+- **Real-Time Validation**: Validates input as user types
+- **Visual Feedback**: Red borders and inline error messages for invalid input
+- **Hex-Only Input**: Accepts only 0-9, A-F characters
+- **Uppercase Conversion**: Automatically converts hex digits to uppercase
+- **Cursor Management**: Prevents cursor placement before prefix
+- **Universal Application**: Applied to all MAC input fields system-wide
+- **Pattern Validation**: Enforces 00:1A:79:XX:XX:XX format
+- **Pre-Submission Check**: Blocks form submission if invalid
+- **Reusable Components**: Easy integration via JavaScript functions
+
+### Phone Number Support (v1.7.1)
+- **Phone Number Field**: Added to account creation and editing forms
+- **Bidirectional Sync**: Phone numbers sync between billing panel and Stalker Portal
+- **Single Source of Truth**: Stalker Portal is authoritative source for phone data
+- **Table Display**: Phone column in accounts table (blank if not set)
+- **Export Support**: Included in PDF and Excel exports
+- **Database Migration**: Safe migration utility for existing deployments
+- **Data Integrity**: Automatic sync ensures consistency across systems
+
 ### User Management
 - Four-tier user system: Super Admin, Reseller Admin, Regular Reseller, Observer
 - Granular permission control for each user type
@@ -265,33 +307,43 @@ Current Billing Shahrokh/
 ├── api.php              # API helper functions
 │
 ├── Account Management APIs:
-├── add_account.php
-├── update_account.php
-├── remove_account.php
-├── get_accounts.php
+├── add_account.php           # Create new account
+├── edit_account.php          # Update account details (v1.7.1 - phone support)
+├── update_account.php        # Legacy update endpoint
+├── remove_account.php        # Delete account
+├── get_accounts.php          # Fetch accounts (v1.7.1 - includes phone)
+├── sync_accounts.php         # Sync from Stalker Portal
+├── change_status.php         # Enable/disable account
 │
 ├── Reseller Management APIs:
-├── add_reseller.php
-├── update_reseller.php
-├── remove_reseller.php
-├── get_resellers.php
-├── assign_reseller.php    # NEW v1.7.0 - Assign accounts to resellers
+├── add_reseller.php          # Create reseller
+├── update_reseller.php       # Update reseller details
+├── remove_reseller.php       # Delete reseller
+├── get_resellers.php         # Fetch all resellers
+├── assign_reseller.php       # v1.7.0 - Assign accounts to resellers
 │
 ├── Plan Management APIs:
-├── add_plan.php
-├── remove_plan.php
-├── get_plans.php
-├── get_tariffs.php      # NEW v1.3.0 - Fetch tariffs from Stalker Portal
-├── sync_plans_web.php   # NEW v1.3.0 - Web-based plan sync
+├── add_plan.php              # Create subscription plan
+├── remove_plan.php           # Delete plan
+├── get_plans.php             # Fetch all plans
+├── get_tariffs.php           # v1.3.0 - Fetch tariffs from Stalker Portal
+├── sync_plans_web.php        # v1.3.0 - Web-based plan sync
+│
+├── STB Device Control APIs:
+├── send_stb_event.php        # v1.7.2 - Send control events to devices
+├── send_stb_message.php      # v1.7.2 - Send messages to devices
+├── send_message.php          # Legacy message endpoint
+├── send_event.php            # Legacy event endpoint (reference)
+│
+├── Database Management:
+├── add_phone_column.php      # v1.7.1 - Migration utility for phone field
 │
 ├── Other APIs:
-├── get_transactions.php
-├── get_user_info.php
-├── update_password.php
-├── change_status.php
-├── send_message.php
-├── send_event.php
-└── new_transaction.php
+├── get_transactions.php      # Fetch transaction history
+├── get_user_info.php         # Get logged-in user details
+├── update_password.php       # Change user password
+├── adjust_credit.php         # Modify reseller balance
+└── new_transaction.php       # Log new transaction
 ```
 
 ## How to Use
@@ -526,28 +578,39 @@ Unauthorized copying, modification, or distribution is prohibited.
 ## Version History
 
 - **v1.7.2** (Nov 2025) - STB Device Control System with smart MAC address input
-  - New STB Control tab for managing Set-Top Box devices
-  - Send events to devices (reboot, reload portal, update channels, play channel)
-  - Send custom messages to devices
-  - Real-time action history tracking
-  - Smart MAC address input with auto-formatting (00:1A:79:XX:XX:XX)
-  - Real-time validation with visual feedback
-  - New API endpoints: send_stb_event.php, send_stb_message.php
+  - **New STB Control Tab**: Complete device management interface
+  - **8 Control Events**: Reboot, reload portal, update channels, play channel, play radio, update image, show menu, cut off
+  - **Messaging System**: Send custom text messages to devices
+  - **Action History**: Track last 10 commands with timestamps
+  - **Smart MAC Input**: Auto-formatting component with enforced prefix (00:1A:79:XX:XX:XX)
+  - **Real-Time Validation**: Visual feedback with error messages
+  - **Permission-Based Access**: Super admin and reseller admin only
+  - **Device Ownership**: Resellers can only control their own devices
+  - **New API Endpoints**: send_stb_event.php, send_stb_message.php
+  - **Comprehensive Logging**: All actions logged for audit trail
+  - **208 Lines of CSS**: Responsive design with mobile support
+  - **JavaScript Functions**: Reusable MAC validation and STB control functions
 - **v1.7.1** (Nov 2025) - Phone number support with Stalker Portal integration
-  - Phone number field added to accounts table
-  - Phone number synced from Stalker Portal (single source of truth)
-  - Phone numbers displayed in UI, reports, and exports
-  - Fixed pagination and search state bugs after account deletion
+  - **Phone Number Field**: Added to accounts table (VARCHAR 50)
+  - **Bidirectional Sync**: Phone numbers sync between billing panel and Stalker Portal
+  - **Single Source of Truth**: Stalker Portal is authoritative source
+  - **UI Integration**: Phone column in accounts table, blank if not set
+  - **Export Support**: Included in PDF and Excel exports
+  - **Database Migration**: add_phone_column.php utility (safe and idempotent)
+  - **Fixed Pagination Bug**: Deleted accounts now disappear immediately
+  - **Fixed Search State**: Search term cleared after deletion
+  - **Data Integrity**: Automatic sync ensures consistency
 - **v1.7.0** (Nov 2025) - Account-to-Reseller assignment system with full admin features for reseller admins
-  - New "Assign Reseller" button on account rows for admins and reseller admins
-  - Reseller column added to accounts table
-  - Modal interface for selecting reseller from dropdown
-  - Accounts sync as "Not Assigned" by default (prevents auto-admin assignment)
-  - Reseller admins now have full admin-level features (all tabs, sync, manage resellers)
-  - Mutually exclusive Observer and Admin permissions (cannot select both)
-  - Enhanced permission system with proper role separation
-  - Backend support for reseller admin account assignment
-  - New `assign_reseller.php` API endpoint
+  - **Assign Reseller Button**: One-click assignment for admins and reseller admins
+  - **Reseller Column**: Shows current owner in accounts table
+  - **Modal Interface**: Clean dropdown for selecting reseller
+  - **Not Assigned Option**: Accounts can be unassigned (NULL)
+  - **Smart Sync**: New accounts sync as "Not Assigned" by default
+  - **Full Admin Features**: Reseller admins get all tabs, sync, manage resellers
+  - **Mutually Exclusive Permissions**: Cannot select Observer AND Admin
+  - **Enhanced Permission System**: Proper role separation
+  - **New API**: assign_reseller.php endpoint
+  - **Account Ownership**: Reseller admins can assign accounts
 - **v1.6.6** (Nov 2025) - Stalker Portal reseller integration with bidirectional sync
 - **v1.6.5** (Nov 2025) - Granular delete permissions, dark mode default, sync bug fixes
 - **v1.6.4** (Nov 2025) - Observer Mode UI improvements with disabled buttons and transaction reseller column

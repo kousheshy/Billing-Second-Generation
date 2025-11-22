@@ -2,8 +2,8 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.0.0
-**Last Updated:** January 2025
+**Version:** 1.7.2
+**Last Updated:** November 2025
 **Base URL:** `http://your-domain.com/`
 
 ---
@@ -17,7 +17,8 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 5. [Transaction Management](#transaction-management)
 6. [User Management](#user-management)
 7. [Stalker Portal Integration](#stalker-portal-integration)
-8. [Error Codes](#error-codes)
+8. [STB Device Control](#stb-device-control)
+9. [Error Codes](#error-codes)
 
 ---
 
@@ -107,27 +108,37 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 
 **Headers:** Requires active session.
 
+**Query Parameters:**
+- `viewAllAccounts` (optional, boolean) - For reseller admins: `true` to view all accounts, `false` to view only their own
+
 **Response:**
 ```json
 {
   "error": 0,
-  "err_msg": "",
   "accounts": [
     {
       "id": 1,
       "username": "user001",
       "email": "user@example.com",
+      "phone_number": "+447712345678",
       "mac": "00:1A:79:XX:XX:XX",
       "full_name": "John Doe",
       "tariff_plan": "1 Month Plan",
       "end_date": "2025-02-15 23:59:59",
       "status": 1,
       "reseller": 1,
+      "reseller_name": "Reseller One",
+      "plan_name": "Premium Monthly",
       "timestamp": 1705449600
     }
   ]
 }
 ```
+
+**New Fields (v1.7.1):**
+- `phone_number` - Customer phone number (can be NULL)
+- `reseller_name` - Name of assigned reseller (or NULL if not assigned)
+- `plan_name` - Name of subscription plan
 
 ---
 
@@ -144,11 +155,16 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
   "mac": "00:1A:79:XX:XX:XX",
   "full_name": "John Doe",
   "email": "user@example.com",
+  "phone": "+447712345678",
   "tariff_plan": "1 Month Plan",
   "end_date": "2025-02-15",
-  "status": 1
+  "status": 1,
+  "plan": 1
 }
 ```
+
+**New Fields (v1.7.1):**
+- `phone` (optional) - Customer phone number, sent to Stalker Portal and saved locally
 
 **Response:**
 ```json
@@ -646,6 +662,197 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 
 ---
 
+## STB Device Control
+
+### Send Event to Device
+**Endpoint:** `POST /send_stb_event.php`
+
+**Description:** Send control event to Set-Top Box device via Stalker Portal API.
+
+**Version:** Added in v1.7.2
+
+**Permissions:** Super admin or reseller admin only
+
+**Request Body:**
+```json
+{
+  "mac": "00:1A:79:XX:XX:XX",
+  "event": "reboot"
+}
+```
+
+**Available Events:**
+
+| Event | Description | Additional Parameters |
+|-------|-------------|-----------------------|
+| `reboot` | Restart the device | None |
+| `reload_portal` | Refresh portal interface | None |
+| `update_channels` | Sync latest channel list | None |
+| `play_channel` | Switch to specific TV channel | `channel_id` (required) |
+| `play_radio_channel` | Switch to specific radio channel | `channel_id` (required) |
+| `update_image` | Update device firmware/image | None |
+| `show_menu` | Display portal menu on device | None |
+| `cut_off` | Disable service to device | None |
+
+**Example - Play Channel:**
+```json
+{
+  "mac": "00:1A:79:12:34:56",
+  "event": "play_channel",
+  "channel_id": "123"
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Event sent successfully to device 00:1A:79:12:34:56"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Permission denied. Only administrators can send STB events."
+}
+```
+
+**Technical Details:**
+- Uses Stalker Portal `/send_event/` endpoint
+- Channel events use `$` separator (not `&`): `event=play_channel$channel_number=123`
+- Verifies device ownership for resellers
+- Logs all actions to error_log for audit trail
+
+---
+
+### Send Message to Device
+**Endpoint:** `POST /send_stb_message.php`
+
+**Description:** Send text message to Set-Top Box device via Stalker Portal API.
+
+**Version:** Added in v1.7.2
+
+**Permissions:** Super admin or reseller admin only
+
+**Request Body:**
+```json
+{
+  "mac": "00:1A:79:XX:XX:XX",
+  "message": "Your subscription will expire soon. Please renew."
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Message sent successfully to device 00:1A:79:XX:XX:XX"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Permission denied. This device does not belong to you."
+}
+```
+
+**Technical Details:**
+- Uses Stalker Portal `/stb_msg/` endpoint
+- Message content is URL-encoded
+- Verifies device ownership for resellers
+- Logs all messages to error_log
+- Message displayed on device screen
+
+---
+
+### Assign Reseller to Account
+**Endpoint:** `POST /assign_reseller.php`
+
+**Description:** Assign or reassign account to a specific reseller.
+
+**Version:** Added in v1.7.0
+
+**Permissions:** Super admin or reseller admin only
+
+**Request Body:**
+```json
+{
+  "username": "user001",
+  "reseller_id": 5
+}
+```
+
+**To Unassign (set to "Not Assigned"):**
+```json
+{
+  "username": "user001",
+  "reseller_id": ""
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Reseller assigned successfully"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "err_msg": "Only administrators can assign accounts to resellers"
+}
+```
+
+---
+
+### Get Tariffs from Stalker Portal
+**Endpoint:** `GET /get_tariffs.php`
+
+**Description:** Fetch all tariff plans from Stalker Portal API.
+
+**Version:** Added in v1.3.0
+
+**Permissions:** Admin only
+
+**Response:**
+```json
+{
+  "error": 0,
+  "tariffs": [
+    {
+      "id": 1,
+      "name": "1 Month Premium",
+      "days": 30,
+      "description": "Monthly subscription plan"
+    },
+    {
+      "id": 2,
+      "name": "3 Month Premium",
+      "days": 90,
+      "description": "Quarterly subscription plan"
+    }
+  ],
+  "count": 2
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "message": "Failed to fetch tariff plans from Stalker Portal"
+}
+```
+
+---
+
 ## Error Codes
 
 ### Standard Error Response Format
@@ -793,6 +1000,27 @@ curl -X POST http://localhost:8000/update_account.php \
 
 ## Changelog
 
+### Version 1.7.2 (November 2025)
+- Added STB Device Control section
+- Documented `send_stb_event.php` endpoint with 8 event types
+- Documented `send_stb_message.php` endpoint
+- Added technical details for Stalker Portal integration
+- Added event table with descriptions and parameters
+- Documented phone number support in account endpoints
+- Added `assign_reseller.php` endpoint documentation
+- Added `get_tariffs.php` endpoint documentation
+
+### Version 1.7.1 (November 2025)
+- Added phone number field to account management endpoints
+- Updated GET `/get_accounts.php` with new fields
+- Updated POST `/add_account.php` with phone parameter
+- Documented reseller_name and plan_name fields
+
+### Version 1.7.0 (November 2025)
+- Added account-to-reseller assignment endpoint
+- Documented assign_reseller.php API
+- Added query parameters for viewAllAccounts
+
 ### Version 1.0.0 (January 2025)
 - Initial API documentation
 - All core endpoints documented
@@ -810,6 +1038,6 @@ For API support:
 
 ---
 
-**Document Version:** 1.0.0
-**Last Updated:** January 2025
+**Document Version:** 1.7.2
+**Last Updated:** November 2025
 **Maintained by:** ShowBox Development Team
