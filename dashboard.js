@@ -276,6 +276,19 @@ function switchTab(tabName) {
     // Save current tab to localStorage for persistence across refreshes
     localStorage.setItem('currentTab', tabName);
 
+    // iOS PWA Mobile: Update body class to show/hide stats and tabs (v1.10.1)
+    if (window.innerWidth <= 768) {
+        // Remove all mobile-tab-* classes
+        document.body.classList.remove('mobile-tab-dashboard', 'mobile-tab-accounts', 'mobile-tab-resellers', 'mobile-tab-plans', 'mobile-tab-transactions', 'mobile-tab-stb-control', 'mobile-tab-messaging', 'mobile-tab-reports');
+
+        // Add current tab class
+        document.body.classList.add('mobile-tab-' + tabName);
+
+        // For 'accounts', we want to show ONLY the accounts table (hide stats/tabs)
+        // For 'dashboard', we want to show stats + tabs
+        // The CSS will handle hiding based on body class
+    }
+
     // Refresh dynamic reports when switching to reports tab
     if(tabName === 'reports' && accountsPagination.allAccounts) {
         updateDynamicReports();
@@ -3657,3 +3670,355 @@ function restoreActiveTab() {
         }, 100);
     }
 }
+
+// ========================================
+// iOS PWA Enhancements (v1.10.0)
+// ========================================
+
+// ========================================
+// 1. Bottom Navigation Sync
+// ========================================
+
+function syncBottomNav(activeTab) {
+    const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
+    bottomNavItems.forEach(item => {
+        if (item.dataset.tab === activeTab) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+// Wrap existing switchTab function to sync bottom nav
+if (typeof switchTab !== 'undefined') {
+    const originalSwitchTab = switchTab;
+    switchTab = function(tab) {
+        originalSwitchTab(tab);
+        syncBottomNav(tab);
+    };
+}
+
+// ========================================
+// 2. Pull-to-Refresh Implementation
+// ========================================
+
+let pullStartY = 0;
+let pulling = false;
+let pullDistance = 0;
+
+function initPullToRefresh() {
+    // Only enable on mobile (screen width <= 768px)
+    if (window.innerWidth > 768) return;
+
+    const content = document.querySelector('.content') || document.querySelector('main');
+    const pullIndicator = document.getElementById('pull-to-refresh');
+
+    if (!content || !pullIndicator) {
+        console.log('[Pull-to-Refresh] Elements not found, skipping initialization');
+        return;
+    }
+
+    console.log('[Pull-to-Refresh] Initialized on mobile');
+
+    content.addEventListener('touchstart', (e) => {
+        // Only trigger if at top of scroll
+        if (content.scrollTop === 0) {
+            pullStartY = e.touches[0].clientY;
+            pulling = true;
+        }
+    }, { passive: true });
+
+    content.addEventListener('touchmove', (e) => {
+        if (!pulling) return;
+
+        const touchY = e.touches[0].clientY;
+        pullDistance = touchY - pullStartY;
+
+        // Show indicator when pulled down 80px
+        if (pullDistance > 80) {
+            pullIndicator.style.display = 'flex';
+            pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Release to refresh';
+        } else if (pullDistance > 40) {
+            pullIndicator.style.display = 'flex';
+            pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Pull down to refresh';
+        }
+    }, { passive: true });
+
+    content.addEventListener('touchend', async (e) => {
+        if (!pulling) return;
+
+        if (pullDistance > 80) {
+            // Trigger refresh
+            pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Refreshing...';
+            pullIndicator.querySelector('.pull-to-refresh-icon').style.animation = 'rotate 1s linear infinite';
+
+            // Get current active tab
+            const activeTabElement = document.querySelector('.tab-pane.active');
+            const currentTab = activeTabElement ? activeTabElement.id.replace('-content', '') : 'dashboard';
+
+            console.log('[Pull-to-Refresh] Refreshing tab:', currentTab);
+
+            // Reload current tab data
+            await refreshTabData(currentTab);
+
+            // Hide indicator after refresh
+            setTimeout(() => {
+                pullIndicator.style.display = 'none';
+                pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Release to refresh';
+                pullIndicator.querySelector('.pull-to-refresh-icon').style.animation = '';
+            }, 1000);
+        } else {
+            pullIndicator.style.display = 'none';
+        }
+
+        pulling = false;
+        pullDistance = 0;
+    }, { passive: true });
+}
+
+async function refreshTabData(tabId) {
+    try {
+        switch(tabId) {
+            case 'dashboard':
+                if (typeof loadDashboard === 'function') {
+                    await loadDashboard();
+                }
+                break;
+            case 'accounts':
+                if (typeof loadAccounts === 'function') {
+                    await loadAccounts();
+                }
+                break;
+            case 'resellers':
+                if (typeof loadResellers === 'function') {
+                    await loadResellers();
+                }
+                break;
+            case 'messaging':
+                if (typeof loadTemplates === 'function') {
+                    await loadTemplates();
+                }
+                if (typeof loadSMSHistory === 'function') {
+                    await loadSMSHistory();
+                }
+                break;
+            case 'reports':
+                if (typeof loadReports === 'function') {
+                    await loadReports();
+                }
+                break;
+            default:
+                console.log('[Pull-to-Refresh] Unknown tab:', tabId);
+        }
+        console.log('[Pull-to-Refresh] Data refreshed for tab:', tabId);
+    } catch (error) {
+        console.error('[Pull-to-Refresh] Error refreshing data:', error);
+    }
+}
+
+// ========================================
+// 3. Skeleton Loading Helpers
+// ========================================
+
+function showSkeletonLoader(containerId, count = 3) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let skeletonHTML = '<div class="skeleton-loader">';
+    for (let i = 0; i < count; i++) {
+        skeletonHTML += `
+            <div class="skeleton-card">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line short"></div>
+            </div>
+        `;
+    }
+    skeletonHTML += '</div>';
+
+    container.innerHTML = skeletonHTML;
+    console.log('[Skeleton Loader] Displayed for:', containerId);
+}
+
+function hideSkeletonLoader(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const skeleton = container.querySelector('.skeleton-loader');
+    if (skeleton) {
+        skeleton.remove();
+        console.log('[Skeleton Loader] Removed from:', containerId);
+    }
+}
+
+// ========================================
+// 4. iOS Viewport Height Fix
+// ========================================
+
+// Fix for iOS viewport height (accounts for address bar)
+function setIOSViewportHeight() {
+    if (window.innerWidth <= 768) {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+}
+
+// Update on resize and orientation change
+window.addEventListener('resize', setIOSViewportHeight);
+window.addEventListener('orientationchange', setIOSViewportHeight);
+
+// ========================================
+// 5. iOS Haptic Feedback (Optional)
+// ========================================
+
+function triggerHaptic(type = 'light') {
+    // Check if iOS and if Haptic Feedback API is available
+    if (navigator.vibrate) {
+        switch(type) {
+            case 'light':
+                navigator.vibrate(10);
+                break;
+            case 'medium':
+                navigator.vibrate(20);
+                break;
+            case 'heavy':
+                navigator.vibrate(30);
+                break;
+            case 'success':
+                navigator.vibrate([10, 50, 10]);
+                break;
+            case 'error':
+                navigator.vibrate([50, 50, 50]);
+                break;
+        }
+    }
+}
+
+// Add haptic feedback to bottom nav items
+document.addEventListener('DOMContentLoaded', () => {
+    const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
+    bottomNavItems.forEach(item => {
+        item.addEventListener('click', () => {
+            triggerHaptic('light');
+        });
+    });
+});
+
+// ========================================
+// 6. Initialize All iOS Features
+// ========================================
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[iOS PWA] Initializing enhancements...');
+
+    // Initialize pull-to-refresh on mobile
+    initPullToRefresh();
+
+    // Set iOS viewport height
+    setIOSViewportHeight();
+
+    // Sync bottom nav with current tab
+    const activeTab = document.querySelector('.tab-pane.active');
+    if (activeTab) {
+        const tabId = activeTab.id.replace('-content', '');
+        syncBottomNav(tabId);
+    }
+
+    console.log('[iOS PWA] Enhancements initialized successfully');
+});
+
+// Reinitialize on window resize (in case orientation changes)
+window.addEventListener('resize', () => {
+    if (window.innerWidth <= 768 && !pulling) {
+        // Reinit pull-to-refresh if needed
+        const content = document.querySelector('.content') || document.querySelector('main');
+        if (content && content._pullToRefreshInit !== true) {
+            initPullToRefresh();
+            content._pullToRefreshInit = true;
+        }
+    }
+});
+
+// ========================================
+// iOS PWA Navbar Hide/Show on Scroll (v1.10.1)
+// ========================================
+
+let lastScrollY = 0;
+let ticking = false;
+
+function handleNavbarScroll() {
+    // Only on mobile
+    if (window.innerWidth > 768) return;
+
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    const currentScrollY = window.scrollY;
+
+    if (currentScrollY > 80) {
+        // Scrolled down past threshold - hide navbar
+        navbar.classList.add('navbar-hidden');
+    } else {
+        // At top of page (< 80px) - show navbar
+        navbar.classList.remove('navbar-hidden');
+    }
+
+    lastScrollY = currentScrollY;
+    ticking = false;
+}
+
+// Use requestAnimationFrame for smooth performance
+function onScroll() {
+    if (!ticking) {
+        window.requestAnimationFrame(handleNavbarScroll);
+        ticking = true;
+    }
+}
+
+// Initialize navbar hide/show
+if (window.innerWidth <= 768) {
+    window.addEventListener('scroll', onScroll, { passive: true });
+    console.log('[iOS PWA] Navbar hide/show initialized');
+}
+
+// Mobile Dashboard View (shows stats + tabs)
+function showMobileDashboard() {
+    if (window.innerWidth > 768) return; // Only on mobile
+
+    // Remove all mobile-tab-* classes
+    document.body.classList.remove('mobile-tab-dashboard', 'mobile-tab-accounts', 'mobile-tab-resellers', 'mobile-tab-plans', 'mobile-tab-transactions', 'mobile-tab-stb-control', 'mobile-tab-messaging', 'mobile-tab-reports');
+
+    // Add dashboard class to show stats and tabs
+    document.body.classList.add('mobile-tab-dashboard');
+
+    // Update bottom nav active state
+    document.querySelectorAll('.bottom-nav-item').forEach(item => {
+        if (item.dataset.tab === 'dashboard') {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Show first tab (accounts) by default
+    const firstTab = document.querySelector('.tab');
+    if (firstTab) {
+        firstTab.click();
+    }
+
+    console.log('[iOS PWA] Mobile dashboard view activated');
+}
+
+// Initialize mobile tab body class on page load
+if (window.innerWidth <= 768) {
+    // Default to dashboard mode on mobile
+    document.body.classList.add('mobile-tab-dashboard');
+    console.log('[iOS PWA] Default mobile tab class set: mobile-tab-dashboard');
+}
+
+// ========================================
+// End of iOS PWA Enhancements (v1.10.1)
+// ========================================

@@ -2,7 +2,8 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Enhanced viewport for iOS PWA (v1.10.0) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <title>ShowBox - Billing Dashboard</title>
 
     <!-- PWA Meta Tags -->
@@ -1444,6 +1445,38 @@
             </form>
         </div>
     </div>
+
+    <!-- Pull-to-Refresh Indicator (v1.10.0) -->
+    <div id="pull-to-refresh" class="pull-to-refresh" style="display: none;">
+        <div class="pull-to-refresh-icon">↻</div>
+        <div class="pull-to-refresh-text">Release to refresh</div>
+    </div>
+
+    <!-- Bottom Navigation Bar - Mobile Only (v1.10.0) -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <div class="bottom-nav-items">
+            <a href="#" class="bottom-nav-item active" data-tab="dashboard" onclick="showMobileDashboard(); return false;">
+                <span class="bottom-nav-icon">📊</span>
+                <span class="bottom-nav-label">Dashboard</span>
+            </a>
+            <a href="#" class="bottom-nav-item" data-tab="accounts" onclick="switchTab('accounts'); return false;">
+                <span class="bottom-nav-icon">👥</span>
+                <span class="bottom-nav-label">Accounts</span>
+            </a>
+            <a href="#" class="bottom-nav-item" data-tab="resellers" onclick="switchTab('resellers'); return false;">
+                <span class="bottom-nav-icon">🏢</span>
+                <span class="bottom-nav-label">Resellers</span>
+            </a>
+            <a href="#" class="bottom-nav-item" data-tab="messaging" onclick="switchTab('messaging'); return false;">
+                <span class="bottom-nav-icon">💬</span>
+                <span class="bottom-nav-label">Messages</span>
+            </a>
+            <a href="#" class="bottom-nav-item" data-tab="reports" onclick="switchTab('reports'); return false;">
+                <span class="bottom-nav-icon">📈</span>
+                <span class="bottom-nav-label">Reports</span>
+            </a>
+        </div>
+    </nav>
 
     <script src="dashboard.js"></script>
     <script src="sms-functions.js"></script>

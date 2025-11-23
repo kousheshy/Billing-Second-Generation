@@ -61,6 +61,15 @@
     --spacing-md: 16px;
     --spacing-lg: 24px;
     --spacing-xl: 32px;
+
+    /* iOS Safe Area Support (v1.10.0) */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+
+    /* Mobile Bottom Navigation (v1.10.0) */
+    --bottom-nav-height: 60px;
 }
 
 /* Dark Mode Colors */
@@ -97,6 +106,11 @@ body {
     transition: background-color var(--transition-normal), color var(--transition-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* iOS Safe Area Padding (v1.10.0) */
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
+    padding-left: var(--safe-area-left);
+    padding-right: var(--safe-area-right);
 }
 
 /* Navbar */
@@ -112,7 +126,7 @@ body {
     top: 0;
     z-index: 100;
     backdrop-filter: blur(10px);
-    transition: box-shadow var(--transition-fast);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .navbar:hover {
@@ -3106,4 +3120,731 @@ input[type="number"] {
 .sms-history-message {
     font-family: 'BYekan', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* ========================================
+   iOS PWA Optimizations (v1.10.0)
+   ======================================== */
+
+/* ========================================
+   1. Bottom Navigation Bar - Mobile Only
+   ======================================== */
+
+.bottom-nav {
+    display: none; /* Hidden on desktop */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding-bottom: var(--safe-area-bottom);
+    z-index: 1000;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.bottom-nav-items {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: var(--bottom-nav-height);
+    padding: 0 8px;
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    min-width: 60px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.bottom-nav-item.active {
+    color: var(--primary);
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.bottom-nav-item:active {
+    transform: scale(0.95);
+}
+
+.bottom-nav-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.bottom-nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* ========================================
+   2. Touch Target Optimization - iOS
+   ======================================== */
+
+/* Minimum 44x44px touch targets on touch devices */
+@media (hover: none) and (pointer: coarse) {
+    button,
+    .btn,
+    a.button,
+    .nav-link,
+    .bottom-nav-item,
+    .icon-button,
+    .tab-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Table action buttons */
+    .btn-sm,
+    .action-button,
+    .btn-icon {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px 16px;
+    }
+
+    /* Form inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    select,
+    textarea {
+        min-height: 44px;
+        font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+
+    /* Checkboxes and radios */
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-width: 24px;
+        min-height: 24px;
+    }
+}
+
+/* Keep desktop button sizes unchanged */
+@media (hover: hover) and (pointer: fine) {
+    button,
+    .btn {
+        min-height: 36px;
+    }
+
+    .btn-sm {
+        min-height: 32px;
+    }
+}
+
+/* ========================================
+   3. iOS Touch & Gesture Support
+   ======================================== */
+
+* {
+    /* Remove iOS tap highlight */
+    -webkit-tap-highlight-color: transparent;
+    /* Smooth scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Touch manipulation for better responsiveness */
+button,
+a,
+.clickable,
+.card,
+.nav-link,
+.tab-button,
+.bottom-nav-item {
+    touch-action: manipulation;
+}
+
+/* Prevent pull-to-refresh on specific elements */
+.modal,
+.dropdown-menu,
+.table-container,
+.modal-overlay {
+    overscroll-behavior-y: contain;
+}
+
+/* Enable pull-to-refresh on main content */
+.content,
+.tab-pane,
+main {
+    overscroll-behavior-y: auto;
+}
+
+/* ========================================
+   4. iOS-Style Bottom Sheet Modals
+   ======================================== */
+
+/* Desktop: Keep centered modals */
+@media (min-width: 769px) {
+    .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 600px;
+        max-height: 90vh;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+/* Mobile: iOS-style bottom sheets */
+@media (max-width: 768px) {
+    .modal {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        transform: none;
+        max-width: 100%;
+        max-height: 85vh;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+        padding-bottom: calc(var(--safe-area-bottom) + 16px);
+        animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Add drag handle to bottom sheets */
+    .modal::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: var(--text-tertiary);
+        border-radius: 2px;
+        opacity: 0.5;
+    }
+
+    .modal-header {
+        padding-top: 24px; /* Account for drag handle */
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* ========================================
+   5. Pull-to-Refresh Indicator
+   ======================================== */
+
+.pull-to-refresh {
+    position: fixed;
+    top: calc(var(--safe-area-top) + 70px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    box-shadow: var(--shadow-md);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    z-index: 999;
+    animation: pullIndicator 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pull-to-refresh-icon {
+    font-size: 20px;
+    line-height: 1;
+    animation: rotate 1s linear infinite;
+}
+
+.pull-to-refresh-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pullIndicator {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ========================================
+   6. Skeleton Loading Screens
+   ======================================== */
+
+.skeleton-loader {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+}
+
+.skeleton-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-header {
+    height: 24px;
+    background: var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    width: 40%;
+}
+
+.skeleton-line {
+    height: 16px;
+    background: var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-line.short {
+    width: 60%;
+}
+
+.skeleton-line.medium {
+    width: 80%;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ========================================
+   7. Performance Optimizations
+   ======================================== */
+
+/* Hardware acceleration for animations */
+.modal,
+.dropdown-menu,
+.card,
+.btn,
+.bottom-nav,
+.tab-pane {
+    transform: translateZ(0);
+    will-change: auto;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Optimize transitions */
+.tab-pane,
+.content-section {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* GPU acceleration for scrolling */
+.content,
+.table-container,
+.modal-body {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+/* ========================================
+   8. Responsive Mobile Adjustments
+   ======================================== */
+
+/* Show bottom nav on mobile, hide sidebar */
+@media (max-width: 768px) {
+    .bottom-nav {
+        display: block;
+    }
+
+    .sidebar {
+        display: none !important;
+    }
+
+    /* Adjust main content for bottom nav */
+    .content {
+        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 20px);
+    }
+
+    /* Adjust navbar for mobile safe area */
+    .navbar {
+        padding-left: max(16px, var(--safe-area-left));
+        padding-right: max(16px, var(--safe-area-right));
+    }
+
+    /* Disable text selection on UI elements (better for touch) */
+    .navbar,
+    .bottom-nav,
+    .tabs,
+    button,
+    .btn,
+    .tab-button {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    /* Larger tap targets for mobile */
+    .stats-card,
+    .card {
+        padding: 20px;
+    }
+
+    /* Full-width modals on mobile */
+    .modal-content {
+        width: 100%;
+    }
+
+    /* Optimize table for mobile */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* iOS PWA Usability Fixes (v1.10.1) */
+
+    /* Fix 1: Make navbar scroll away on scroll down, show on scroll up */
+    .navbar {
+        position: fixed;
+        width: 100%;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        min-height: auto;
+        z-index: 1000;
+    }
+
+    .navbar.navbar-hidden {
+        transform: translateY(-100%);
+    }
+
+    .navbar h1 {
+        font-size: 18px;
+    }
+
+    .navbar .user-info span {
+        font-size: 12px;
+    }
+
+    .app-version {
+        display: none;
+    }
+
+    /* Adjust body for fixed navbar */
+    body {
+        padding-top: 60px !important;
+    }
+
+    /* Fix 2: Responsive table - hide less important columns on mobile */
+    /* Accounts table columns: 1=Username, 2=Full Name, 3=Phone, 4=MAC, 5=Tariff, 6=Reseller, 7=Status, 8=Expiration, 9=Actions */
+    /* Show: Full Name (2), MAC (4), Reseller (6), Expiration (8), Actions (9) */
+
+    /* Hide Username column (1st) in Accounts table */
+    #accounts-table thead tr th:nth-child(1),
+    #accounts-tbody tr td:nth-child(1) {
+        display: none;
+    }
+
+    /* Hide Phone column (3rd) in Accounts table */
+    #accounts-table thead tr th:nth-child(3),
+    #accounts-tbody tr td:nth-child(3) {
+        display: none;
+    }
+
+    /* Hide Tariff Plan column (5th) in Accounts table */
+    #accounts-table thead tr th:nth-child(5),
+    #accounts-tbody tr td:nth-child(5) {
+        display: none;
+    }
+
+    /* Hide Status column (7th) in Accounts table */
+    #accounts-table thead tr th:nth-child(7),
+    #accounts-tbody tr td:nth-child(7) {
+        display: none;
+    }
+
+    /* Resellers table columns: 1=Name, 2=Username, 3=Email, 4=Balance, 5=Max Users, 6=Actions */
+    /* Show: Name (1), Username (2), Balance (4), Actions (6) */
+
+    /* Hide Email column (3rd) in Resellers table */
+    #resellers-table thead tr th:nth-child(3),
+    #resellers-table tbody tr td:nth-child(3) {
+        display: none;
+    }
+
+    /* Hide Max Users column (5th) in Resellers table */
+    #resellers-table thead tr th:nth-child(5),
+    #resellers-table tbody tr td:nth-child(5) {
+        display: none;
+    }
+
+    /* Make remaining columns fit better */
+    table th,
+    table td {
+        padding: 8px 6px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    /* Accounts Table: Full Name column (2nd) - allow wrap */
+    #accounts-table thead tr th:nth-child(2),
+    #accounts-tbody tr td:nth-child(2) {
+        white-space: normal;
+        word-break: break-word;
+        min-width: 100px;
+        max-width: 140px;
+    }
+
+    /* Accounts Table: MAC column (4th) - compact */
+    #accounts-table thead tr th:nth-child(4),
+    #accounts-tbody tr td:nth-child(4) {
+        font-size: 11px;
+        min-width: 100px;
+    }
+
+    /* Accounts Table: Reseller column (6th) - compact */
+    #accounts-table thead tr th:nth-child(6),
+    #accounts-tbody tr td:nth-child(6) {
+        white-space: normal;
+        word-break: break-word;
+        font-size: 11px;
+        min-width: 80px;
+        max-width: 120px;
+    }
+
+    /* Accounts Table: Expiration column (8th) - compact */
+    #accounts-table thead tr th:nth-child(8),
+    #accounts-tbody tr td:nth-child(8) {
+        font-size: 11px;
+        min-width: 85px;
+    }
+
+    /* Accounts Table: Actions column (9th) - compact */
+    #accounts-table thead tr th:nth-child(9),
+    #accounts-tbody tr td:nth-child(9) {
+        width: 90px;
+    }
+
+    /* Resellers Table: Name column (1st) - allow wrap */
+    #resellers-table thead tr th:nth-child(1),
+    #resellers-table tbody tr td:nth-child(1) {
+        white-space: normal;
+        word-break: break-word;
+        min-width: 100px;
+        max-width: 140px;
+    }
+
+    /* Resellers Table: Username column (2nd) - allow wrap */
+    #resellers-table thead tr th:nth-child(2),
+    #resellers-table tbody tr td:nth-child(2) {
+        white-space: normal;
+        word-break: break-word;
+        min-width: 90px;
+        max-width: 130px;
+    }
+
+    /* Resellers Table: Balance column (4th) - compact */
+    #resellers-table thead tr th:nth-child(4),
+    #resellers-table tbody tr td:nth-child(4) {
+        min-width: 80px;
+    }
+
+    /* Resellers Table: Actions column (6th) - compact */
+    #resellers-table thead tr th:nth-child(6),
+    #resellers-table tbody tr td:nth-child(6) {
+        width: 90px;
+    }
+
+    /* Make buttons in table smaller */
+    table .btn {
+        padding: 4px 8px;
+        font-size: 11px;
+        margin: 1px;
+    }
+
+    /* Compact toggle switch */
+    .status-toggle {
+        transform: scale(0.8);
+    }
+
+    /* Fix 3: Mobile-optimized tab navigation - hide navbar/stats/tabs when not on dashboard */
+    /* Hide navbar (header) when not on dashboard tab */
+    body:not(.mobile-tab-dashboard) .navbar {
+        display: none !important;
+    }
+
+    /* Adjust body padding when navbar is hidden */
+    body:not(.mobile-tab-dashboard) {
+        padding-top: 0 !important;
+    }
+
+    /* Hide stat cards when not on dashboard tab */
+    body:not(.mobile-tab-dashboard) .stats-grid {
+        display: none !important;
+    }
+
+    /* Hide top tabs bar when not on dashboard tab */
+    body:not(.mobile-tab-dashboard) .tabs {
+        display: none !important;
+    }
+
+    /* Hide view mode toggle when not on dashboard */
+    body:not(.mobile-tab-dashboard) #view-mode-toggle {
+        display: none !important;
+    }
+
+    /* When on dashboard, make cards stack vertically */
+    body.mobile-tab-dashboard .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+
+    /* Fix 4: Reduce padding everywhere to save space */
+    .content {
+        padding: 12px;
+        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 20px);
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .card-header h2 {
+        font-size: 16px;
+    }
+
+    /* Fix 5: Make search and filters more compact */
+    .search-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .search-container input,
+    .search-container select,
+    .search-container button {
+        width: 100%;
+    }
+
+    /* Fix 6: Stack form fields vertically in modals */
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Fix 7: Make pagination more compact */
+    .pagination {
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 12px;
+    }
+
+    .pagination button {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    /* Fix 8: Hide username column (usually same as full name or not critical) */
+    table th:first-child,
+    table td:first-child {
+        display: none;
+    }
+
+    /* Fix 9: Better modal sizing on mobile */
+    .modal-content {
+        width: 95%;
+        max-width: 95%;
+        margin: 20px auto;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    /* Fix 10: Compact tabs */
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 4px;
+    }
+
+    .tabs button {
+        font-size: 12px;
+        padding: 8px 12px;
+        white-space: nowrap;
+    }
+}
+
+/* Keep desktop layout unchanged */
+@media (min-width: 769px) {
+    .bottom-nav {
+        display: none;
+    }
+
+    .sidebar {
+        display: flex;
+    }
+
+    /* No safe-area padding needed on desktop */
+    body {
+        padding-top: 0;
+        padding-bottom: 0;
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+/* ========================================
+   9. iOS Dark Mode Specific
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="dark"] .bottom-nav {
+        background: rgba(30, 41, 59, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    [data-theme="dark"] .bottom-nav-item.active {
+        background: rgba(102, 126, 234, 0.2);
+    }
+
+    [data-theme="dark"] .pull-to-refresh {
+        background: rgba(30, 41, 59, 0.95);
+    }
+}
+
+/* ========================================
+   End of iOS PWA Optimizations (v1.10.0)
+   ======================================== */
 

@@ -1,10 +1,14 @@
-const CACHE_NAME = 'showbox-billing-v1.7.8';
+const CACHE_NAME = 'showbox-billing-v1.10.0';
 const urlsToCache = [
   '/dashboard.html',
   '/index.html',
   '/dashboard.css',
   '/dashboard.js',
-  '/manifest.json'
+  '/sms-functions.js',
+  '/manifest.json',
+  '/BYekan+.ttf',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 // Install event - cache resources
