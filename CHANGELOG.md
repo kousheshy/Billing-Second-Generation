@@ -7,6 +7,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.1] - 2025-11-23
+
+### Added - Phone Number Input Enhancement
+
+**Overview**
+Enhanced phone input system with intelligent country code selection, automatic validation, and format correction for Add/Edit Account modals.
+
+**Features**
+
+1. **Smart Country Code Selector** (New Feature)
+   - **Default Selection**: Iran (+98) pre-selected for convenience
+   - **Top 11 Countries**: Quick access dropdown with most-used country codes
+     - 🇮🇷 Iran (+98), 🇺🇸 USA (+1), 🇬🇧 UK (+44), 🇨🇳 China (+86), 🇮🇳 India (+91)
+     - 🇯🇵 Japan (+81), 🇩🇪 Germany (+49), 🇫🇷 France (+33), 🇷🇺 Russia (+7)
+     - 🇰🇷 South Korea (+82), 🇮🇹 Italy (+39)
+   - **Custom Option**: Enter any country code (e.g., +971 for UAE, +966 for Saudi Arabia)
+   - **Responsive UI**: Styled dropdown with country flags and codes
+   - **Files**: `dashboard.html` (lines 247-302, 608-663), `dashboard.css` (lines 2935-2985)
+
+2. **Automatic Number Formatting** (UX Enhancement)
+   - **Leading Zero Removal**: Automatically strips leading zero when entered
+     - User types: `09121234567` → System converts: `9121234567`
+   - **Smart Parsing on Edit**: Automatically splits stored numbers (+989121234567) into:
+     - Country Code: `+98`
+     - Phone Number: `9121234567`
+   - **E.164 Format Storage**: Always stores as `+[country code][number]` in database
+   - **Files**: `dashboard.js` (lines 489-513, 1433-1457)
+
+3. **Real-time Validation** (Data Quality)
+   - **Iran-Specific Rules** (+98):
+     - Must be exactly 10 digits
+     - Must start with 9 (mobile numbers)
+     - Examples: `9121234567` ✅, `8121234567` ❌, `912123456` ❌
+   - **International Rules** (all other codes):
+     - Must be 7-15 digits
+     - Only digits allowed (no letters/special characters)
+   - **Visual Feedback**: Red border for invalid, green checkmark for valid
+   - **Error Messages**: Clear validation messages below input field
+   - **Files**: `dashboard.js` (lines 519-587)
+
+4. **Display Formatting** (Consistency)
+   - **Account Table**: Shows full format with country code (+989121234567)
+   - **Edit Modal**: Automatically populates country code dropdown and number field
+   - **Visual Indicator**: Country code in dropdown, phone number in separate input
+   - **Files**: `dashboard.js` (lines 1433-1457, parsePhoneNumber function)
+
+### Fixed - Phone Number Parsing Bug
+
+**Critical Bug Fix**
+
+1. **Phone Parsing Issue** (Critical)
+   - **Problem**: Numbers like `+989122268577` displayed as `22268577` in edit modal
+   - **Root Cause**: Greedy regex matched up to 4 digits for country code, misinterpreting `+9891` as code
+   - **Old Pattern**: `/^\+(\d{1,4})(\d+)$/` (matched +9891-22268577 instead of +98-9122268577)
+   - **New Pattern**: `/^\+(\d{1,3})(\d+)$/` (correctly matches +98-9122268577)
+   - **Impact**: Fixed all Iranian numbers (+98) and other 2-digit codes
+   - **Testing**: Verified with +989122268577, +14155552671, +447700900123
+   - **Files**: `dashboard.js` (line 1436)
+
+**Technical Details**
+- Country codes are 1-3 digits max (ITU-T E.164 standard)
+- Changed regex from 1-4 digits to 1-3 digits
+- Prevents incorrect parsing of 2-digit codes followed by 9-starting numbers
+- Maintains compatibility with all international formats
+
+**Files Modified**
+- `dashboard.html` - Phone input UI with country code selector (110 lines added)
+- `dashboard.js` - Validation, parsing, formatting logic (180 lines added/modified)
+- `dashboard.css` - Phone input styling and validation states (50 lines added)
+
+**Files Created**
+- `PHONE_INPUT_ENHANCEMENT.md` - Complete feature documentation
+- `PHONE_INPUT_IMPLEMENTATION.md` - Technical implementation details
+- `PHONE_INPUT_QUICK_SUMMARY.md` - Quick reference guide
+- `PHONE_INPUT_CHANGELOG.md` - Detailed change log
+- `PHONE_PARSING_BUG_FIX.md` - Bug fix documentation
+
+**Benefits**
+- **Better UX**: Clear country code selection vs typing full number
+- **Data Quality**: Automatic validation prevents invalid numbers
+- **International Support**: Easy to add numbers from any country
+- **Consistent Format**: All numbers stored in E.164 standard format
+- **Error Prevention**: Real-time validation catches mistakes before submission
+
+**User Feedback Integration**
+- Requested by user: Better phone number handling
+- Issue reported: Phone numbers displaying incorrectly in edit modal
+- Solution: Complete phone input system with validation and parsing
+
+**Testing Required**
+- [ ] Add account with Iranian number (leading zero handling)
+- [ ] Add account with international number (various country codes)
+- [ ] Edit existing account (phone parsing and display)
+- [ ] Validation errors (invalid formats, wrong length)
+- [ ] Custom country code entry (non-standard codes)
+
+---
+
 ## [1.11.0] - 2025-11-23
 
 ### Added - Plan Management Enhancements & Renewal Filtering

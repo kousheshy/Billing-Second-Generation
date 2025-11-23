@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.1-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,28 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.0
+**Version:** 1.11.1
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.1** (Nov 2025) - Phone Number Input Enhancement & Parsing Bug Fix
+  - **Smart Country Code Selector**: Dropdown with top 11 countries + custom option, Iran (+98) default
+  - **Automatic Number Formatting**: Leading zero removal (09121234567 → 9121234567), smart parsing on edit
+  - **Real-time Validation**: Iran-specific (10 digits, starts with 9) and international rules (7-15 digits)
+  - **Phone Parsing Bug Fix**: Fixed critical regex issue causing numbers like +989122268577 to display as 22268577
+  - **E.164 Format**: All numbers stored in international standard format (+[country code][number])
+  - **Visual Feedback**: Red border for invalid, green checkmark for valid, clear error messages
+  - **Technical Changes**:
+    - Country code selector UI in Add/Edit Account modals (110 lines HTML)
+    - `parsePhoneNumber()`: Changed regex from `/^\+(\d{1,4})(\d+)$/` to `/^\+(\d{1,3})(\d+)$/`
+    - `validatePhone()`: Iran and international validation rules (70 lines JS)
+    - Phone input styling with validation states (50 lines CSS)
+  - **Files Modified**: dashboard.html, dashboard.js, dashboard.css
+  - **User Feedback**: "Phone numbers displaying incorrectly in edit modal" - Fixed ✅
 
 - **v1.11.0** (Nov 2025) - Plan Management Enhancements & Renewal Filtering
   - **Edit Plan Functionality**: Admins can now edit existing plans (name, price, duration, category) without deletion

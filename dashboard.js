@@ -717,6 +717,178 @@ function initAllMacInputs() {
     console.log(`[MAC Init] Initialization complete`);
 }
 
+/**
+ * Phone Number Validation and Formatting Functions
+ */
+
+/**
+ * Normalize phone number by removing leading zero
+ * @param {string} phoneNumber - The phone number to normalize
+ * @returns {string} - Normalized phone number
+ */
+function normalizePhoneNumber(phoneNumber) {
+    if (!phoneNumber) return '';
+
+    // Remove all non-digit characters
+    let digits = phoneNumber.replace(/\D/g, '');
+
+    // Remove leading zero if present
+    if (digits.startsWith('0')) {
+        digits = digits.substring(1);
+    }
+
+    return digits;
+}
+
+/**
+ * Validate phone number format
+ * @param {string} phoneNumber - The phone number to validate
+ * @param {string} countryCode - The country code (e.g., +98)
+ * @returns {object} - {valid: boolean, error: string}
+ */
+function validatePhoneNumber(phoneNumber, countryCode) {
+    if (!phoneNumber) {
+        return { valid: true, error: '' }; // Phone is optional
+    }
+
+    const normalized = normalizePhoneNumber(phoneNumber);
+
+    // Check if phone number contains only digits after normalization
+    if (!/^\d+$/.test(normalized)) {
+        return { valid: false, error: 'Phone number must contain only digits' };
+    }
+
+    // Iran-specific validation
+    if (countryCode === '+98') {
+        if (normalized.length !== 10) {
+            return { valid: false, error: 'Iranian phone number must be 10 digits (e.g., 9121234567)' };
+        }
+        if (!normalized.startsWith('9')) {
+            return { valid: false, error: 'Iranian mobile number must start with 9' };
+        }
+    } else {
+        // General validation for other countries
+        if (normalized.length < 7 || normalized.length > 15) {
+            return { valid: false, error: 'Phone number must be between 7 and 15 digits' };
+        }
+    }
+
+    return { valid: true, error: '' };
+}
+
+/**
+ * Get full phone number with country code
+ * @param {string} countryCodeSelect - Country code selector value
+ * @param {string} customCode - Custom country code input value
+ * @param {string} phoneNumber - Phone number input value
+ * @returns {string} - Full phone number with country code
+ */
+function getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber) {
+    if (!phoneNumber) return '';
+
+    const normalized = normalizePhoneNumber(phoneNumber);
+    if (!normalized) return '';
+
+    const code = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
+    return code + normalized;
+}
+
+/**
+ * Parse stored phone number into country code and number
+ * @param {string} fullPhone - Full phone number with country code (e.g., +989121234567)
+ * @returns {object} - {countryCode: string, phoneNumber: string}
+ */
+function parsePhoneNumber(fullPhone) {
+    if (!fullPhone) return { countryCode: '+98', phoneNumber: '' };
+
+    // List of known country codes (from our dropdown + common ones)
+    const knownCountryCodes = ['+98', '+1', '+44', '+86', '+91', '+81', '+49', '+33', '+7', '+82', '+39', '+971', '+966', '+90', '+93'];
+
+    // Try to match known country codes first
+    for (const code of knownCountryCodes) {
+        if (fullPhone.startsWith(code)) {
+            return {
+                countryCode: code,
+                phoneNumber: fullPhone.substring(code.length)
+            };
+        }
+    }
+
+    // If no known code found, try generic pattern (shortest match first)
+    // Try 1-digit, then 2-digit, then 3-digit, then 4-digit country codes
+    for (let len = 1; len <= 4; len++) {
+        const potentialCode = fullPhone.substring(0, len + 1); // +1 for the '+' symbol
+        if (potentialCode.startsWith('+') && /^\+\d+$/.test(potentialCode)) {
+            const restOfNumber = fullPhone.substring(len + 1);
+            // Validate that rest is a reasonable phone number (7-15 digits)
+            if (restOfNumber.length >= 7 && restOfNumber.length <= 15 && /^\d+$/.test(restOfNumber)) {
+                return {
+                    countryCode: potentialCode,
+                    phoneNumber: restOfNumber
+                };
+            }
+        }
+    }
+
+    // If no country code found, assume Iran
+    return {
+        countryCode: '+98',
+        phoneNumber: fullPhone.replace(/^\+/, '')
+    };
+}
+
+/**
+ * Initialize phone input handlers
+ * @param {string} countryCodeId - ID of country code select element
+ * @param {string} customCodeId - ID of custom code input element
+ * @param {string} phoneNumberId - ID of phone number input element
+ */
+function initPhoneInput(countryCodeId, customCodeId, phoneNumberId) {
+    const countryCodeSelect = document.getElementById(countryCodeId);
+    const customCodeInput = document.getElementById(customCodeId);
+    const phoneNumberInput = document.getElementById(phoneNumberId);
+
+    if (!countryCodeSelect || !customCodeInput || !phoneNumberInput) return;
+
+    // Handle country code selection change
+    countryCodeSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customCodeInput.style.display = 'inline-block';
+            customCodeInput.focus();
+        } else {
+            customCodeInput.style.display = 'none';
+            customCodeInput.value = '';
+        }
+    });
+
+    // Validate phone number on blur
+    phoneNumberInput.addEventListener('blur', function() {
+        const countryCode = countryCodeSelect.value === 'custom' ? customCodeInput.value : countryCodeSelect.value;
+        const validation = validatePhoneNumber(this.value, countryCode);
+
+        if (!validation.valid && this.value) {
+            showAlert(validation.error, 'error');
+        }
+    });
+
+    // Auto-remove leading zero on input
+    phoneNumberInput.addEventListener('input', function() {
+        if (this.value.startsWith('0')) {
+            this.value = this.value.substring(1);
+        }
+    });
+
+    // Validate custom country code
+    customCodeInput.addEventListener('input', function() {
+        // Ensure it starts with +
+        if (this.value && !this.value.startsWith('+')) {
+            this.value = '+' + this.value;
+        }
+        // Remove any non-digit characters except +
+        this.value = this.value.replace(/[^\d+]/g, '');
+    });
+}
+
 // Modal functions
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('show');
@@ -731,13 +903,26 @@ function openModal(modalId) {
         initAllMacInputs();
     }, 10);
 
-    // Auto-generate username and password when opening add account modal
+    // Initialize phone inputs based on modal
     if(modalId === 'addAccountModal') {
+        // Auto-generate username and password
         document.getElementById('account-username').value = generateRandomString();
         document.getElementById('account-password').value = generateRandomString();
 
         // Initialize name capitalization for PWA mode
         initNameCapitalization();
+
+        // Initialize phone input for Add Account modal
+        setTimeout(() => {
+            initPhoneInput('add-country-code', 'add-custom-code', 'add-phone-number');
+        }, 10);
+    }
+
+    if(modalId === 'editAccountModal') {
+        // Initialize phone input for Edit Account modal
+        setTimeout(() => {
+            initPhoneInput('edit-country-code', 'edit-custom-code', 'edit-phone');
+        }, 10);
     }
 }
 
@@ -1742,7 +1927,38 @@ async function addAccount(e) {
         return;
     }
 
+    // Validate and format phone number
+    const countryCodeSelect = document.getElementById('add-country-code').value;
+    const customCode = document.getElementById('add-custom-code').value;
+    const phoneNumber = document.getElementById('add-phone-number').value;
+
+    if (phoneNumber) {
+        const countryCode = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
+
+        // Validate country code for custom option
+        if (countryCodeSelect === 'custom' && !customCode) {
+            showAlert('Please enter a custom country code', 'error');
+            return;
+        }
+
+        // Validate phone number
+        const validation = validatePhoneNumber(phoneNumber, countryCode);
+        if (!validation.valid) {
+            showAlert(validation.error, 'error');
+            return;
+        }
+    }
+
     const formData = new FormData(e.target);
+
+    // Replace phone_number with full formatted number
+    if (phoneNumber) {
+        const fullPhone = getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber);
+        formData.set('phone_number', fullPhone);
+    }
+
+    // Remove country_code from form data (it's already included in phone_number)
+    formData.delete('country_code');
 
     try {
         const response = await fetch('add_account.php', {
@@ -2212,7 +2428,12 @@ async function editAccount(username) {
         document.getElementById('edit-password').value = ''; // Keep blank
         document.getElementById('edit-name').value = account.full_name || '';
         document.getElementById('edit-email').value = account.email || '';
-        document.getElementById('edit-phone').value = account.phone_number || '';
+
+        // Parse and populate phone number
+        const parsedPhone = parsePhoneNumber(account.phone_number || '');
+        document.getElementById('edit-country-code').value = parsedPhone.countryCode;
+        document.getElementById('edit-phone').value = parsedPhone.phoneNumber;
+
         document.getElementById('edit-comment').value = account.comment || '';
 
         // Handle reseller without admin permission
@@ -2338,6 +2559,28 @@ async function submitEditAccount(e) {
     console.log('submitEditAccount called');
     e.preventDefault();
 
+    // Validate and format phone number
+    const countryCodeSelect = document.getElementById('edit-country-code').value;
+    const customCode = document.getElementById('edit-custom-code').value;
+    const phoneNumber = document.getElementById('edit-phone').value;
+
+    if (phoneNumber) {
+        const countryCode = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
+
+        // Validate country code for custom option
+        if (countryCodeSelect === 'custom' && !customCode) {
+            showAlert('Please enter a custom country code', 'error');
+            return false;
+        }
+
+        // Validate phone number
+        const validation = validatePhoneNumber(phoneNumber, countryCode);
+        if (!validation.valid) {
+            showAlert(validation.error, 'error');
+            return false;
+        }
+    }
+
     // Check if user is reseller without admin permission
     const isSuperUser = currentUser ? currentUser.super_user : true;
     const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
@@ -2399,6 +2642,15 @@ async function submitEditAccount(e) {
             }
         }
     }
+
+    // Replace phone field with full formatted number
+    if (phoneNumber) {
+        const fullPhone = getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber);
+        formData.set('phone', fullPhone);
+    }
+
+    // Remove country_code from form data (it's already included in phone)
+    formData.delete('country_code');
 
     try {
         console.log('Sending request to edit_account.php');
