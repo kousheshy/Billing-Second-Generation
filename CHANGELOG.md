@@ -7,6 +7,170 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.1] - 2025-11-23
+
+### Fixed - PWA Modal & Template Sync Issues
+
+**Overview**
+Critical bug fixes for PWA modal behavior, positioning, and SMS template synchronization between local and production environments.
+
+**Bug Fixes**
+
+1. **Modal Centering in Standard Browsers** (Critical)
+   - **Issue**: Modals were sliding in from the right instead of being centered in standard (non-PWA) browsers
+   - **Root Cause**: CSS `transform: translate(-50%, -50%)` on `.modal` container conflicted with flexbox centering
+   - **Fix**: Commented out problematic media query (lines 3294-3312 in dashboard.css)
+   - **Impact**: Modals now center correctly in all standard browsers while PWA bottom sheets remain functional
+   - **Files Modified**: `dashboard.css`
+
+2. **PWA Mode Detection** (Enhancement)
+   - **Issue**: Need to differentiate between installed PWA and standard browser for modal styles
+   - **Implementation**: Added JavaScript-based PWA detection using `display-mode: standalone` media query
+   - **Feature**: Added `pwa-mode` class to body when running as installed PWA
+   - **CSS Updates**: Changed bottom sheet selectors from media queries to `body.pwa-mode` class
+   - **Files Modified**: `dashboard.js` (lines 38-54), `dashboard.css` (lines 3317-3353)
+
+3. **Bottom Navigation Bar Positioning** (UX Fix)
+   - **Issue**: Bottom navigation bar positioned too low on screen, making it difficult to tap
+   - **User Feedback**: "Bottom bar is a lot down in screen make it hard to click on it"
+   - **Fix**:
+     - Changed `bottom: 0` to `bottom: 20px` (line 3135)
+     - Removed `padding-bottom: var(--safe-area-bottom)` from `.bottom-nav` (line 3141)
+     - Updated content padding from `calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 20px)` to `calc(var(--bottom-nav-height) + 20px)` (line 3503)
+   - **Impact**: Bottom navigation now positioned 20px above screen edge for easier tapping
+   - **Files Modified**: `dashboard.css`
+
+4. **SMS Templates Database Sync** (Data Fix)
+   - **Issue**: Server SMS templates didn't match local database
+   - **Problem Details**:
+     - Template ID 2 corrupted on server: "Welcome Kooni" instead of Persian welcome message
+     - Missing Persian contact information in some templates
+     - Inconsistent template content between environments
+   - **Fix**: Created SQL UPDATE script to sync all 8 templates for user_id=1
+   - **Templates Updated**:
+     1. Expiry Reminder
+     2. New Account Welcome (fixed Persian text)
+     3. Renewal Confirmation
+     4. Payment Reminder
+     9. 7 Days Before Expiry
+     10. 3 Days Before Expiry
+     11. 1 Day Before Expiry
+     12. Account Expired
+   - **Files Created**: `/tmp/sync_templates.sql`
+   - **Deployment**: Executed via SSH to production server
+
+5. **SMS Functions File Permissions** (Access Fix)
+   - **Issue**: `sms-functions.js` not loading due to incorrect file permissions
+   - **Root Cause**: File had 600 permissions (`-rw-------`), web server couldn't read it
+   - **Fix**:
+     - Re-uploaded file to server
+     - Set permissions to 644 (`-rw-r--r--`)
+     - Set ownership to `www-data:www-data`
+   - **Impact**: SMS templates now load correctly in both standard browser and PWA
+   - **Files Modified**: `sms-functions.js` (permissions only)
+
+6. **Modal Scrolling in PWA** (Critical UX Fix)
+   - **Issue**: Scrolling inside modals caused background page to scroll instead
+   - **User Impact**: Unable to reach bottom buttons in modals, poor UX
+   - **Fix**:
+     - Added CSS `overscroll-behavior: contain` to `.modal` and `.modal-content`
+     - Added CSS `-webkit-overflow-scrolling: touch` for smooth iOS scrolling
+     - Added JavaScript body scroll lock when modal opens:
+       ```javascript
+       document.body.style.overflow = 'hidden';
+       document.body.style.position = 'fixed';
+       document.body.style.width = '100%';
+       ```
+     - Restored scrolling when modal closes
+   - **Files Modified**: `dashboard.css` (lines 811-848), `dashboard.js` (lines 721-753)
+
+7. **PWA Modal Positioning & Dragging** (Triple Fix)
+   - **Issue 1**: Modal not centered vertically (too much space at top/bottom)
+   - **Issue 2**: User could touch and drag modal around screen
+   - **Issue 3**: Bottom buttons hidden behind bottom navigation bar
+   - **Fixes**:
+     - Set `margin-bottom: calc(var(--bottom-nav-height) + 20px)` to position above bottom nav
+     - Set `max-height: calc(100vh - var(--bottom-nav-height) - 40px)` to account for nav height
+     - Added `touch-action: pan-y` to `.modal-content` (only vertical scrolling allowed)
+     - Added `touch-action: none` to `.modal` backdrop (prevent any touch interaction)
+     - Added `user-select: none` to prevent drag via text selection
+     - Added `padding-bottom: 80px` for bottom button clearance
+   - **Files Modified**: `dashboard.css` (lines 3317-3353)
+
+8. **Name Field Auto-Capitalization** (PWA Enhancement)
+   - **Feature**: Auto-capitalize first letter of each word in name field (Add Account modal)
+   - **User Request**: "First character be capital and when he hit on space to type family again keyboard become capital"
+   - **Implementation**:
+     - HTML: Added `id="account-fullname"` and `autocapitalize="words"` attribute (line 910)
+     - JavaScript: Created `initNameCapitalization()` function (lines 56-81)
+     - Real-time capitalization with cursor position preservation
+     - Only activates in PWA mode (checks for `pwa-mode` class)
+   - **Technical Details**:
+     - Splits value by spaces, capitalizes first char of each word
+     - Uses `setSelectionRange()` to maintain cursor position
+     - Native `autocapitalize="words"` provides keyboard-level capitalization on mobile
+   - **Files Modified**: `dashboard.html` (line 910), `dashboard.js` (lines 56-81, 740)
+
+**Technical Implementation**
+
+- **CSS Changes**:
+  - Fixed modal centering for standard browsers
+  - Adjusted bottom navigation positioning (20px from bottom)
+  - Added scroll prevention and touch-action controls
+  - Improved PWA modal positioning relative to bottom nav
+
+- **JavaScript Changes**:
+  - Added `detectPWAMode()` function for standalone app detection
+  - Implemented body scroll locking for modals
+  - Created `initNameCapitalization()` for auto-capitalization
+  - Enhanced modal open/close functions with scroll control
+
+- **Database Changes**:
+  - Synced 8 SMS templates from local to production
+  - Fixed corrupted Template ID 2 (Persian welcome message)
+  - Ensured all templates have correct Persian text and contact info
+
+- **Deployment**:
+  - Uploaded fixed CSS, JS, HTML files to production server
+  - Executed SQL sync script on production database
+  - Corrected file permissions for `sms-functions.js`
+
+**Browser/Platform Compatibility**
+- Standard browsers: Modals centered correctly (flexbox)
+- PWA mode: Bottom sheet modals with proper positioning
+- iOS Safari: Touch scrolling and gesture controls working
+- All mobile browsers: Auto-capitalization functional
+
+**Testing Performed**
+- ✅ Modal centering in Chrome, Firefox, Safari (standard browser)
+- ✅ Bottom sheet modals in PWA mode
+- ✅ Bottom navigation positioning and tap targets
+- ✅ SMS templates loading in Messaging tab
+- ✅ Modal scrolling without background scroll
+- ✅ Modal positioning relative to bottom nav
+- ✅ Touch/drag prevention on modals
+- ✅ Name auto-capitalization in Add Account modal
+- ✅ Database template sync verification
+
+**User Feedback Integration**
+- "آره مشکل حل شد" (Yes, the problem is fixed) - Modal centering
+- "Works good" - Bottom navigation positioning
+- All reported issues resolved and verified
+
+**Files Modified**
+- `dashboard.css` - Modal centering, positioning, scroll behavior fixes
+- `dashboard.js` - PWA detection, scroll locking, name capitalization
+- `dashboard.html` - Name field autocapitalize attribute
+- `sms-functions.js` - File permissions corrected
+- `_sms_templates` database table - 8 templates synced
+
+**Files Created**
+- `/tmp/sync_templates.sql` - SQL script to sync templates
+
+**Deployment Date**: November 23, 2025
+
+---
+
 ## [1.10.0] - 2025-11-23
 
 ### Added - iOS-Optimized PWA (Progressive Web App)

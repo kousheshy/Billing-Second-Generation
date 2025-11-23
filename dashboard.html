@@ -2,8 +2,8 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <!-- Enhanced viewport for iOS PWA (v1.10.0) -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <!-- Enhanced viewport for iOS PWA (v1.10.0) - viewport-fit removed for desktop compatibility -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>ShowBox - Billing Dashboard</title>
 
     <!-- PWA Meta Tags -->
@@ -907,7 +907,7 @@
                 </div>
                 <div class="form-group">
                     <label>Full Name</label>
-                    <input type="text" name="name">
+                    <input type="text" name="name" id="account-fullname" autocapitalize="words">
                 </div>
                 <div class="form-group">
                     <label>Email</label>
@@ -1452,14 +1452,73 @@
         <div class="pull-to-refresh-text">Release to refresh</div>
     </div>
 
-    <!-- Bottom Navigation Bar - Mobile Only (v1.10.0) -->
+    <!-- Mobile Settings Page (v1.10.1 - redesigned) -->
+    <div id="mobile-settings-page" class="mobile-settings-page" style="display: none;">
+        <div class="mobile-settings-header">
+            <h2>Settings</h2>
+        </div>
+        <div class="mobile-settings-content">
+            <!-- User Profile Card -->
+            <div class="settings-profile-card">
+                <div class="profile-avatar">
+                    <span id="settings-avatar-initial">?</span>
+                </div>
+                <div class="profile-info">
+                    <div class="profile-username" id="settings-username">Loading...</div>
+                    <div class="profile-role" id="settings-role">-</div>
+                </div>
+            </div>
+
+            <!-- Settings Options -->
+            <div class="settings-options">
+                <button class="settings-option-btn" onclick="showChangePassword()">
+                    <span class="option-icon">🔑</span>
+                    <span class="option-text">Change Password</span>
+                    <span class="option-arrow">›</span>
+                </button>
+                <button class="settings-option-btn settings-logout" onclick="logout()">
+                    <span class="option-icon">🚪</span>
+                    <span class="option-text">Logout</span>
+                    <span class="option-arrow">›</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal (v1.10.1) -->
+    <div id="change-password-modal" class="change-password-modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeChangePassword()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Password</h3>
+                <button class="modal-close-btn" onclick="closeChangePassword()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="current-password" class="form-input" placeholder="Enter current password">
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="new-password" class="form-input" placeholder="Enter new password">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirm-password" class="form-input" placeholder="Confirm new password">
+                </div>
+                <div id="password-error" class="password-error" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeChangePassword()">Cancel</button>
+                <button class="btn-save" onclick="saveNewPassword()">Change Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar - Mobile Only (v1.10.1 - removed Dashboard, added Settings) -->
     <nav class="bottom-nav" id="bottom-nav">
         <div class="bottom-nav-items">
-            <a href="#" class="bottom-nav-item active" data-tab="dashboard" onclick="showMobileDashboard(); return false;">
-                <span class="bottom-nav-icon">📊</span>
-                <span class="bottom-nav-label">Dashboard</span>
-            </a>
-            <a href="#" class="bottom-nav-item" data-tab="accounts" onclick="switchTab('accounts'); return false;">
+            <a href="#" class="bottom-nav-item active" data-tab="accounts" onclick="switchTab('accounts'); return false;">
                 <span class="bottom-nav-icon">👥</span>
                 <span class="bottom-nav-label">Accounts</span>
             </a>
@@ -1474,6 +1533,10 @@
             <a href="#" class="bottom-nav-item" data-tab="reports" onclick="switchTab('reports'); return false;">
                 <span class="bottom-nav-icon">📈</span>
                 <span class="bottom-nav-label">Reports</span>
+            </a>
+            <a href="#" class="bottom-nav-item" data-tab="settings" onclick="showMobileSettings(); return false;">
+                <span class="bottom-nav-icon">⚙️</span>
+                <span class="bottom-nav-label">Settings</span>
             </a>
         </div>
     </nav>

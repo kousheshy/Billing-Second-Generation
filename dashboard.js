@@ -35,6 +35,51 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// Detect if running as installed PWA (v1.10.1)
+function detectPWAMode() {
+    // Check if running in standalone mode (installed PWA)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                        window.navigator.standalone ||
+                        document.referrer.includes('android-app://');
+
+    if (isStandalone) {
+        document.body.classList.add('pwa-mode');
+        console.log('[PWA] Running as installed PWA - bottom sheet modals enabled');
+    } else {
+        console.log('[PWA] Running in browser - centered modals enabled');
+    }
+}
+
+// Run on page load
+detectPWAMode();
+
+// Auto-capitalize name input in PWA mode (v1.10.1)
+function initNameCapitalization() {
+    if (document.body.classList.contains('pwa-mode')) {
+        const nameInput = document.getElementById('account-fullname');
+        if (nameInput) {
+            nameInput.addEventListener('input', function(e) {
+                const cursorPosition = this.selectionStart;
+                const words = this.value.split(' ');
+                const capitalizedWords = words.map(word => {
+                    if (word.length > 0) {
+                        return word.charAt(0).toUpperCase() + word.slice(1);
+                    }
+                    return word;
+                });
+                const newValue = capitalizedWords.join(' ');
+
+                // Only update if value changed to avoid cursor jump
+                if (this.value !== newValue) {
+                    this.value = newValue;
+                    this.setSelectionRange(cursorPosition, cursorPosition);
+                }
+            });
+            console.log('[PWA] Name auto-capitalization enabled');
+        }
+    }
+}
+
 // PWA Install Prompt
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -278,8 +323,25 @@ function switchTab(tabName) {
 
     // iOS PWA Mobile: Update body class to show/hide stats and tabs (v1.10.1)
     if (window.innerWidth <= 768) {
+        // Hide Settings page if it's open (v1.10.1 fix)
+        const settingsPage = document.getElementById('mobile-settings-page');
+        if (settingsPage && settingsPage.style.display !== 'none') {
+            settingsPage.style.display = 'none';
+
+            // Show main content elements
+            const navbar = document.querySelector('.navbar');
+            const statsGrid = document.querySelector('.stats-grid');
+            const tabs = document.querySelector('.tabs');
+            const content = document.querySelector('.content');
+
+            if (navbar) navbar.style.display = '';
+            if (statsGrid) statsGrid.style.display = '';
+            if (tabs) tabs.style.display = '';
+            if (content) content.style.display = '';
+        }
+
         // Remove all mobile-tab-* classes
-        document.body.classList.remove('mobile-tab-dashboard', 'mobile-tab-accounts', 'mobile-tab-resellers', 'mobile-tab-plans', 'mobile-tab-transactions', 'mobile-tab-stb-control', 'mobile-tab-messaging', 'mobile-tab-reports');
+        document.body.classList.remove('mobile-tab-dashboard', 'mobile-tab-accounts', 'mobile-tab-resellers', 'mobile-tab-plans', 'mobile-tab-transactions', 'mobile-tab-stb-control', 'mobile-tab-messaging', 'mobile-tab-reports', 'mobile-tab-settings');
 
         // Add current tab class
         document.body.classList.add('mobile-tab-' + tabName);
@@ -659,6 +721,11 @@ function initAllMacInputs() {
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('show');
 
+    // Prevent background scrolling on mobile (v1.10.1)
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+
     // Initialize MAC address inputs in the modal
     setTimeout(() => {
         initAllMacInputs();
@@ -668,11 +735,19 @@ function openModal(modalId) {
     if(modalId === 'addAccountModal') {
         document.getElementById('account-username').value = generateRandomString();
         document.getElementById('account-password').value = generateRandomString();
+
+        // Initialize name capitalization for PWA mode
+        initNameCapitalization();
     }
 }
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('show');
+
+    // Re-enable background scrolling on mobile (v1.10.1)
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
 
     // Reset form when closing add account modal
     if(modalId === 'addAccountModal') {
@@ -1076,9 +1151,17 @@ function renderAccountsPage() {
                     <span class="toggle-slider"></span>
                    </label>`;
 
+            // iOS PWA: Show reseller name below full name on mobile (v1.10.1)
+            const fullNameWithReseller = `
+                <div class="full-name-cell">
+                    <div class="name-primary">${account.full_name || ''}</div>
+                    <div class="name-secondary">${account.reseller_name || '<span style="font-style: italic;">Unassigned</span>'}</div>
+                </div>
+            `;
+
             tr.innerHTML = `
                 <td>${account.username || ''}</td>
-                <td>${account.full_name || ''}</td>
+                <td>${fullNameWithReseller}</td>
                 <td>${account.phone_number || ''}</td>
                 <td>${account.mac || ''}</td>
                 <td>${account.tariff_plan || ''}</td>
@@ -3722,8 +3805,8 @@ function initPullToRefresh() {
     console.log('[Pull-to-Refresh] Initialized on mobile');
 
     content.addEventListener('touchstart', (e) => {
-        // Only trigger if at top of scroll
-        if (content.scrollTop === 0) {
+        // Only trigger if at VERY top of page (scrollY = 0) - v1.10.1 fix
+        if (window.scrollY === 0 && content.scrollTop === 0) {
             pullStartY = e.touches[0].clientY;
             pulling = true;
         }
@@ -3735,13 +3818,16 @@ function initPullToRefresh() {
         const touchY = e.touches[0].clientY;
         pullDistance = touchY - pullStartY;
 
-        // Show indicator when pulled down 80px
-        if (pullDistance > 80) {
-            pullIndicator.style.display = 'flex';
-            pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Release to refresh';
-        } else if (pullDistance > 40) {
-            pullIndicator.style.display = 'flex';
-            pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Pull down to refresh';
+        // Only show if pulling DOWN (positive distance) - v1.10.1 fix
+        if (pullDistance > 0) {
+            // Show indicator when pulled down 80px
+            if (pullDistance > 80) {
+                pullIndicator.style.display = 'flex';
+                pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Release to refresh';
+            } else if (pullDistance > 40) {
+                pullIndicator.style.display = 'flex';
+                pullIndicator.querySelector('.pull-to-refresh-text').textContent = 'Pull down to refresh';
+            }
         }
     }, { passive: true });
 
@@ -3984,7 +4070,7 @@ if (window.innerWidth <= 768) {
     console.log('[iOS PWA] Navbar hide/show initialized');
 }
 
-// Mobile Dashboard View (shows stats + tabs)
+// Mobile Dashboard View (shows stats + tabs) - v1.10.1 fixed dashboard navigation
 function showMobileDashboard() {
     if (window.innerWidth > 768) return; // Only on mobile
 
@@ -4003,20 +4089,211 @@ function showMobileDashboard() {
         }
     });
 
-    // Show first tab (accounts) by default
-    const firstTab = document.querySelector('.tab');
-    if (firstTab) {
-        firstTab.click();
-    }
+    // Update top tab bar active state (highlight first tab)
+    document.querySelectorAll('.tab').forEach((tab, index) => {
+        if (index === 0) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+
+    // Show first tab content (accounts)
+    document.querySelectorAll('.tab-content').forEach((content, index) => {
+        if (index === 0) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
+    });
+
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     console.log('[iOS PWA] Mobile dashboard view activated');
 }
 
+// Mobile Settings View (v1.10.1 - fixed overlay issue)
+function showMobileSettings() {
+    if (window.innerWidth > 768) return; // Only on mobile
+
+    const settingsPage = document.getElementById('mobile-settings-page');
+    if (!settingsPage) return;
+
+    // Hide navbar, stats, tabs, and main content
+    const navbar = document.querySelector('.navbar');
+    const statsGrid = document.querySelector('.stats-grid');
+    const tabs = document.querySelector('.tabs');
+    const content = document.querySelector('.content');
+
+    if (navbar) navbar.style.display = 'none';
+    if (statsGrid) statsGrid.style.display = 'none';
+    if (tabs) tabs.style.display = 'none';
+    if (content) content.style.display = 'none';
+
+    // Show settings page
+    settingsPage.style.display = 'block';
+
+    // Remove all mobile-tab-* classes
+    document.body.classList.remove('mobile-tab-dashboard', 'mobile-tab-accounts', 'mobile-tab-resellers', 'mobile-tab-plans', 'mobile-tab-transactions', 'mobile-tab-stb-control', 'mobile-tab-messaging', 'mobile-tab-reports');
+
+    // Add settings class
+    document.body.classList.add('mobile-tab-settings');
+
+    // Update bottom nav active state
+    document.querySelectorAll('.bottom-nav-item').forEach(item => {
+        if (item.dataset.tab === 'settings') {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Populate user info
+    const currentUser = localStorage.getItem('currentUser') || sessionStorage.getItem('username') || 'User';
+    const isReseller = localStorage.getItem('isReseller') === 'true';
+    const isResellerAdmin = localStorage.getItem('isResellerAdmin') === 'true';
+    const isObserver = localStorage.getItem('isObserver') === 'true';
+
+    // Set username
+    document.getElementById('settings-username').textContent = currentUser;
+
+    // Set avatar initial (first letter of username)
+    const avatarInitial = currentUser.charAt(0).toUpperCase();
+    document.getElementById('settings-avatar-initial').textContent = avatarInitial;
+
+    // Set role
+    let role = 'Super Admin';
+    if (isObserver) {
+        role = 'Observer';
+    } else if (isResellerAdmin) {
+        role = 'Reseller Admin';
+    } else if (isReseller) {
+        role = 'Reseller';
+    }
+    document.getElementById('settings-role').textContent = role;
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    console.log('[iOS PWA] Mobile settings view activated');
+}
+
+function closeMobileSettings() {
+    const settingsPage = document.getElementById('mobile-settings-page');
+    if (!settingsPage) return;
+
+    // Show navbar, stats, tabs, and main content
+    const navbar = document.querySelector('.navbar');
+    const statsGrid = document.querySelector('.stats-grid');
+    const tabs = document.querySelector('.tabs');
+    const content = document.querySelector('.content');
+
+    if (navbar) navbar.style.display = '';
+    if (statsGrid) statsGrid.style.display = '';
+    if (tabs) tabs.style.display = '';
+    if (content) content.style.display = '';
+
+    // Hide settings page
+    settingsPage.style.display = 'none';
+
+    // Remove settings class
+    document.body.classList.remove('mobile-tab-settings');
+
+    // Switch back to accounts tab
+    switchTab('accounts');
+
+    console.log('[iOS PWA] Mobile settings view closed');
+}
+
+// Change Password Functions (v1.10.1)
+function showChangePassword() {
+    const modal = document.getElementById('change-password-modal');
+    if (!modal) return;
+
+    // Clear previous values
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    document.getElementById('password-error').style.display = 'none';
+
+    // Show modal
+    modal.style.display = 'flex';
+
+    console.log('[iOS PWA] Change password modal opened');
+}
+
+function closeChangePassword() {
+    const modal = document.getElementById('change-password-modal');
+    if (!modal) return;
+
+    // Hide modal
+    modal.style.display = 'none';
+
+    console.log('[iOS PWA] Change password modal closed');
+}
+
+function saveNewPassword() {
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    const errorDiv = document.getElementById('password-error');
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        errorDiv.textContent = 'All fields are required';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        errorDiv.textContent = 'New password must be at least 6 characters';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        errorDiv.textContent = 'New passwords do not match';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    // Call change password API
+    const username = localStorage.getItem('currentUser') || sessionStorage.getItem('username');
+
+    fetch('change_password.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `username=${encodeURIComponent(username)}&current_password=${encodeURIComponent(currentPassword)}&new_password=${encodeURIComponent(newPassword)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error === 0) {
+            // Success
+            alert('Password changed successfully!');
+            closeChangePassword();
+        } else {
+            // Error
+            errorDiv.textContent = data.message || 'Failed to change password';
+            errorDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Change password error:', error);
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+    });
+
+    console.log('[iOS PWA] Attempting to change password');
+}
+
 // Initialize mobile tab body class on page load
 if (window.innerWidth <= 768) {
-    // Default to dashboard mode on mobile
-    document.body.classList.add('mobile-tab-dashboard');
-    console.log('[iOS PWA] Default mobile tab class set: mobile-tab-dashboard');
+    // Default to accounts tab on mobile (v1.10.1 - no dashboard button)
+    switchTab('accounts');
+    console.log('[iOS PWA] Default mobile tab: accounts');
 }
 
 // ========================================

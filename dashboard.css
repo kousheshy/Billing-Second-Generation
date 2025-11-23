@@ -822,6 +822,8 @@ table tbody tr:last-child td {
     justify-content: center;
     overflow-y: auto;
     animation: fadeIn var(--transition-normal);
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    overscroll-behavior: contain; /* Prevent background scroll */
 }
 
 .modal.show {
@@ -841,6 +843,8 @@ table tbody tr:last-child td {
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-color);
     animation: slideUp var(--transition-normal);
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    overscroll-behavior: contain; /* Prevent scroll chaining */
 }
 
 @keyframes slideUp {
@@ -3132,13 +3136,13 @@ input[type="number"] {
 .bottom-nav {
     display: none; /* Hidden on desktop */
     position: fixed;
-    bottom: 0;
+    bottom: 20px;
     left: 0;
     right: 0;
-    height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+    height: var(--bottom-nav-height);
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-color);
-    padding-bottom: var(--safe-area-bottom);
+    padding-bottom: 0;
     z-index: 1000;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -3291,8 +3295,10 @@ main {
    4. iOS-Style Bottom Sheet Modals
    ======================================== */
 
-/* Desktop: Keep centered modals */
-@media (min-width: 769px) {
+/* Desktop: Keep centered modals - REMOVED
+   The base .modal CSS already centers content with flexbox
+   This transform was breaking the layout */
+/* @media (min-width: 769px) {
     .modal {
         position: fixed;
         top: 50%;
@@ -3303,52 +3309,56 @@ main {
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-lg);
     }
+} */
+
+/* Mobile PWA: iOS-style bottom sheets - ONLY when running as installed PWA (v1.10.1)
+   Uses .pwa-mode class added by JavaScript detection
+   Standard browsers get centered modals, PWA gets bottom sheets */
+body.pwa-mode .modal {
+    align-items: flex-end; /* Align modal-content to bottom */
+    touch-action: none; /* Prevent any touch interaction on backdrop */
 }
 
-/* Mobile: iOS-style bottom sheets */
-@media (max-width: 768px) {
-    .modal {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        top: auto;
-        transform: none;
-        max-width: 100%;
-        max-height: 85vh;
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
-        padding-bottom: calc(var(--safe-area-bottom) + 16px);
-        animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+body.pwa-mode .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - var(--bottom-nav-height) - 40px); /* Leave space for bottom nav + padding */
+    margin: 0;
+    margin-bottom: calc(var(--bottom-nav-height) + 20px); /* Above bottom nav */
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+    padding-bottom: 80px; /* Extra padding for bottom nav clearance */
+    animation: slideUpMobile 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    touch-action: pan-y; /* Only allow vertical scrolling, prevent dragging */
+    user-select: none; /* Prevent text selection that could trigger drag */
+}
 
-    /* Add drag handle to bottom sheets */
-    .modal::before {
-        content: '';
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 40px;
-        height: 4px;
-        background: var(--text-tertiary);
-        border-radius: 2px;
-        opacity: 0.5;
-    }
+/* Add drag handle to bottom sheets in PWA mode */
+body.pwa-mode .modal-content::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: var(--text-tertiary);
+    border-radius: 2px;
+    opacity: 0.5;
+}
 
-    .modal-header {
-        padding-top: 24px; /* Account for drag handle */
-    }
+body.pwa-mode .modal-header {
+    padding-top: 24px; /* Account for drag handle */
+}
 
-    @keyframes slideUp {
-        from {
-            transform: translateY(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+@keyframes slideUpMobile {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }
 
@@ -3497,7 +3507,7 @@ main {
 
     /* Adjust main content for bottom nav */
     .content {
-        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 20px);
+        padding-bottom: calc(var(--bottom-nav-height) + 20px);
     }
 
     /* Adjust navbar for mobile safe area */
@@ -3523,10 +3533,10 @@ main {
         padding: 20px;
     }
 
-    /* Full-width modals on mobile */
-    .modal-content {
+    /* Full-width modals on mobile - REMOVED, conflicts with centered modals */
+    /* .modal-content {
         width: 100%;
-    }
+    } */
 
     /* Optimize table for mobile */
     .table-container {
@@ -3571,7 +3581,7 @@ main {
 
     /* Fix 2: Responsive table - hide less important columns on mobile */
     /* Accounts table columns: 1=Username, 2=Full Name, 3=Phone, 4=MAC, 5=Tariff, 6=Reseller, 7=Status, 8=Expiration, 9=Actions */
-    /* Show: Full Name (2), MAC (4), Reseller (6), Expiration (8), Actions (9) */
+    /* Show: Full Name with Reseller below (2), MAC (4), Expiration (8), Actions (9) */
 
     /* Hide Username column (1st) in Accounts table */
     #accounts-table thead tr th:nth-child(1),
@@ -3588,6 +3598,12 @@ main {
     /* Hide Tariff Plan column (5th) in Accounts table */
     #accounts-table thead tr th:nth-child(5),
     #accounts-tbody tr td:nth-child(5) {
+        display: none;
+    }
+
+    /* Hide Reseller column (6th) in Accounts table - now shown below Full Name */
+    #accounts-table thead tr th:nth-child(6),
+    #accounts-tbody tr td:nth-child(6) {
         display: none;
     }
 
@@ -3620,85 +3636,436 @@ main {
         white-space: nowrap;
     }
 
-    /* Accounts Table: Full Name column (2nd) - allow wrap */
+    /* Accounts Table: Full Name column (2nd) - allow wrap, show reseller below */
     #accounts-table thead tr th:nth-child(2),
     #accounts-tbody tr td:nth-child(2) {
         white-space: normal;
         word-break: break-word;
-        min-width: 100px;
+        min-width: 110px;
         max-width: 140px;
     }
 
-    /* Accounts Table: MAC column (4th) - compact */
-    #accounts-table thead tr th:nth-child(4),
-    #accounts-tbody tr td:nth-child(4) {
-        font-size: 11px;
-        min-width: 100px;
+    /* Full Name Cell: Primary name and secondary reseller name */
+    .full-name-cell {
+        line-height: 1.3;
     }
 
-    /* Accounts Table: Reseller column (6th) - compact */
-    #accounts-table thead tr th:nth-child(6),
-    #accounts-tbody tr td:nth-child(6) {
-        white-space: normal;
-        word-break: break-word;
-        font-size: 11px;
-        min-width: 80px;
-        max-width: 120px;
+    .full-name-cell .name-primary {
+        font-size: 12px;
+        font-weight: 500;
+        color: #fff;
+        margin-bottom: 2px;
+    }
+
+    .full-name-cell .name-secondary {
+        font-size: 10px;
+        color: #999;
+        font-style: normal;
+    }
+
+    /* Accounts Table: MAC column (4th) - larger for readability (v1.10.1) */
+    #accounts-table thead tr th:nth-child(4),
+    #accounts-tbody tr td:nth-child(4) {
+        font-size: 12px;
+        min-width: 105px;
+        white-space: nowrap;
     }
 
     /* Accounts Table: Expiration column (8th) - compact */
     #accounts-table thead tr th:nth-child(8),
     #accounts-tbody tr td:nth-child(8) {
-        font-size: 11px;
-        min-width: 85px;
+        font-size: 10px;
+        min-width: 80px;
     }
 
-    /* Accounts Table: Actions column (9th) - compact */
+    /* Accounts Table: Actions column (9th) - compact with smaller buttons */
     #accounts-table thead tr th:nth-child(9),
     #accounts-tbody tr td:nth-child(9) {
-        width: 90px;
+        width: 80px;
+        min-width: 80px;
     }
 
-    /* Resellers Table: Name column (1st) - allow wrap */
+    /* Resellers Table: Optimize column widths for full screen (v1.10.1) */
+    /* Columns visible on mobile: Username (2), Balance (4), Actions (6) */
+
+    /* Hide Name column (1st) on mobile - not needed since username is shown */
     #resellers-table thead tr th:nth-child(1),
     #resellers-table tbody tr td:nth-child(1) {
-        white-space: normal;
-        word-break: break-word;
-        min-width: 100px;
-        max-width: 140px;
+        display: none;
     }
 
-    /* Resellers Table: Username column (2nd) - allow wrap */
+    /* Resellers Table: Username column (2nd) - wider for better visibility */
     #resellers-table thead tr th:nth-child(2),
     #resellers-table tbody tr td:nth-child(2) {
         white-space: normal;
         word-break: break-word;
-        min-width: 90px;
-        max-width: 130px;
+        width: 40%;
+        min-width: 120px;
+        font-size: 12px;
+        font-weight: 500;
     }
 
-    /* Resellers Table: Balance column (4th) - compact */
+    /* Resellers Table: Balance column (4th) - wider for better visibility */
     #resellers-table thead tr th:nth-child(4),
     #resellers-table tbody tr td:nth-child(4) {
-        min-width: 80px;
+        width: 35%;
+        min-width: 110px;
+        font-size: 12px;
+        white-space: nowrap;
     }
 
-    /* Resellers Table: Actions column (6th) - compact */
+    /* Resellers Table: Actions column (6th) - optimized width */
     #resellers-table thead tr th:nth-child(6),
     #resellers-table tbody tr td:nth-child(6) {
-        width: 90px;
+        width: 25%;
+        min-width: 85px;
     }
 
-    /* Make buttons in table smaller */
-    table .btn {
-        padding: 4px 8px;
-        font-size: 11px;
-        margin: 1px;
+    /* Make buttons in table smaller (v1.10.1 - even more compact) */
+    table .btn,
+    table .btn-sm,
+    table .btn-edit,
+    table .btn-delete,
+    table .btn-assign {
+        padding: 3px 6px !important;
+        font-size: 9px !important;
+        margin: 1px !important;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    /* Action buttons container - stack vertically on mobile */
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: stretch;
     }
 
     /* Compact toggle switch */
     .status-toggle {
         transform: scale(0.8);
+    }
+
+    /* Mobile Settings Page (v1.10.1 - redesigned, fixed bottom nav visibility) */
+    .mobile-settings-page {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+        background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
+        z-index: 100;
+        overflow-y: auto;
+        padding-bottom: 20px;
+    }
+
+    .mobile-settings-header {
+        position: sticky;
+        top: 0;
+        background: rgba(10, 14, 39, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        padding-top: calc(var(--safe-area-top) + 20px);
+        border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+        z-index: 100;
+    }
+
+    .mobile-settings-header h2 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #fff;
+        text-align: center;
+    }
+
+    .mobile-settings-content {
+        padding: 24px 20px;
+    }
+
+    /* User Profile Card */
+    .settings-profile-card {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .profile-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: 700;
+        color: white;
+        text-transform: uppercase;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .profile-info {
+        flex: 1;
+    }
+
+    .profile-username {
+        font-size: 20px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 4px;
+    }
+
+    .profile-role {
+        font-size: 14px;
+        color: var(--primary-color);
+        font-weight: 500;
+    }
+
+    /* Settings Options */
+    .settings-options {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .settings-option-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+    }
+
+    .settings-option-btn:active {
+        transform: scale(0.98);
+    }
+
+    .settings-option-btn:not(.settings-logout):hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .option-icon {
+        font-size: 24px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 10px;
+    }
+
+    .option-text {
+        flex: 1;
+        font-size: 16px;
+        font-weight: 500;
+        color: #fff;
+        text-align: left;
+    }
+
+    .option-arrow {
+        font-size: 24px;
+        color: #666;
+    }
+
+    /* Logout Button Special Styling */
+    .settings-logout {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+        border-color: rgba(239, 68, 68, 0.3);
+        margin-top: 12px;
+    }
+
+    .settings-logout:hover {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+        border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .settings-logout .option-icon {
+        background: rgba(239, 68, 68, 0.2);
+    }
+
+    .settings-logout .option-text {
+        color: #ef4444;
+    }
+
+    .settings-logout .option-arrow {
+        color: #ef4444;
+    }
+
+    /* Change Password Modal */
+    .change-password-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        position: relative;
+        background: var(--card-bg);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 16px;
+        max-width: 400px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .modal-close-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #fff;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .modal-close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #999;
+        margin-bottom: 8px;
+    }
+
+    .form-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        color: #fff;
+        transition: all 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .password-error {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        color: #ef4444;
+        font-size: 14px;
+        margin-top: 12px;
+    }
+
+    .modal-footer {
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-cancel,
+    .btn-save {
+        flex: 1;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+
+    .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-save:active {
+        transform: translateY(0);
     }
 
     /* Fix 3: Mobile-optimized tab navigation - hide navbar/stats/tabs when not on dashboard */

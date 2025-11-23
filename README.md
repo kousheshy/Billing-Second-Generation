@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.10.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.10.1-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,32 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.10.0
+**Version:** 1.10.1
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.10.1** (Nov 2025) - PWA Modal & Template Sync Bug Fixes
+  - **Modal Centering Fix**: Fixed modals sliding in from right in standard browsers (conflicting CSS transform removed)
+  - **PWA Mode Detection**: JavaScript-based detection using `display-mode: standalone`, adds `pwa-mode` class to body
+  - **Bottom Navigation Positioning**: Moved from `bottom: 0` to `bottom: 20px` for better tap accessibility
+  - **SMS Template Sync**: Synced all 8 templates from local to production database, fixed corrupted Template ID 2
+  - **File Permissions Fix**: Corrected `sms-functions.js` permissions from 600 to 644 for web server access
+  - **Modal Scroll Fix**: Added `overscroll-behavior: contain` and body scroll locking to prevent background scroll
+  - **PWA Modal Positioning**: Fixed vertical centering, prevented dragging, ensured buttons visible above bottom nav
+  - **Name Auto-Capitalization**: PWA-only feature capitalizes first letter of each word in name field (Add Account modal)
+  - **Technical Changes**:
+    - `detectPWAMode()` function for standalone detection
+    - `initNameCapitalization()` for real-time capitalization with cursor preservation
+    - Body scroll lock on modal open: `overflow: hidden`, `position: fixed`
+    - Touch controls: `touch-action: pan-y` (modal content), `touch-action: none` (backdrop)
+    - Modal positioning: `margin-bottom: calc(var(--bottom-nav-height) + 20px)`
+  - **Database**: Executed SQL UPDATE on production to sync templates, fixed Persian text in Template ID 2
+  - **Files Modified**: dashboard.css, dashboard.js, dashboard.html, sms-functions.js (permissions), _sms_templates table
+  - **User Feedback**: "آره مشکل حل شد" (modal fix), "Works good" (bottom nav), all issues resolved
 
 - **v1.10.0** (Nov 2025) - iOS-Optimized PWA (Progressive Web App)
   - **iOS Safe-Area Support**: Automatic padding for iPhone notch and home indicator using `env(safe-area-inset-*)`
