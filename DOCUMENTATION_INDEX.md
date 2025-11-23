@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.9.1!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.10.1!
 
 ---
 
@@ -61,7 +61,7 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.9.1!
 
 6. **[CHANGELOG.md](CHANGELOG.md)** (10 KB)
    - Version history
-   - Release notes for v1.9.1, v1.9.0, v1.8.0, etc.
+   - Release notes for v1.10.1, v1.9.0, v1.8.0, etc.
    - Breaking changes
    - Future roadmap
    - Migration guides
@@ -69,7 +69,7 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.9.1!
 
    **Check this** for version updates and changes!
 
-7. **[PERSIAN_RTL_TYPOGRAPHY.md](PERSIAN_RTL_TYPOGRAPHY.md)** (15 KB) **NEW in v1.9.1**
+7. **[PERSIAN_RTL_TYPOGRAPHY.md](PERSIAN_RTL_TYPOGRAPHY.md)** (15 KB) **NEW in v1.10.1**
    - Persian RTL support implementation
    - BYekan+ font integration guide
    - Automatic text direction detection
@@ -79,15 +79,25 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.9.1!
 
    **Read this** for Persian language features!
 
-8. **[VERSION_1.9.1_SUMMARY.md](VERSION_1.9.1_SUMMARY.md)** (10 KB) **NEW in v1.9.1**
-   - Complete technical summary of v1.9.1
+8. **[VERSION_1.9.1_SUMMARY.md](VERSION_1.9.1_SUMMARY.md)** (10 KB) **NEW in v1.10.1**
+
+8. **[VERSION_1.10.1_BUG_FIXES.md](VERSION_1.10.1_BUG_FIXES.md)** (28 KB) **NEW in v1.10.1**
+   - Complete PWA bug fix documentation
+   - Modal centering and positioning fixes
+   - SMS template sync procedures
+   - Root cause analysis for all issues
+   - Deployment and rollback guides
+   - Testing checklist
+
+   **Read this** for v1.10.1 bug fixes!
+   - Complete technical summary of v1.10.1
    - Detailed file changes with line numbers
    - Deployment instructions
    - Rollback procedures
    - Testing checklist
    - Performance metrics
 
-   **Use this** for upgrading to v1.9.1!
+   **Use this** for upgrading to v1.10.1!
 
 ---
 

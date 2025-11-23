@@ -4,9 +4,10 @@
 
 The ShowBox Billing Panel MVP is a fully functional IPTV billing and account management system designed to streamline subscription management, reseller operations, and business analytics. The MVP focuses on core features essential for day-to-day operations while maintaining scalability for future enhancements.
 
-**Version:** 1.0.0
-**Status:** Production Ready 
-**Release Date:** January 2025
+**Version:** 1.10.1
+**Status:** Production Ready ✅
+**Release Date:** November 2025
+**Latest Update:** v1.10.1 - PWA Modal & Template Sync Bug Fixes
 
 ---
 

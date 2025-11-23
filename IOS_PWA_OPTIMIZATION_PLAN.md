@@ -1050,3 +1050,64 @@ cp dashboard.js.backup.1.9.1 dashboard.js
 ---
 
 **End of Implementation Plan**
+
+---
+
+## Version 1.10.1 Bug Fixes (November 23, 2025)
+
+### Critical PWA Issues Resolved
+
+Following the initial v1.10.0 rollout, user feedback identified several critical issues that were addressed in v1.10.1:
+
+#### 1. Modal Centering in Standard Browsers ✅
+**Issue**: Modals sliding in from right instead of centering  
+**Fix**: Removed conflicting CSS transform on modal container  
+**Impact**: Standard browsers now display modals correctly
+
+#### 2. PWA Mode Detection ✅
+**Enhancement**: JavaScript-based detection using `display-mode: standalone`  
+**Implementation**: Added `pwa-mode` class to body for PWA-specific styles  
+**Impact**: Clean separation between PWA and browser experiences
+
+#### 3. Bottom Navigation Positioning ✅
+**Issue**: Bottom nav too low, difficult to tap  
+**Fix**: Moved from `bottom: 0` to `bottom: 20px`  
+**Impact**: Significantly improved tap accessibility
+
+#### 4. SMS Templates Database Sync ✅
+**Issue**: Production templates corrupted ("Welcome Kooni" instead of Persian text)  
+**Fix**: Synced all 8 templates from local to production  
+**Impact**: Correct SMS messages now sent to customers
+
+#### 5. Modal Scrolling in PWA ✅
+**Issue**: Background scrolled instead of modal content  
+**Fix**: Added `overscroll-behavior: contain` and body scroll lock  
+**Impact**: Users can now access bottom buttons in modals
+
+#### 6. PWA Modal Positioning & Dragging ✅
+**Issues**: Not centered, draggable, buttons hidden  
+**Fix**: Proper positioning, touch-action controls, padding adjustments  
+**Impact**: Professional modal experience in PWA mode
+
+#### 7. Name Auto-Capitalization ✅
+**Enhancement**: Auto-capitalize first letter of each word (PWA only)  
+**Implementation**: HTML `autocapitalize="words"` + JavaScript enforcement  
+**Impact**: Improved data entry quality for customer names
+
+### Files Modified in v1.10.1
+- `dashboard.css` - Modal centering, positioning, scroll behavior
+- `dashboard.js` - PWA detection, scroll locking, name capitalization
+- `dashboard.html` - Name field autocapitalize attribute
+- `sms-functions.js` - File permissions (644)
+- `_sms_templates` - Database sync (8 templates)
+
+### User Feedback
+- "آره مشکل حل شد" (Yes, the problem is fixed) - Modal centering
+- "Works good" - Bottom navigation
+- All reported issues resolved ✅
+
+See [VERSION_1.10.1_BUG_FIXES.md](VERSION_1.10.1_BUG_FIXES.md) for complete documentation.
+
+---
+
+**Document Last Updated**: November 23, 2025 (v1.10.1)
