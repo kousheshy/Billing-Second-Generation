@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.10.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.10.2-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,29 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.10.1
+**Version:** 1.10.2
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.10.2** (Nov 2025) - SMS Functionality, Renewal Notifications & UI Enhancements
+  - **PWA Full Name Display Fix**: Reseller name below customer name now only shows in PWA mode, not standard browsers
+  - **Automatic SMS for Resellers**: Welcome SMS works for all users with automatic fallback to admin's SMS settings
+  - **Automatic Renewal SMS**: Send SMS notification on every account renewal (admin or reseller)
+  - **Transaction Database Fix**: Corrected column name from 'reseller_id' to 'for_user' in renewal transactions
+  - **Alert Modal Visibility**: Moved alert element to end of body to fix visibility over modals
+  - **SMS Reseller Initialization**: Auto-initialize SMS settings for new and existing resellers
+  - **Technical Changes**:
+    - `sendWelcomeSMS()` and `sendRenewalSMS()` now fall back to admin SMS if reseller not configured
+    - Persian renewal template: "عزیز، سرویس شوباکس شما با موفقیت تمدید شد..."
+    - Alert placement: dashboard.html line 115 → line 1543
+    - PWA detection: `isPWAMode = document.body.classList.contains('pwa-mode')`
+  - **Files Modified**: dashboard.js, sms_helper.php, add_account.php, edit_account.php, add_reseller.php, dashboard.html, dashboard.css
+  - **Files Created**: initialize_reseller_sms.php (migration script)
+  - **User Feedback**: All critical issues resolved ("مشکل حل شد", "Works good")
 
 - **v1.10.1** (Nov 2025) - PWA Modal & Template Sync Bug Fixes
   - **Modal Centering Fix**: Fixed modals sliding in from right in standard browsers (conflicting CSS transform removed)

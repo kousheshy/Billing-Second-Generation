@@ -1151,17 +1151,27 @@ function renderAccountsPage() {
                     <span class="toggle-slider"></span>
                    </label>`;
 
-            // iOS PWA: Show reseller name below full name on mobile (v1.10.1)
-            const fullNameWithReseller = `
-                <div class="full-name-cell">
-                    <div class="name-primary">${account.full_name || ''}</div>
-                    <div class="name-secondary">${account.reseller_name || '<span style="font-style: italic;">Unassigned</span>'}</div>
-                </div>
-            `;
+            // iOS PWA: Show reseller name below full name ONLY in PWA mode (v1.10.1)
+            // Check if running in PWA mode
+            const isPWAMode = document.body.classList.contains('pwa-mode');
+
+            let fullNameDisplay;
+            if (isPWAMode) {
+                // PWA mode: Show reseller name below customer name
+                fullNameDisplay = `
+                    <div class="full-name-cell">
+                        <div class="name-primary">${account.full_name || ''}</div>
+                        <div class="name-secondary">${account.reseller_name || '<span style="font-style: italic;">Unassigned</span>'}</div>
+                    </div>
+                `;
+            } else {
+                // Standard browser: Show only customer name
+                fullNameDisplay = account.full_name || '';
+            }
 
             tr.innerHTML = `
                 <td>${account.username || ''}</td>
-                <td>${fullNameWithReseller}</td>
+                <td>${fullNameDisplay}</td>
                 <td>${account.phone_number || ''}</td>
                 <td>${account.mac || ''}</td>
                 <td>${account.tariff_plan || ''}</td>

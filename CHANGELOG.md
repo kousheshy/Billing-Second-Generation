@@ -7,6 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.2] - 2025-11-23
+
+### Fixed - SMS Functionality, Renewal Notifications & UI Enhancements
+
+**Overview**
+Critical fixes for reseller SMS functionality, automatic renewal notifications, alert modal visibility, and PWA full name display behavior.
+
+**Bug Fixes**
+
+1. **PWA Full Name Display** (Critical UX Fix)
+   - **Issue**: Reseller name showing below customer name in standard browsers (should be PWA-only)
+   - **User Report**: "در standard browser ما در قسمت full name در account management پایین اسم مشترک نام reseller رو الان داریم که این غلط هستش"
+   - **Fix**: Added PWA mode detection in JavaScript using `document.body.classList.contains('pwa-mode')`
+   - **Conditional Rendering**: Full name display now checks `isPWAMode` before showing reseller name
+   - **Impact**: Standard browsers show only customer name, PWA shows customer + reseller name
+   - **Files Modified**: `dashboard.js` (lines 1154-1170)
+
+2. **Automatic SMS for Resellers** (Feature Completion)
+   - **Issue**: Resellers couldn't send automatic welcome SMS when adding accounts
+   - **User Request**: "این مورد هیچ ارتباطی به permission برای message که به reseller ها توسط ادمین داده میشود و یا از آنها گرفته میشود نداره. این اتفاق برای همه باید همیشه رخ بده"
+   - **Implementation**: Added fallback mechanism in `sendWelcomeSMS()` function
+   - **Fallback Logic**:
+     - First tries reseller's SMS settings (API token + sender number)
+     - If reseller SMS not configured, automatically uses admin's SMS settings
+     - Logs who actually sent the SMS (reseller or admin fallback)
+   - **Impact**: SMS works for ALL users automatically, independent of messaging permissions
+   - **Files Modified**: `sms_helper.php` (lines 23-111), `add_account.php` (lines 559-573)
+
+3. **Automatic Renewal SMS** (New Feature)
+   - **Issue**: No SMS sent when accounts are renewed
+   - **User Request**: "حالا باید به ازای هر تمدید که در سیستم انجام میشه فارغ از اینکه کدام یوزر ادمین یا ریسلر انجام میده باید به شماره آن اگر شماره دارد sms برود"
+   - **Implementation**: Added `sendRenewalSMS()` function with same fallback mechanism as welcome SMS
+   - **Persian Template**: "عزیز، سرویس شوباکس شما با موفقیت تمدید شد. تاریخ اتمام جدید: {expiry_date}. از اعتماد شما سپاسگزاریم!"
+   - **Integration**: Added SMS sending to `edit_account.php` renewal flow (lines 256-275)
+   - **Non-blocking**: SMS failures don't disrupt account renewal process
+   - **Variables**: {name}, {mac}, {expiry_date} replaced with actual values
+   - **Files Modified**: `sms_helper.php` (lines 130-216, 263-271), `edit_account.php` (lines 10, 256-275)
+
+4. **Transaction Database Error Fix** (Critical Bug)
+   - **Issue**: "SQLSTATE[42S22]: Column not found: 1054 Unknown column 'reseller_id' in 'field list'"
+   - **User Scenario**: Kamiksh reseller tried to renew account via Edit button
+   - **Root Cause**: `edit_account.php` used wrong column name 'reseller_id' instead of 'for_user'
+   - **Fix**: Updated INSERT statement with correct _transactions table schema
+   - **Correct Columns**: `creator, for_user, amount, type, details, timestamp`
+   - **Files Modified**: `edit_account.php` (lines 129-137)
+
+5. **Alert Modal Visibility** (Critical UX Fix - 3 Attempts)
+   - **Issue**: Error messages (e.g., "MAC address already in use") appearing behind modals, invisible to users
+   - **User Feedback**: "still appearing behind the modal"
+   - **Attempt 1**: Increased z-index to 100000 - Failed
+   - **Attempt 2**: Added !important to CSS, z-index 999999 - Failed
+   - **Root Cause**: Alert inside .content div (rendered early), modals at end of body (rendered later) - DOM order overrides z-index
+   - **Final Solution**: Moved alert element in HTML from line 115 to line 1543 (before closing </body>)
+   - **Result**: Alert now guaranteed on top due to both DOM order AND z-index
+   - **Files Modified**: `dashboard.html` (removed line 115, added line 1543), `dashboard.css` (maintained z-index: 999999 !important)
+
+6. **SMS Reseller Initialization** (Enhancement)
+   - **New Script**: `initialize_reseller_sms.php` - Initializes SMS settings for all existing resellers
+   - **Functionality**: Creates default SMS settings and 4 templates for resellers who don't have SMS configured
+   - **Templates Created**: Expiry Reminder, Welcome, Renewal, Payment Reminder (all in Persian)
+   - **Integration**: `add_reseller.php` now automatically calls `initializeResellerSMS()` when creating new resellers
+   - **Result**: All resellers (new and existing) can automatically send welcome/renewal SMS
+   - **Files Modified**: `add_reseller.php` (lines 83-85), `sms_helper.php` (lines 218-298)
+
+**Technical Implementation**
+
+- **SMS Fallback Mechanism**:
+  - Get user's SMS settings from _sms_settings table
+  - If empty api_token or sender_number, fall back to admin (super_user = 1)
+  - Track actual sender in `sent_by` field for audit logging
+  - Return false if neither user nor admin has SMS configured
+
+- **Renewal SMS Flow**:
+  - Edit account triggers renewal check (plan_id != 0 && phone exists)
+  - Get account owner ID for SMS settings lookup
+  - Send personalized renewal SMS via `sendRenewalSMS()`
+  - Non-blocking try-catch prevents SMS errors from failing renewal
+  - Log all SMS attempts with status (sent/failed)
+
+- **Database Schema**:
+  - _transactions: `id, creator, for_user, amount, currency, type, details, timestamp`
+  - _sms_logs: `account_id, mac, recipient_name, recipient_number, message, message_type, sent_by, sent_at, status, api_response, bulk_id, error_message, created_at`
+  - _sms_settings: `user_id, api_token, sender_number, auto_send_enabled, days_before_expiry, base_url`
+  - _sms_templates: `user_id, name, template, description, created_at, updated_at`
+
+**Files Modified**
+- `dashboard.js` - PWA full name display conditional rendering
+- `sms_helper.php` - Welcome & renewal SMS with fallback, reseller initialization
+- `add_account.php` - Welcome SMS integration
+- `edit_account.php` - Transaction fix, renewal SMS integration
+- `add_reseller.php` - Auto-initialize SMS for new resellers
+- `dashboard.html` - Alert placement fix (line 115 → line 1543)
+- `dashboard.css` - Alert z-index enhancement
+
+**Files Created**
+- `initialize_reseller_sms.php` - Migration script for existing resellers
+
+**Deployment Date**: November 23, 2025
+
+---
+
 ## [1.10.1] - 2025-11-23
 
 ### Fixed - PWA Modal & Template Sync Issues

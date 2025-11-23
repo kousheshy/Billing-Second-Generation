@@ -564,7 +564,8 @@ if($decoded->status == 'OK')
                 $account_id = $account_row ? $account_row['id'] : null;
 
                 // Send welcome SMS (non-blocking - won't affect account creation if it fails)
-                sendWelcomeSMS($pdo, $user_info['id'], $name, $mac, $phone_number, $expire_billing_date, $account_id);
+                // Use reseller_info['id'] to ensure the SMS is sent using the account owner's settings
+                sendWelcomeSMS($pdo, $reseller_info['id'], $name, $mac, $phone_number, $expire_billing_date, $account_id);
             } catch (Exception $e) {
                 // Silently fail - don't disrupt account creation
                 error_log("Welcome SMS failed: " . $e->getMessage());

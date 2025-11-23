@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 
 include('config.php');
 include('api.php');
+include('sms_helper.php'); // Include SMS helper functions
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1)
 {
@@ -125,11 +126,12 @@ try {
                 $stmt->execute([$new_balance, $user_info['id']]);
 
                 // Record transaction
-                $stmt = $pdo->prepare('INSERT INTO _transactions (reseller_id, amount, type, description, timestamp) VALUES (?,?,?,?,?)');
+                $stmt = $pdo->prepare('INSERT INTO _transactions (creator, for_user, amount, type, details, timestamp) VALUES (?,?,?,?,?,?)');
                 $stmt->execute([
+                    $user_info['username'],
                     $user_info['id'],
                     -$plan['price'],
-                    'renewal',
+                    1, // type: 1 for renewal
                     'Account renewal: ' . $original_username . ' - Plan: ' . $plan['name'],
                     time()
                 ]);
@@ -250,6 +252,27 @@ try {
         curl_close($curl);
 
         error_log("edit_account.php: Theme update response: " . $theme_result);
+    }
+
+    // Send renewal SMS if account was renewed (plan_id != 0) and phone number exists
+    if($plan_id != 0 && !empty($phone)) {
+        try {
+            // Get the account owner's ID for SMS settings
+            $account_owner_id = $account['reseller'] ?: $user_info['id'];
+
+            // Get the account ID
+            $stmt = $pdo->prepare('SELECT id FROM _accounts WHERE mac = ? LIMIT 1');
+            $stmt->execute([$mac]);
+            $account_row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $account_id = $account_row ? $account_row['id'] : null;
+
+            // Send renewal SMS (non-blocking - won't affect account update if it fails)
+            // Uses account owner's SMS settings, falls back to admin if not configured
+            sendRenewalSMS($pdo, $account_owner_id, $name, $mac, $phone, $new_expiration_date, $account_id);
+        } catch (Exception $e) {
+            // Silently fail - don't disrupt account update
+            error_log("Renewal SMS failed: " . $e->getMessage());
+        }
     }
 
     $response['error'] = 0;

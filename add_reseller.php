@@ -12,6 +12,7 @@ header('Content-Type: application/json');
 
 try {
     include('config.php');
+    include('sms_helper.php'); // Include SMS helper functions
 
     if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
         echo json_encode(['error' => 1, 'err_msg' => 'Not logged in']);
@@ -75,6 +76,13 @@ try {
     // Observer status is stored in is_observer field
     $stmt = $pdo->prepare('INSERT INTO _users (username, password, name, email, max_users, balance, theme, ip_ranges, currency_id, plans, super_user, is_observer, permissions, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
     $stmt->execute([$username, $password, $name, $email, $max_users, $balance, $theme, $use_ip_ranges, $currency, $plans, 0, $is_observer, $permissions, time()]);
+
+    // Get the newly created reseller's ID
+    $new_reseller_id = $pdo->lastInsertId();
+
+    // Initialize SMS settings and templates for the new reseller
+    // This allows them to automatically send welcome SMS when adding accounts
+    initializeResellerSMS($pdo, $new_reseller_id);
 
     echo json_encode(['error' => 0, 'err_msg' => '']);
 

@@ -989,30 +989,31 @@ input[type="number"] {
 
 /* Alerts */
 .alert {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
     padding: var(--spacing-md) var(--spacing-lg);
     border-radius: var(--radius-sm);
     display: none;
     font-weight: 500;
-    z-index: 10000;
+    z-index: 999999 !important;
     min-width: 300px;
     max-width: 600px;
     text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     animation: slideDown var(--transition-normal);
+    pointer-events: all !important;
 }
 
 @keyframes slideDown {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translate(-50%, -20px) !important;
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate(-50%, 0) !important;
     }
 }
 
@@ -1029,7 +1030,8 @@ input[type="number"] {
 }
 
 .alert.show {
-    display: block;
+    display: block !important;
+    z-index: 999999 !important;
 }
 
 /* Settings Item */
