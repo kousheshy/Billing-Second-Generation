@@ -55,31 +55,20 @@ try {
     }
 
     // Get and validate input parameters
-    if(!isset($_GET['tariff_id']) || !isset($_GET['name']) || !isset($_GET['currency']) || !isset($_GET['price']) || !isset($_GET['days'])) {
+    if(!isset($_GET['plan_id']) || !isset($_GET['name']) || !isset($_GET['price']) || !isset($_GET['days'])) {
         echo json_encode(['error' => 1, 'err_msg' => 'Missing required parameters']);
         exit;
     }
 
-    $tariff_id = trim($_GET['tariff_id']); // Tariff ID from Stalker Portal
+    $plan_id = intval($_GET['plan_id']);
     $name = trim($_GET['name']);
-    $currency = strtoupper(trim($_GET['currency']));
     $price = trim($_GET['price']);
     $days = trim($_GET['days']);
     $category = isset($_GET['category']) ? trim($_GET['category']) : null;
 
     // Validate inputs
-    if(empty($tariff_id)) {
-        echo json_encode(['error' => 1, 'err_msg' => 'Tariff ID is required']);
-        exit;
-    }
-
     if(empty($name)) {
         echo json_encode(['error' => 1, 'err_msg' => 'Plan name is required']);
-        exit;
-    }
-
-    if(!in_array($currency, ['GBP', 'USD', 'EUR', 'IRR'])) {
-        echo json_encode(['error' => 1, 'err_msg' => 'Invalid currency']);
         exit;
     }
 
@@ -100,37 +89,25 @@ try {
         exit;
     }
 
-    // Use tariff_id as external_id (the Stalker Portal tariff plan ID)
-    $plan = $tariff_id;
+    // Check if plan exists
+    $stmt = $pdo->prepare('SELECT * FROM _plans WHERE id = ?');
+    $stmt->execute([$plan_id]);
+    $existing_plan = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Check if this tariff ID + currency combination already exists
-    $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id = ? AND currency_id = ?');
-    $stmt->execute([$plan, $currency]);
-
-    if($stmt->rowCount() > 0) {
-        // This combination already exists, update it
-        $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=?, category=? WHERE id=?');
-        $stmt->execute([$name, $price, $days, $category, $plan_info['id']]);
-
-        echo json_encode([
-            'error' => 0,
-            'err_msg' => '',
-            'message' => 'Plan updated successfully'
-        ]);
-
-    } else {
-        // Insert new plan
-        $stmt = $pdo->prepare('INSERT INTO _plans (external_id, name, currency_id, price, days, category) VALUES (?,?,?,?,?,?)');
-        $stmt->execute([$plan, $name, $currency, $price, $days, $category]);
-
-        echo json_encode([
-            'error' => 0,
-            'err_msg' => '',
-            'message' => 'Plan created successfully'
-        ]);
+    if (!$existing_plan) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Plan not found']);
+        exit;
     }
+
+    // Update the plan
+    $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=?, category=? WHERE id=?');
+    $stmt->execute([$name, $price, $days, $category, $plan_id]);
+
+    echo json_encode([
+        'error' => 0,
+        'err_msg' => '',
+        'message' => 'Plan updated successfully'
+    ]);
 
 } catch(PDOException $e) {
     echo json_encode([

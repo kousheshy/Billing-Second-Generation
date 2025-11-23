@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.10.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,29 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.10.2
+**Version:** 1.11.0
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.0** (Nov 2025) - Plan Management Enhancements & Renewal Filtering
+  - **Edit Plan Functionality**: Admins can now edit existing plans (name, price, duration, category) without deletion
+  - **Plan Category System**: Plans categorized into New Device, Application, and Renew Device types
+  - **Renewal Plan Filtering**: Resellers only see "Renew Device" plans when renewing accounts
+  - **Category Badges**: Color-coded visual indicators (Blue: New Device, Green: Application, Orange: Renew Device)
+  - **Smart Filtering**: Context-aware plan selection prevents confusion and guides correct workflow
+  - **Database Migration**: Added `category` column to `_plans` table
+  - **Technical Changes**:
+    - `edit_plan.php`: New endpoint for plan updates with validation
+    - `get_plans.php`: Added `renewal_mode` parameter for filtering by category
+    - `add_plan.php`: Added category field support with validation
+    - Category badges styled in dashboard.css (lines 2890-2920)
+    - Edit Plan modal with pre-populated form and currency lock
+  - **Files Created**: edit_plan.php (197 lines), migration_add_plan_category.sql
+  - **UI Improvements**: Edit button in Plans table, category dropdown in Add/Edit Plan modals
 
 - **v1.10.2** (Nov 2025) - SMS Functionality, Renewal Notifications & UI Enhancements
   - **PWA Full Name Display Fix**: Reseller name below customer name now only shows in PWA mode, not standard browsers

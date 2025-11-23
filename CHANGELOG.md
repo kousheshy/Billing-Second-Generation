@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.0] - 2025-11-23
+
+### Added - Plan Management Enhancements & Renewal Filtering
+
+**Overview**
+Major upgrade to plan management with edit functionality, plan categorization system, and intelligent renewal filtering for resellers.
+
+**Features**
+
+1. **Edit Plan Functionality** (New Feature)
+   - Admins can now edit existing plans without deletion
+   - **Editable Fields**: Plan Name, Price, Duration (Days), Category
+   - **Non-Editable Fields**: Plan ID (External ID), Currency
+   - **Permissions**: 
+     - Super Admin: Can edit all plans
+     - Reseller Admin: Can edit plans (based on existing permissions)
+     - Observers: Edit button disabled
+   - **UI**: Edit button in Plans table with pencil icon
+   - **Modal**: Pre-populated form with current plan data
+   - **Validation**: Required fields, positive numbers, currency lock
+   - **Files**: `edit_plan.php` (new), `dashboard.html` (lines 721-803), `dashboard.js` (lines 2201-2294)
+
+2. **Plan Category System** (New Feature)
+   - Plans can be categorized into three types:
+     - **New Device** (`new_device`) - Plans for new device activations
+     - **Application** (`application`) - Plans for application-only subscriptions
+     - **Renew Device** (`renew_device`) - Plans specifically for renewals
+   - **Database**: New `category` VARCHAR(20) column in `_plans` table
+   - **Default**: Existing plans default to 'new_device'
+   - **UI**: Category dropdown in Add/Edit Plan modals (required field)
+   - **Display**: Category column in Plans table with color-coded badges
+   - **Colors**: 
+     - New Device: Blue (#6366f1)
+     - Application: Green (#10b981)
+     - Renew Device: Orange (#f59e0b)
+   - **Migration**: `migration_add_plan_category.sql` script
+   - **Files**: `add_plan.php` (lines 23, 64-70), `get_plans.php` (lines 78-82), `dashboard.html`, `dashboard.js`, `dashboard.css`
+
+3. **Renewal Plan Filtering** (Smart Filtering)
+   - When renewing accounts, resellers only see "Renew Device" plans
+   - **Context Detection**: Edit Account modal in "renew mode"
+   - **Filtering Logic**: `category = 'renew_device'` in SQL query
+   - **Fallback**: If no renewal plans exist, shows all plans
+   - **UX Benefit**: Prevents confusion, guides resellers to correct plans
+   - **Files**: `get_plans.php` (lines 58-95), `dashboard.js` (lines 1520-1530)
+
+**Technical Implementation**
+
+- **Database Changes**:
+  - Added `category` column to `_plans` table
+  - Migration script updates existing plans to 'new_device'
+  
+- **API Changes**:
+  - `get_plans.php`: Added `renewal_mode` parameter for filtering
+  - `add_plan.php`: Accepts and validates `category` field
+  - `edit_plan.php`: New endpoint for plan updates (POST request)
+  
+- **Frontend Changes**:
+  - New Edit Plan modal with form validation
+  - Category badges with color coding
+  - Dynamic plan filtering based on context
+  - Edit button with permissions check
+
+**Files Modified**
+- `add_plan.php` - Added category field support
+- `get_plans.php` - Added renewal filtering logic
+- `dashboard.css` - Category badge styles (lines 2890-2920)
+- `dashboard.html` - Edit Plan modal structure (35 lines)
+- `dashboard.js` - Edit functionality and filtering (94 lines)
+
+**Files Created**
+- `edit_plan.php` - Plan update endpoint (197 lines)
+- `migration_add_plan_category.sql` - Database migration script
+- `PLAN_MANAGEMENT_ENHANCEMENTS.md` - Complete feature documentation
+- `PLAN_CATEGORY_QUICK_REFERENCE.md` - Quick reference guide
+- `RENEWAL_FILTERING_IMPLEMENTATION.md` - Technical implementation details
+
+**Database Migration Required**
+```sql
+ALTER TABLE _plans ADD COLUMN category VARCHAR(20) DEFAULT 'new_device' AFTER duration;
+UPDATE _plans SET category = 'new_device' WHERE category IS NULL;
+```
+
+**Testing Checklist**
+- [ ] Edit plan functionality (all fields)
+- [ ] Category selection in Add Plan modal
+- [ ] Category display in Plans table
+- [ ] Renewal filtering (reseller sees only Renew Device plans)
+- [ ] Permission checks (observer cannot edit)
+- [ ] Currency lock in Edit Plan modal
+- [ ] Category badges color-coded correctly
+
+**Benefits**
+- **Improved UX**: No more deleting and recreating plans
+- **Better Organization**: Plans categorized by purpose
+- **Guided Workflow**: Resellers see only relevant renewal plans
+- **Reduced Errors**: Context-aware plan selection
+- **Flexibility**: Easy plan management for admins
+
+**Deployment Requirements**
+1. Run migration script on production database
+2. Upload all modified files
+3. Clear browser cache for updated JavaScript
+4. Test renewal filtering with reseller account
+
+---
+
 ## [1.10.2] - 2025-11-23
 
 ### Fixed - SMS Functionality, Renewal Notifications & UI Enhancements

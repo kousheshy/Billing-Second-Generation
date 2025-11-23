@@ -189,6 +189,7 @@
                         <tr>
                             <th>Plan ID</th>
                             <th>Name</th>
+                            <th>Category</th>
                             <th>Currency</th>
                             <th>Price</th>
                             <th>Days</th>
@@ -196,7 +197,7 @@
                         </tr>
                     </thead>
                     <tbody id="plans-tbody">
-                        <tr><td colspan="6" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1223,7 +1224,71 @@
                     <input type="number" name="days" id="plan-days-input" required readonly>
                     <small>Automatically filled from selected tariff</small>
                 </div>
+                <div class="form-group">
+                    <label>Plan Category *</label>
+                    <select name="category" required>
+                        <option value="">-- Select Category --</option>
+                        <option value="new_device">New Device</option>
+                        <option value="application">Application</option>
+                        <option value="renew_device">Renew Device</option>
+                    </select>
+                    <small>Choose the category for this plan (for filtering purposes)</small>
+                </div>
                 <button type="submit" class="btn-primary">Create Plan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Plan Modal -->
+    <div id="editPlanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Plan</h3>
+                <button class="close-btn" onclick="closeModal('editPlanModal')">&times;</button>
+            </div>
+            <form onsubmit="submitEditPlan(event)">
+                <input type="hidden" id="edit-plan-id" name="plan_id">
+                <input type="hidden" id="edit-plan-external-id" name="external_id">
+                <input type="hidden" id="edit-plan-currency" name="currency">
+
+                <div class="form-group">
+                    <label>Plan ID</label>
+                    <input type="text" id="edit-plan-id-display" readonly>
+                    <small>Plan ID cannot be changed</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Plan Name *</label>
+                    <input type="text" name="name" id="edit-plan-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Currency</label>
+                    <input type="text" id="edit-plan-currency-display" readonly>
+                    <small>Currency cannot be changed</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Price *</label>
+                    <input type="number" step="0.01" name="price" id="edit-plan-price" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Duration (Days) *</label>
+                    <input type="number" name="days" id="edit-plan-days" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Plan Category *</label>
+                    <select name="category" id="edit-plan-category" required>
+                        <option value="">-- Select Category --</option>
+                        <option value="new_device">New Device</option>
+                        <option value="application">Application</option>
+                        <option value="renew_device">Renew Device</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary">Update Plan</button>
             </form>
         </div>
     </div>
@@ -1291,19 +1356,19 @@
     <div id="editAccountModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Edit Account</h3>
+                <h3>Edit/Renew Account</h3>
                 <button class="close-btn" onclick="closeModal('editAccountModal')">&times;</button>
             </div>
             <form onsubmit="return submitEditAccount(event)" id="editAccountForm">
                 <input type="hidden" id="edit-original-username" name="original_username">
 
-                <div class="form-group">
+                <div class="form-group" id="edit-username-group">
                     <label>Username*</label>
                     <input type="text" id="edit-username" name="username" required>
                     <small>Must be unique.</small>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="edit-password-group">
                     <label>Password</label>
                     <input type="text" id="edit-password" name="password" placeholder="">
                     <small>Leave blank for making no change.</small>
@@ -1324,7 +1389,8 @@
                     <input type="text" id="edit-phone" name="phone">
                 </div>
 
-                <div class="form-group">
+                <!-- Admin-only fields -->
+                <div class="form-group" id="edit-plan-group">
                     <label>Plan</label>
                     <select id="edit-plan" name="plan">
                         <option value="0">SELECT ONE TO UPDATE</option>
@@ -1332,12 +1398,23 @@
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="edit-status-group">
                     <label>Status</label>
                     <select id="edit-status" name="status">
                         <option value="1">On</option>
                         <option value="0">Off</option>
                     </select>
+                </div>
+
+                <!-- Reseller Renewal Section (hidden by default) -->
+                <div id="reseller-renewal-section" style="display: none;">
+                    <div class="renewal-header">
+                        <h4>Select Renewal Plan</h4>
+                        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 5px;">Choose a plan to renew this account</p>
+                    </div>
+                    <div id="renewal-plans-container" class="renewal-plans-grid">
+                        <!-- Plans will be loaded dynamically as beautiful buttons -->
+                    </div>
                 </div>
 
                 <div class="form-group">

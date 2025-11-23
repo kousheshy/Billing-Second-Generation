@@ -1084,10 +1084,10 @@ function renderAccountsPage() {
                 deleteButton = `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`;
             }
 
-            // Show edit button for everyone, but disabled for observers
+            // Show edit/renew button for everyone, but disabled for observers
             const editButton = isObserver
-                ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit</button>`
-                : `<button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit</button>`;
+                ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit/Renew</button>`
+                : `<button class="btn-sm btn-edit" onclick="editAccount('${account.username}')">Edit/Renew</button>`;
 
             // Add Assign Reseller button for admin users (using same pattern as edit/delete buttons)
             let assignResellerButton = '';
@@ -1503,8 +1503,19 @@ async function loadPlans() {
                 const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
                 const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
 
-                // Check if user is observer (observers can't delete)
+                // Format category display
+                const categoryLabels = {
+                    'new_device': 'New Device',
+                    'application': 'Application',
+                    'renew_device': 'Renew Device'
+                };
+                const categoryDisplay = plan.category ? (categoryLabels[plan.category] || plan.category) : '-';
+
+                // Check if user is observer (observers can't edit or delete)
                 const isObserver = currentUser && currentUser.is_observer == 1;
+                const editButton = isObserver
+                    ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit</button>`
+                    : `<button class="btn-sm btn-edit" onclick="editPlan(${plan.id})">Edit</button>`;
                 const deleteButton = isObserver
                     ? `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`
                     : `<button class="btn-sm btn-delete" onclick="deletePlan('${plan.external_id}', '${plan.currency_id}')">Delete</button>`;
@@ -1512,11 +1523,13 @@ async function loadPlans() {
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
                     <td>${plan.name || ''}</td>
+                    <td>${categoryDisplay}</td>
                     <td>${displayCurrency || ''}</td>
                     <td>${formattedPrice}</td>
                     <td>${plan.days || 0}</td>
                     <td>
                         <div class="action-buttons">
+                            ${editButton}
                             ${deleteButton}
                         </div>
                     </td>
@@ -1540,7 +1553,7 @@ async function loadPlans() {
             });
         } else {
             console.log('[loadPlans] No plans to display. Error:', result.error, 'Plans:', result.plans);
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">No plans found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999">No plans found</td></tr>';
             planSelect.innerHTML = '<option value="0">No Plan</option>';
             document.getElementById('total-plans').textContent = '0';
         }
@@ -1836,6 +1849,67 @@ async function addPlan(e) {
     }
 }
 
+// Edit Plan - Open modal with plan data
+async function editPlan(planId) {
+    try {
+        // Find the plan in the availablePlans array
+        const plan = availablePlans.find(p => p.id == planId);
+
+        if(!plan) {
+            showAlert('Plan not found', 'error');
+            return;
+        }
+
+        // Populate the edit form
+        document.getElementById('edit-plan-id').value = plan.id;
+        document.getElementById('edit-plan-external-id').value = plan.external_id;
+        document.getElementById('edit-plan-currency').value = plan.currency_id;
+        document.getElementById('edit-plan-id-display').value = plan.external_id;
+        document.getElementById('edit-plan-name').value = plan.name;
+
+        // Display currency (normalize IRT -> IRR)
+        const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
+        document.getElementById('edit-plan-currency-display').value = displayCurrency;
+
+        document.getElementById('edit-plan-price').value = plan.price;
+        document.getElementById('edit-plan-days').value = plan.days;
+        document.getElementById('edit-plan-category').value = plan.category || '';
+
+        // Open the edit modal
+        openModal('editPlanModal');
+
+    } catch(error) {
+        console.error('Error loading plan for edit:', error);
+        showAlert('Error loading plan data', 'error');
+    }
+}
+
+// Submit Edit Plan
+async function submitEditPlan(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const params = new URLSearchParams(formData).toString();
+
+    try {
+        const response = await fetch('edit_plan.php?' + params, {
+            method: 'GET'
+        });
+
+        const result = await response.json();
+
+        if(result.error == 0) {
+            showAlert(result.message || 'Plan updated successfully!', 'success');
+            closeModal('editPlanModal');
+            loadPlans();
+        } else {
+            showAlert(result.err_msg || 'Error updating plan', 'error');
+        }
+    } catch(error) {
+        showAlert('Error updating plan: ' + error.message, 'error');
+    }
+}
+
 // Delete Account
 async function deleteAccount(username) {
     if(!confirm('Are you sure you want to delete this account?')) {
@@ -2126,6 +2200,12 @@ async function editAccount(username) {
             return;
         }
 
+        // Check if user is reseller without admin permission
+        // If currentUser is not loaded, assume admin to show all fields
+        const isSuperUser = currentUser ? currentUser.super_user : true;
+        const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+        const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
+
         // Populate form fields
         document.getElementById('edit-original-username').value = account.username;
         document.getElementById('edit-username').value = account.username;
@@ -2135,12 +2215,40 @@ async function editAccount(username) {
         document.getElementById('edit-phone').value = account.phone_number || '';
         document.getElementById('edit-comment').value = account.comment || '';
 
-        // Set status (default to 1 if not set)
-        const statusSelect = document.getElementById('edit-status');
-        statusSelect.value = account.status !== undefined ? account.status : '1';
+        // Handle reseller without admin permission
+        if (isResellerWithoutAdmin) {
+            // Disable username and password fields
+            document.getElementById('edit-username').disabled = true;
+            document.getElementById('edit-password').disabled = true;
 
-        // Load plans into dropdown
-        await loadPlansForEdit();
+            // Hide admin-only fields (Plan and Status)
+            document.getElementById('edit-plan-group').style.display = 'none';
+            document.getElementById('edit-status-group').style.display = 'none';
+
+            // Show renewal section for resellers
+            document.getElementById('reseller-renewal-section').style.display = 'block';
+
+            // Load renewal plans
+            await loadRenewalPlans();
+        } else {
+            // Enable all fields for admin users
+            document.getElementById('edit-username').disabled = false;
+            document.getElementById('edit-password').disabled = false;
+
+            // Show admin-only fields
+            document.getElementById('edit-plan-group').style.display = 'block';
+            document.getElementById('edit-status-group').style.display = 'block';
+
+            // Hide renewal section
+            document.getElementById('reseller-renewal-section').style.display = 'none';
+
+            // Set status (default to 1 if not set)
+            const statusSelect = document.getElementById('edit-status');
+            statusSelect.value = account.status !== undefined ? account.status : '1';
+
+            // Load plans into dropdown for admin
+            await loadPlansForEdit();
+        }
 
         // Open modal
         openModal('editAccountModal');
@@ -2175,20 +2283,120 @@ async function loadPlansForEdit() {
     }
 }
 
+// Load renewal plans for reseller (as beautiful cards with checkboxes)
+async function loadRenewalPlans() {
+    try {
+        const response = await fetch('get_plans.php');
+        const result = await response.json();
+
+        const container = document.getElementById('renewal-plans-container');
+        container.innerHTML = ''; // Clear existing
+
+        if(result.error == 0 && result.plans) {
+            // Filter plans to only show "Renew Device" category plans
+            const renewalPlans = result.plans.filter(plan => plan.category === 'renew_device');
+
+            if(renewalPlans.length > 0) {
+                renewalPlans.forEach(plan => {
+                    const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+
+                    const card = document.createElement('div');
+                    card.className = 'renewal-plan-card';
+                    card.dataset.planId = plan.id;
+                    card.innerHTML = `
+                        <div class="renewal-plan-checkbox"></div>
+                        <div class="renewal-plan-name">${plan.name}</div>
+                        <div class="renewal-plan-duration">${plan.days} days</div>
+                        <div class="renewal-plan-price">${formattedPrice}</div>
+                    `;
+
+                    // Click handler to select plan
+                    card.addEventListener('click', function() {
+                        // Deselect all other cards
+                        document.querySelectorAll('.renewal-plan-card').forEach(c => {
+                            c.classList.remove('selected');
+                        });
+                        // Select this card
+                        this.classList.add('selected');
+                    });
+
+                    container.appendChild(card);
+                });
+            } else {
+                container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No renewal plans available</p>';
+            }
+        } else {
+            container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No plans available</p>';
+        }
+    } catch(error) {
+        console.error('Error loading renewal plans:', error);
+        document.getElementById('renewal-plans-container').innerHTML = '<p style="color: var(--danger); text-align: center;">Error loading plans</p>';
+    }
+}
+
 async function submitEditAccount(e) {
     console.log('submitEditAccount called');
     e.preventDefault();
 
-    const formData = new FormData(e.target);
-    const selectedPlan = document.getElementById('edit-plan').value;
+    // Check if user is reseller without admin permission
+    const isSuperUser = currentUser ? currentUser.super_user : true;
+    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+    const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
-    console.log('Form data:', Object.fromEntries(formData));
-    console.log('Selected plan:', selectedPlan);
+    let selectedPlan;
+    let formData;
 
-    // Confirm if renewing with a plan
-    if(selectedPlan != '0') {
-        if(!confirm('This will renew the account with the selected plan. Continue?')) {
+    if (isResellerWithoutAdmin) {
+        // Get selected plan from renewal cards
+        const selectedCard = document.querySelector('.renewal-plan-card.selected');
+
+        if (!selectedCard) {
+            showAlert('Please select a renewal plan', 'error');
             return false;
+        }
+
+        selectedPlan = selectedCard.dataset.planId;
+
+        // Confirm renewal
+        if(!confirm('This will renew the account with the selected plan and enable the device. Continue?')) {
+            return false;
+        }
+
+        // Temporarily enable disabled fields so they get submitted
+        const usernameField = document.getElementById('edit-username');
+        const passwordField = document.getElementById('edit-password');
+        const wasUsernameDisabled = usernameField.disabled;
+        const wasPasswordDisabled = passwordField.disabled;
+
+        usernameField.disabled = false;
+        passwordField.disabled = false;
+
+        // Create formData with now-enabled fields
+        formData = new FormData(e.target);
+
+        // Restore disabled state
+        usernameField.disabled = wasUsernameDisabled;
+        passwordField.disabled = wasPasswordDisabled;
+
+        // Add plan to formData
+        formData.set('plan', selectedPlan);
+
+        // Force status to enabled (1) for renewals
+        formData.set('status', '1');
+    } else {
+        // Admin user - create formData normally
+        formData = new FormData(e.target);
+        // Admin user - get plan from dropdown
+        selectedPlan = document.getElementById('edit-plan').value;
+
+        console.log('Form data:', Object.fromEntries(formData));
+        console.log('Selected plan:', selectedPlan);
+
+        // Confirm if renewing with a plan
+        if(selectedPlan != '0') {
+            if(!confirm('This will renew the account with the selected plan. Continue?')) {
+                return false;
+            }
         }
     }
 
