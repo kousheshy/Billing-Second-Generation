@@ -45,11 +45,14 @@ $user_id = $user_info['id'];
 try {
     // IMPORTANT: Get existing account-to-reseller mappings BEFORE deleting accounts
     // Note: We DON'T preserve phone numbers - they must come from Stalker Portal as the single source of truth
+    // Use BOTH username AND MAC for lookup to ensure we preserve reseller assignments even if username changes
     $existing_resellers = [];
-    $stmt = $pdo->prepare('SELECT username, reseller FROM _accounts WHERE reseller IS NOT NULL');
+    $stmt = $pdo->prepare('SELECT username, mac, reseller FROM _accounts WHERE reseller IS NOT NULL');
     $stmt->execute();
     foreach($stmt->fetchAll() as $row) {
-        $existing_resellers[$row['username']] = $row['reseller'];
+        // Store by both username AND MAC address (MAC is primary key as it never changes)
+        $existing_resellers['mac_' . $row['mac']] = $row['reseller'];
+        $existing_resellers['user_' . $row['username']] = $row['reseller'];
     }
 
     // For admins: Delete all accounts
@@ -124,23 +127,30 @@ try {
         // Use current timestamp for creation date
         $created_timestamp = time();
 
-        // Determine reseller priority (Stalker is source of truth):
-        // 1. Use reseller from Stalker if available
-        // 2. Fallback to existing local mapping
-        // 3. If no mapping exists, leave as NULL (Not Assigned)
+        // Determine reseller priority:
+        // 1. Use reseller from Stalker if available (Stalker is source of truth)
+        // 2. Fallback to existing local mapping by MAC address (most reliable - MAC never changes)
+        // 3. Fallback to existing local mapping by username
+        // 4. If no mapping exists, leave as NULL (Not Assigned)
         $stalker_reseller = $stalker_user->reseller ?? null;
 
         // DEBUG: Log what Stalker returned for reseller field
-        error_log("=== SYNC ACCOUNT: $login ===");
+        error_log("=== SYNC ACCOUNT: $login (MAC: $mac) ===");
         error_log("Stalker reseller field value: " . ($stalker_reseller !== null ? $stalker_reseller : 'NULL'));
-        error_log("Existing local mapping: " . ($existing_resellers[$login] ?? 'NONE'));
+        error_log("Existing local mapping by MAC: " . ($existing_resellers['mac_' . $mac] ?? 'NONE'));
+        error_log("Existing local mapping by username: " . ($existing_resellers['user_' . $login] ?? 'NONE'));
 
         if($stalker_reseller && is_numeric($stalker_reseller) && $stalker_reseller > 0) {
             $reseller_id = (int)$stalker_reseller;
             error_log("Using Stalker reseller: " . $reseller_id);
-        } else if(isset($existing_resellers[$login])) {
-            $reseller_id = $existing_resellers[$login];
-            error_log("Using existing local mapping: " . $reseller_id);
+        } else if(isset($existing_resellers['mac_' . $mac])) {
+            // MAC-based lookup is most reliable
+            $reseller_id = $existing_resellers['mac_' . $mac];
+            error_log("Using existing local mapping by MAC: " . $reseller_id);
+        } else if(isset($existing_resellers['user_' . $login])) {
+            // Username-based fallback
+            $reseller_id = $existing_resellers['user_' . $login];
+            error_log("Using existing local mapping by username: " . $reseller_id);
         } else {
             $reseller_id = null;  // Not assigned to any reseller
             error_log("No reseller assignment - setting to NULL (Not Assigned)");

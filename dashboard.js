@@ -954,6 +954,30 @@ function openModal(modalId) {
         setTimeout(() => {
             initPhoneInput('add-country-code', 'add-custom-code', 'add-phone-number');
         }, 10);
+
+        // Check if user is reseller without admin permission
+        const isSuperUser = currentUser ? currentUser.super_user : true;
+        const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+        const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
+
+        if (isResellerWithoutAdmin) {
+            // Hide admin plan/status dropdowns
+            document.getElementById('add-admin-plan-group').style.display = 'none';
+            document.getElementById('add-admin-status-group').style.display = 'none';
+
+            // Show reseller plan card selection
+            document.getElementById('add-reseller-plan-section').style.display = 'block';
+
+            // Load new device plans
+            loadNewDevicePlans();
+        } else {
+            // Show admin plan/status dropdowns
+            document.getElementById('add-admin-plan-group').style.display = 'block';
+            document.getElementById('add-admin-status-group').style.display = 'block';
+
+            // Hide reseller plan section
+            document.getElementById('add-reseller-plan-section').style.display = 'none';
+        }
     }
 
     if(modalId === 'editAccountModal') {
@@ -1998,16 +2022,63 @@ async function addAccount(e) {
         }
     }
 
-    const formData = new FormData(e.target);
+    // Check if user is reseller without admin permission
+    const isSuperUser = currentUser ? currentUser.super_user : true;
+    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+    const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
-    // Replace phone_number with full formatted number
-    if (phoneNumber) {
-        const fullPhone = getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber);
-        formData.set('phone_number', fullPhone);
+    // Handle plan selection for resellers
+    if (isResellerWithoutAdmin) {
+        // Get selected plan from cards
+        const selectedCard = document.querySelector('#add-new-device-plans-container .renewal-plan-card.selected');
+
+        if (!selectedCard) {
+            showAlert('Please select a plan for the new device', 'error');
+            return;
+        }
+
+        const selectedPlan = selectedCard.dataset.planId;
+
+        // Create formData
+        const formData = new FormData(e.target);
+
+        // Add the selected plan from cards
+        formData.set('plan', selectedPlan);
+
+        // Force status to active (1) for new accounts
+        formData.set('status', '1');
+
+        // Replace phone_number with full formatted number
+        if (phoneNumber) {
+            const fullPhone = getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber);
+            formData.set('phone_number', fullPhone);
+        }
+
+        // Remove country_code from form data (it's already included in phone_number)
+        formData.delete('country_code');
+
+        // Submit the form
+        await submitAddAccountForm(formData);
+    } else {
+        // Admin user - create formData normally
+        const formData = new FormData(e.target);
+
+        // Replace phone_number with full formatted number
+        if (phoneNumber) {
+            const fullPhone = getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber);
+            formData.set('phone_number', fullPhone);
+        }
+
+        // Remove country_code from form data (it's already included in phone_number)
+        formData.delete('country_code');
+
+        // Submit the form
+        await submitAddAccountForm(formData);
     }
+}
 
-    // Remove country_code from form data (it's already included in phone_number)
-    formData.delete('country_code');
+// Helper function to submit add account form
+async function submitAddAccountForm(formData) {
 
     try {
         const response = await fetch('add_account.php', {
@@ -2020,7 +2091,7 @@ async function addAccount(e) {
         if(result.error == 0) {
             showAlert('Account created successfully!', 'success');
             closeModal('addAccountModal');
-            e.target.reset();
+            document.getElementById('addAccountForm').reset();
             loadAccounts();
             checkAuth(); // Refresh stats
         } else {
@@ -2052,15 +2123,17 @@ async function addReseller(e) {
     const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
     const canToggleStatus = formData.get('can_toggle_status') === '1' ? '1' : '0';
     const canAccessMessaging = formData.get('can_access_messaging') === '1' ? '1' : '0';
+    const canEditPhoneName = formData.get('can_edit_phone_name') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // If admin is checked, grant all permissions including STB control, status toggle, and messaging access
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
+    // If admin is checked, grant all permissions including STB control, status toggle, messaging access, and phone/name editing
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging|can_edit_phone_name
     const finalCanControlStb = isAdmin === '1' ? '1' : canControlStb;
     const finalCanToggleStatus = isAdmin === '1' ? '1' : canToggleStatus;
     const finalCanAccessMessaging = isAdmin === '1' ? '1' : canAccessMessaging;
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}|${finalCanAccessMessaging}`;
+    const finalCanEditPhoneName = isAdmin === '1' ? '1' : canEditPhoneName;
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}|${finalCanAccessMessaging}|${finalCanEditPhoneName}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -2349,8 +2422,8 @@ async function editReseller(resellerId) {
                 const themeToSet = reseller.theme || (defaultTheme ? defaultTheme.id : 'HenSoft-TV Realistic-Centered SHOWBOX');
                 document.getElementById('edit-reseller-theme').value = themeToSet;
 
-                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging)
-                const permissions = (reseller.permissions || '0|0|0|0|0|0|0').split('|');
+                // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging|can_edit_phone_name)
+                const permissions = (reseller.permissions || '0|0|0|0|0|0|0|0').split('|');
                 document.getElementById('edit-can-edit-accounts').checked = permissions[0] === '1';
                 document.getElementById('edit-can-add-accounts').checked = permissions[1] === '1';
                 document.getElementById('edit-is-admin').checked = permissions[2] === '1';
@@ -2358,6 +2431,7 @@ async function editReseller(resellerId) {
                 document.getElementById('edit-can-control-stb').checked = permissions[4] === '1';
                 document.getElementById('edit-can-toggle-status').checked = permissions[5] === '1';
                 document.getElementById('edit-can-access-messaging').checked = permissions[6] === '1';
+                document.getElementById('edit-can-edit-phone-name').checked = permissions[7] === '1';
 
                 // Set observer checkbox
                 document.getElementById('edit-is-observer').checked = reseller.is_observer == 1;
@@ -2388,15 +2462,17 @@ async function updateReseller(e) {
     const canControlStb = formData.get('can_control_stb') === '1' ? '1' : '0';
     const canToggleStatus = formData.get('can_toggle_status') === '1' ? '1' : '0';
     const canAccessMessaging = formData.get('can_access_messaging') === '1' ? '1' : '0';
+    const canEditPhoneName = formData.get('can_edit_phone_name') === '1' ? '1' : '0';
     const isAdmin = formData.get('is_admin') === '1' ? '1' : '0';
     const isObserver = formData.get('is_observer') === '1' ? '1' : '0';
 
-    // If admin is checked, grant all permissions including STB control, status toggle, and messaging access
-    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
+    // If admin is checked, grant all permissions including STB control, status toggle, messaging access, and phone/name editing
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging|can_edit_phone_name
     const finalCanControlStb = isAdmin === '1' ? '1' : canControlStb;
     const finalCanToggleStatus = isAdmin === '1' ? '1' : canToggleStatus;
     const finalCanAccessMessaging = isAdmin === '1' ? '1' : canAccessMessaging;
-    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}|${finalCanAccessMessaging}`;
+    const finalCanEditPhoneName = isAdmin === '1' ? '1' : canEditPhoneName;
+    const permissions = `${canEditAccounts}|${canAddAccounts}|${isAdmin}|${canDeleteAccounts}|${finalCanControlStb}|${finalCanToggleStatus}|${finalCanAccessMessaging}|${finalCanEditPhoneName}`;
 
     formData.delete('is_admin'); // Remove is_admin as it's now part of permissions
     formData.set('permissions', permissions);
@@ -2485,11 +2561,32 @@ async function editAccount(username) {
 
         document.getElementById('edit-comment').value = account.comment || '';
 
+        // Check if reseller has permission to edit phone, email, and name
+        // Parse permissions (format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging|can_edit_phone_name)
+        const permissions = (currentUser && currentUser.permissions || '0|0|0|0|0|0|0|0').split('|');
+        const canEditPhoneName = permissions[7] === '1';
+
+        // If user is a reseller and doesn't have phone/name/email edit permission, make fields read-only
+        if (isResellerWithoutAdmin && !canEditPhoneName) {
+            document.getElementById('edit-name').readOnly = true;
+            document.getElementById('edit-email').readOnly = true;
+            document.getElementById('edit-country-code').disabled = true;
+            document.getElementById('edit-custom-code').readOnly = true;
+            document.getElementById('edit-phone').readOnly = true;
+        } else {
+            // Enable fields for users with permission
+            document.getElementById('edit-name').readOnly = false;
+            document.getElementById('edit-email').readOnly = false;
+            document.getElementById('edit-country-code').disabled = false;
+            document.getElementById('edit-custom-code').readOnly = false;
+            document.getElementById('edit-phone').readOnly = false;
+        }
+
         // Handle reseller without admin permission
         if (isResellerWithoutAdmin) {
-            // Disable username and password fields
-            document.getElementById('edit-username').disabled = true;
-            document.getElementById('edit-password').disabled = true;
+            // Make username and password fields read-only (same visual style as name/phone/email)
+            document.getElementById('edit-username').readOnly = true;
+            document.getElementById('edit-password').readOnly = true;
 
             // Hide admin-only fields (Plan and Status)
             document.getElementById('edit-plan-group').style.display = 'none';
@@ -2502,8 +2599,8 @@ async function editAccount(username) {
             await loadRenewalPlans();
         } else {
             // Enable all fields for admin users
-            document.getElementById('edit-username').disabled = false;
-            document.getElementById('edit-password').disabled = false;
+            document.getElementById('edit-username').readOnly = false;
+            document.getElementById('edit-password').readOnly = false;
 
             // Show admin-only fields
             document.getElementById('edit-plan-group').style.display = 'block';
@@ -2604,16 +2701,93 @@ async function loadRenewalPlans() {
     }
 }
 
+// Load New Device Plans for Add Account Modal (Resellers Only)
+async function loadNewDevicePlans() {
+    try {
+        const response = await fetch('get_plans.php');
+        const result = await response.json();
+
+        const container = document.getElementById('add-new-device-plans-container');
+        container.innerHTML = ''; // Clear existing
+
+        if(result.error == 0 && result.plans) {
+            // Parse reseller's assigned plan IDs from currentUser.plans
+            let assignedPlanIds = [];
+            if(currentUser && currentUser.plans) {
+                // Split comma-separated string and convert to array of integers
+                assignedPlanIds = currentUser.plans
+                    .split(',')
+                    .map(id => parseInt(id.trim()))
+                    .filter(id => !isNaN(id));
+            }
+
+            // Filter plans by BOTH category AND assignment
+            const newDevicePlans = result.plans.filter(plan => {
+                const isNewDevice = plan.category === 'new_device';
+                const isAssigned = assignedPlanIds.length === 0 || assignedPlanIds.includes(parseInt(plan.id));
+                return isNewDevice && isAssigned;
+            });
+
+            if(newDevicePlans.length > 0) {
+                newDevicePlans.forEach(plan => {
+                    const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+
+                    const card = document.createElement('div');
+                    card.className = 'renewal-plan-card';
+                    card.dataset.planId = plan.id;
+                    card.innerHTML = `
+                        <div class="renewal-plan-checkbox"></div>
+                        <div class="renewal-plan-name">${plan.name}</div>
+                        <div class="renewal-plan-duration">${plan.days} days</div>
+                        <div class="renewal-plan-price">${formattedPrice}</div>
+                    `;
+
+                    // Click handler to select plan
+                    card.addEventListener('click', function() {
+                        // Deselect all other cards
+                        document.querySelectorAll('#add-new-device-plans-container .renewal-plan-card').forEach(c => {
+                            c.classList.remove('selected');
+                        });
+                        // Select this card
+                        this.classList.add('selected');
+                    });
+
+                    container.appendChild(card);
+                });
+            } else {
+                container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No new device plans available</p>';
+            }
+        } else {
+            container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No plans available</p>';
+        }
+    } catch(error) {
+        console.error('Error loading new device plans:', error);
+        document.getElementById('add-new-device-plans-container').innerHTML = '<p style="color: var(--danger); text-align: center;">Error loading plans</p>';
+    }
+}
+
 async function submitEditAccount(e) {
     console.log('submitEditAccount called');
     e.preventDefault();
 
-    // Validate and format phone number
+    // Check if user is reseller without admin permission
+    const isSuperUser = currentUser ? currentUser.super_user : true;
+    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+    const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
+
+    // Check if user has permission to edit phone/email/name fields
+    const permissions = (currentUser && currentUser.permissions || '0|0|0|0|0|0|0|0').split('|');
+    const canEditPhoneName = permissions[7] === '1';
+
+    // Validate and format phone number (ONLY if user has permission to edit it)
     const countryCodeSelect = document.getElementById('edit-country-code').value;
     const customCode = document.getElementById('edit-custom-code').value;
     const phoneNumber = document.getElementById('edit-phone').value;
 
-    if (phoneNumber) {
+    // Skip phone validation if reseller doesn't have permission to edit it
+    const shouldValidatePhone = !isResellerWithoutAdmin || canEditPhoneName;
+
+    if (phoneNumber && shouldValidatePhone) {
         const countryCode = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
 
         // Validate country code for custom option
@@ -2629,11 +2803,6 @@ async function submitEditAccount(e) {
             return false;
         }
     }
-
-    // Check if user is reseller without admin permission
-    const isSuperUser = currentUser ? currentUser.super_user : true;
-    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
-    const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
     let selectedPlan;
     let formData;
@@ -2654,21 +2823,8 @@ async function submitEditAccount(e) {
             return false;
         }
 
-        // Temporarily enable disabled fields so they get submitted
-        const usernameField = document.getElementById('edit-username');
-        const passwordField = document.getElementById('edit-password');
-        const wasUsernameDisabled = usernameField.disabled;
-        const wasPasswordDisabled = passwordField.disabled;
-
-        usernameField.disabled = false;
-        passwordField.disabled = false;
-
-        // Create formData with now-enabled fields
+        // Create formData (readOnly fields are automatically included)
         formData = new FormData(e.target);
-
-        // Restore disabled state
-        usernameField.disabled = wasUsernameDisabled;
-        passwordField.disabled = wasPasswordDisabled;
 
         // Add plan to formData
         formData.set('plan', selectedPlan);
