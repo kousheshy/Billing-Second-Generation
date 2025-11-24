@@ -1816,8 +1816,9 @@ async function loadPlans() {
             document.getElementById('total-plans').textContent = '0';
         }
     } catch(error) {
-        console.error('Error loading plans:', error);
-        showAlert('Error loading plans', 'error');
+        console.error('[loadPlans] Exception caught:', error);
+        console.error('[loadPlans] Error stack:', error.stack);
+        showAlert('Error loading plans: ' + error.message, 'error');
     }
 }
 
@@ -2748,8 +2749,9 @@ async function loadNewDevicePlans() {
             container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No plans available</p>';
         }
     } catch(error) {
-        console.error('Error loading new device plans:', error);
-        document.getElementById('add-new-device-plans-container').innerHTML = '<p style="color: var(--danger); text-align: center;">Error loading plans</p>';
+        console.error('[loadNewDevicePlans] Exception caught:', error);
+        console.error('[loadNewDevicePlans] Error stack:', error.stack);
+        document.getElementById('add-new-device-plans-container').innerHTML = '<p style="color: var(--danger); text-align: center;">Error loading plans: ' + error.message + '</p>';
     }
 }
 
