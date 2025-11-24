@@ -46,13 +46,44 @@ try {
     // IMPORTANT: Get existing account-to-reseller mappings BEFORE deleting accounts
     // Note: We DON'T preserve phone numbers - they must come from Stalker Portal as the single source of truth
     // Use BOTH username AND MAC for lookup to ensure we preserve reseller assignments even if username changes
+
+    // PERSISTENT BACKUP: Save to file to survive multiple sync cycles
+    $backup_file = __DIR__ . '/reseller_assignments_backup.json';
+
     $existing_resellers = [];
     $stmt = $pdo->prepare('SELECT username, mac, reseller FROM _accounts WHERE reseller IS NOT NULL');
     $stmt->execute();
-    foreach($stmt->fetchAll() as $row) {
-        // Store by both username AND MAC address (MAC is primary key as it never changes)
-        $existing_resellers['mac_' . $row['mac']] = $row['reseller'];
-        $existing_resellers['user_' . $row['username']] = $row['reseller'];
+    $db_assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // If database has assignments, use them AND save to backup file
+    if(count($db_assignments) > 0) {
+        foreach($db_assignments as $row) {
+            // Store by both username AND MAC address (MAC is primary key as it never changes)
+            $existing_resellers['mac_' . $row['mac']] = $row['reseller'];
+            $existing_resellers['user_' . $row['username']] = $row['reseller'];
+        }
+
+        // Save to persistent backup file
+        $backup_data = [
+            'timestamp' => time(),
+            'date' => date('Y-m-d H:i:s'),
+            'count' => count($db_assignments),
+            'assignments' => $existing_resellers
+        ];
+        file_put_contents($backup_file, json_encode($backup_data, JSON_PRETTY_PRINT));
+        error_log("[SYNC] Saved " . count($db_assignments) . " assignments to backup file");
+    }
+    // If database is empty, try to load from backup file
+    else if(file_exists($backup_file)) {
+        $backup_data = json_decode(file_get_contents($backup_file), true);
+        if($backup_data && isset($backup_data['assignments'])) {
+            $existing_resellers = $backup_data['assignments'];
+            error_log("[SYNC] Database empty! Restored " . count($existing_resellers) . " assignments from backup file (saved: " . $backup_data['date'] . ")");
+        } else {
+            error_log("[SYNC] WARNING: Backup file exists but is invalid");
+        }
+    } else {
+        error_log("[SYNC] WARNING: No assignments in database AND no backup file found!");
     }
 
     // For admins: Delete all accounts
