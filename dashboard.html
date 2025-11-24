@@ -182,7 +182,7 @@
             <div id="plans-tab" class="tab-content">
                 <div class="section-header">
                     <h2>Plan Management</h2>
-                    <button class="btn-primary" onclick="openModal('addPlanModal')">+ Add Plan</button>
+                    <button id="add-plan-btn" class="btn-primary" onclick="openModal('addPlanModal')">+ Add Plan</button>
                 </div>
                 <table id="plans-table">
                     <thead>
@@ -193,7 +193,7 @@
                             <th>Currency</th>
                             <th>Price</th>
                             <th>Days</th>
-                            <th>Actions</th>
+                            <th id="plans-actions-header">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="plans-tbody">
@@ -1633,6 +1633,10 @@
                 <span class="bottom-nav-icon">👥</span>
                 <span class="bottom-nav-label">Accounts</span>
             </a>
+            <a href="#" class="bottom-nav-item" data-tab="plans" onclick="switchTab('plans'); return false;">
+                <span class="bottom-nav-icon">📋</span>
+                <span class="bottom-nav-label">Plans</span>
+            </a>
             <a href="#" class="bottom-nav-item" data-tab="resellers" onclick="switchTab('resellers'); return false;">
                 <span class="bottom-nav-icon">🏢</span>
                 <span class="bottom-nav-label">Resellers</span>
@@ -1644,6 +1648,10 @@
             <a href="#" class="bottom-nav-item" data-tab="reports" onclick="switchTab('reports'); return false;">
                 <span class="bottom-nav-icon">📈</span>
                 <span class="bottom-nav-label">Reports</span>
+            </a>
+            <a href="#" class="bottom-nav-item" data-tab="transactions" onclick="switchTab('transactions'); return false;">
+                <span class="bottom-nav-icon">💳</span>
+                <span class="bottom-nav-label">Transactions</span>
             </a>
             <a href="#" class="bottom-nav-item" data-tab="settings" onclick="showMobileSettings(); return false;">
                 <span class="bottom-nav-icon">⚙️</span>

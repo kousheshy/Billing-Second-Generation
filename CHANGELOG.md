@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.2] - 2025-11-24
+
+### Fixed - PWA Bottom Navigation & Plan Access Control
+
+**Overview**
+Improved PWA bottom navigation with proper role-based visibility and enhanced plan management access control for different user types.
+
+**Bug Fixes**
+
+1. **Bottom Navigation Tab Visibility** (PWA UX Enhancement)
+   - **Added Missing Tabs**: Plans and Transactions tabs now appear in PWA bottom navigation
+   - **Role-Based Hiding**: Tabs automatically hidden based on user role
+     - **Super Admin**: Hides Plans and Transactions tabs (desktop-focused)
+     - **Reseller Admin**: Hides Plans and Transactions tabs
+     - **Regular Reseller**: Hides Plans, Transactions, Messages, and Resellers tabs
+     - **Observer**: Hides Plans and Transactions tabs
+   - **Improved Navigation**: Users can now access Plans and Transactions from mobile PWA
+   - **Files**: `dashboard.html` (lines 1636-1655), `dashboard.js` (lines 192-266)
+
+2. **Plan Management Access Control** (Permission Fix)
+   - **Problem**: Regular resellers could see Edit/Delete buttons in Plans table (should be admin-only)
+   - **Solution**: Hide Edit/Delete buttons completely for regular resellers and observers
+   - **Actions Column**: Entire Actions column hidden when no buttons available (cleaner UI)
+   - **User Detection**: Improved logic to properly identify regular resellers vs admins
+   - **Files**: `dashboard.js` (lines 1711-1769)
+
+3. **Mobile Settings Role Detection** (Bug Fix)
+   - **Problem**: Role detection in mobile settings used localStorage flags (unreliable)
+   - **Solution**: Now uses global `currentUser` object with proper role hierarchy
+   - **Role Priority**: Super Admin → Observer → Reseller Admin → Regular Reseller
+   - **Debugging**: Added console logs for troubleshooting role detection
+   - **Files**: `dashboard.js` (lines 4671-4705)
+
+**Technical Details**
+- Bottom navigation now dynamically shows/hides tabs based on user permissions
+- Plan actions (Edit/Delete) completely hidden for non-admin users
+- Mobile settings properly detects user role from currentUser object
+- Improved code clarity with `shouldHideButtons` and `isRegularReseller` flags
+
+**Files Modified**
+- `dashboard.html` - Added Plans and Transactions to bottom navigation (12 lines)
+- `dashboard.js` - Role-based visibility and access control (93 lines modified)
+
+**Benefits**
+- **Better Mobile UX**: All relevant tabs accessible in PWA bottom navigation
+- **Proper Access Control**: Regular resellers cannot see admin-only buttons
+- **Cleaner UI**: Hidden buttons = cleaner interface for restricted users
+- **Reliable Role Detection**: Uses authoritative currentUser object
+
+**Testing Required**
+- [ ] PWA bottom navigation as super admin (Plans/Transactions hidden)
+- [ ] PWA bottom navigation as reseller admin (Plans/Transactions hidden)
+- [ ] PWA bottom navigation as regular reseller (Plans/Transactions/Messages/Resellers hidden)
+- [ ] Plan table as regular reseller (no Edit/Delete buttons, no Actions column)
+- [ ] Mobile settings role display (correct role for each user type)
+
+---
+
 ## [1.11.1] - 2025-11-23
 
 ### Added - Phone Number Input Enhancement

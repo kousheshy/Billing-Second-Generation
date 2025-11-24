@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.2-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,26 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.1
+**Version:** 1.11.2
 **Last Updated:** November 2025
 **Status:** Production Ready ✅
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.2** (Nov 2025) - PWA Bottom Navigation & Plan Access Control
+  - **Bottom Navigation Enhancement**: Added Plans and Transactions tabs to PWA bottom navigation
+  - **Role-Based Tab Visibility**: Tabs automatically hidden based on user role (Super Admin, Reseller Admin, Regular Reseller, Observer)
+  - **Plan Access Control**: Hide Edit/Delete buttons for regular resellers and observers (admin-only)
+  - **Actions Column Optimization**: Entire Actions column hidden when no buttons available
+  - **Mobile Settings Fix**: Proper role detection using global currentUser object instead of localStorage
+  - **Technical Changes**:
+    - Bottom navigation: Dynamic show/hide based on permissions (dashboard.html lines 1636-1655)
+    - Plan management: `shouldHideButtons` flag for regular resellers (dashboard.js lines 1711-1769)
+    - Role detection: Uses currentUser with proper hierarchy check (dashboard.js lines 4671-4705)
+  - **Files Modified**: dashboard.html (12 lines), dashboard.js (93 lines)
+  - **UX Improvements**: Cleaner interface, proper access control, reliable role detection
 
 - **v1.11.1** (Nov 2025) - Phone Number Input Enhancement & Parsing Bug Fix
   - **Smart Country Code Selector**: Dropdown with top 11 countries + custom option, Iran (+98) default

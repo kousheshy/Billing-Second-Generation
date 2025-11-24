@@ -189,6 +189,14 @@ async function checkAuth() {
                 }
             });
 
+            // Hide Plans and Transactions tabs in bottom navigation (PWA) for observer
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                const tabName = item.getAttribute('data-tab');
+                if(tabName === 'plans' || tabName === 'transactions') {
+                    item.style.display = 'none';
+                }
+            });
+
             // Add visual indicator that this is an observer account
             document.getElementById('username-display').innerHTML = 'Welcome, ' + result.user.name + ' <span style="color: #fbbf24; font-size: 12px;">(Observer)</span>';
         } else if(isSuperAdmin) {
@@ -197,6 +205,14 @@ async function checkAuth() {
 
             // Show sync section for super admin only
             document.getElementById('sync-section').style.display = 'block';
+
+            // Hide Plans and Transactions tabs in bottom navigation (PWA) for super admin
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                const tabName = item.getAttribute('data-tab');
+                if(tabName === 'plans' || tabName === 'transactions') {
+                    item.style.display = 'none';
+                }
+            });
         } else if(isResellerAdmin) {
             // Reseller admin: Has same features as super admin
             document.getElementById('balance-display').style.display = 'none';
@@ -215,6 +231,14 @@ async function checkAuth() {
 
             // Update account count based on initial preference
             updateAccountCount(viewAllAccounts);
+
+            // Hide Plans and Transactions tabs in bottom navigation (PWA) for reseller admin
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                const tabName = item.getAttribute('data-tab');
+                if(tabName === 'plans' || tabName === 'transactions') {
+                    item.style.display = 'none';
+                }
+            });
         } else {
             // Regular reseller: show balance, hide resellers AND plans
             document.getElementById('balance-display').textContent = getCurrencySymbol(result.user.currency_name) + formatBalance(result.user.balance, result.user.currency_name);
@@ -233,6 +257,20 @@ async function checkAuth() {
             // Hide admin-only stat cards for regular resellers
             document.querySelector('.stat-card:nth-child(3)').style.display = 'none'; // Total Resellers
             document.querySelector('.stat-card:nth-child(4)').style.display = 'none'; // Total Plans
+
+            // Hide Plans, Messages and Resellers tabs in bottom navigation (PWA) for regular resellers
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                const tabName = item.getAttribute('data-tab');
+                if(tabName === 'plans' || tabName === 'messaging' || tabName === 'resellers') {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Hide Add Plan button and Actions column for regular resellers (PWA)
+            const addPlanBtn = document.getElementById('add-plan-btn');
+            const actionsHeader = document.getElementById('plans-actions-header');
+            if(addPlanBtn) addPlanBtn.style.display = 'none';
+            if(actionsHeader) actionsHeader.style.display = 'none';
         }
 
         // Show/hide reminder section based on permissions (v1.7.8)
@@ -1696,14 +1734,30 @@ async function loadPlans() {
                 };
                 const categoryDisplay = plan.category ? (categoryLabels[plan.category] || plan.category) : '-';
 
-                // Check if user is observer (observers can't edit or delete)
+                // Check if user is observer or regular reseller (they can't edit or delete)
                 const isObserver = currentUser && currentUser.is_observer == 1;
-                const editButton = isObserver
-                    ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Edit</button>`
+                const isSuperAdmin = currentUser && currentUser.super_user == 1;
+                const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+                const isRegularReseller = currentUser && !isSuperAdmin && !isResellerAdmin && !isObserver;
+
+                // Hide buttons for observers and regular resellers
+                const shouldHideButtons = isObserver || isRegularReseller;
+                const editButton = shouldHideButtons
+                    ? '' // Hide button completely
                     : `<button class="btn-sm btn-edit" onclick="editPlan(${plan.id})">Edit</button>`;
-                const deleteButton = isObserver
-                    ? `<button class="btn-sm btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>`
+                const deleteButton = shouldHideButtons
+                    ? '' // Hide button completely
                     : `<button class="btn-sm btn-delete" onclick="deletePlan('${plan.external_id}', '${plan.currency_id}')">Delete</button>`;
+
+                // Hide entire Actions column for regular resellers
+                const actionsColumn = shouldHideButtons
+                    ? '' // Hide entire column cell
+                    : `<td>
+                        <div class="action-buttons">
+                            ${editButton}
+                            ${deleteButton}
+                        </div>
+                    </td>`;
 
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
@@ -1712,12 +1766,7 @@ async function loadPlans() {
                     <td>${displayCurrency || ''}</td>
                     <td>${formattedPrice}</td>
                     <td>${plan.days || 0}</td>
-                    <td>
-                        <div class="action-buttons">
-                            ${editButton}
-                            ${deleteButton}
-                        </div>
-                    </td>
+                    ${actionsColumn}
                 `;
                 tbody.appendChild(tr);
 
@@ -4619,26 +4668,40 @@ function showMobileSettings() {
         }
     });
 
-    // Populate user info
-    const currentUser = localStorage.getItem('currentUser') || sessionStorage.getItem('username') || 'User';
-    const isReseller = localStorage.getItem('isReseller') === 'true';
-    const isResellerAdmin = localStorage.getItem('isResellerAdmin') === 'true';
-    const isObserver = localStorage.getItem('isObserver') === 'true';
+    // Populate user info - use global currentUser variable (not window.currentUser)
+    console.log('[Mobile Settings] currentUser:', currentUser);
+    const username = currentUser ? currentUser.name : (localStorage.getItem('currentUser') || sessionStorage.getItem('username') || 'User');
+    const isSuperAdmin = currentUser ? currentUser.super_user == 1 : false;
+    const isResellerAdmin = currentUser ? (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1') : false;
+    const isObserver = currentUser ? currentUser.is_observer == 1 : false;
+    const isRegularReseller = currentUser && !isSuperAdmin && !isResellerAdmin && !isObserver;
+
+    console.log('[Mobile Settings] User type:', {
+        isSuperAdmin,
+        isResellerAdmin,
+        isObserver,
+        isRegularReseller,
+        super_user: currentUser?.super_user,
+        is_reseller_admin: currentUser?.is_reseller_admin,
+        is_observer: currentUser?.is_observer
+    });
 
     // Set username
-    document.getElementById('settings-username').textContent = currentUser;
+    document.getElementById('settings-username').textContent = username;
 
     // Set avatar initial (first letter of username)
-    const avatarInitial = currentUser.charAt(0).toUpperCase();
+    const avatarInitial = username.charAt(0).toUpperCase();
     document.getElementById('settings-avatar-initial').textContent = avatarInitial;
 
-    // Set role
+    // Set role - proper detection (check super admin FIRST)
     let role = 'Super Admin';
     if (isObserver) {
         role = 'Observer';
+    } else if (isSuperAdmin) {
+        role = 'Super Admin';
     } else if (isResellerAdmin) {
         role = 'Reseller Admin';
-    } else if (isReseller) {
+    } else if (isRegularReseller) {
         role = 'Reseller';
     }
     document.getElementById('settings-role').textContent = role;
