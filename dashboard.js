@@ -2711,22 +2711,9 @@ async function loadNewDevicePlans() {
         container.innerHTML = ''; // Clear existing
 
         if(result.error == 0 && result.plans) {
-            // Parse reseller's assigned plan IDs from currentUser.plans
-            let assignedPlanIds = [];
-            if(currentUser && currentUser.plans) {
-                // Split comma-separated string and convert to array of integers
-                assignedPlanIds = currentUser.plans
-                    .split(',')
-                    .map(id => parseInt(id.trim()))
-                    .filter(id => !isNaN(id));
-            }
-
-            // Filter plans by BOTH category AND assignment
-            const newDevicePlans = result.plans.filter(plan => {
-                const isNewDevice = plan.category === 'new_device';
-                const isAssigned = assignedPlanIds.length === 0 || assignedPlanIds.includes(parseInt(plan.id));
-                return isNewDevice && isAssigned;
-            });
+            // Filter plans to only show "new_device" category plans
+            // Note: get_plans.php already filters by assigned plans for resellers
+            const newDevicePlans = result.plans.filter(plan => plan.category === 'new_device');
 
             if(newDevicePlans.length > 0) {
                 newDevicePlans.forEach(plan => {
