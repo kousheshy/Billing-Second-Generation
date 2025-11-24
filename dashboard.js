@@ -2191,11 +2191,15 @@ async function addPlan(e) {
 // Edit Plan - Open modal with plan data
 async function editPlan(planId) {
     try {
+        console.log('[editPlan] Called with planId:', planId);
+        console.log('[editPlan] availablePlans:', availablePlans);
+
         // Find the plan in the availablePlans array
         const plan = availablePlans.find(p => p.id == planId);
 
         if(!plan) {
-            showAlert('Plan not found', 'error');
+            console.error('[editPlan] Plan not found. planId:', planId, 'availablePlans:', availablePlans);
+            showAlert('Plan not found. Please refresh the page.', 'error');
             return;
         }
 
@@ -2929,6 +2933,9 @@ async function submitCreditAdjustment(e) {
 
 // Assign Plans
 function assignPlans(resellerId, resellerName, currentPlans, resellerCurrency) {
+    console.log('[assignPlans] Called with:', { resellerId, resellerName, currentPlans, resellerCurrency });
+    console.log('[assignPlans] availablePlans:', availablePlans);
+
     document.getElementById('assign-reseller-id').value = resellerId;
     document.getElementById('assign-reseller-name').value = resellerName;
 
@@ -2942,8 +2949,11 @@ function assignPlans(resellerId, resellerName, currentPlans, resellerCurrency) {
     // Filter plans to only show those matching reseller's currency
     const matchingPlans = availablePlans.filter(plan => plan.currency_id === resellerCurrency);
 
+    console.log('[assignPlans] Matching plans:', matchingPlans);
+
     if (availablePlans.length === 0) {
-        checkboxContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 20px;">No plans available. Please create plans first.</p>';
+        console.warn('[assignPlans] No plans available');
+        checkboxContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 20px;">No plans available. Please refresh the page and try again.</p>';
     } else if (matchingPlans.length === 0) {
         const displayCurrency = (resellerCurrency === 'IRT') ? 'IRR' : resellerCurrency;
         checkboxContainer.innerHTML = `<p style="color: var(--warning); text-align: center; padding: 20px;">No plans available for ${displayCurrency} currency. Please create plans with ${displayCurrency} currency first.</p>`;
