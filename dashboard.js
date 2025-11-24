@@ -1,3 +1,37 @@
+// ========================================
+// Simple Debounce (v1.11.3)
+// Prevents accidental double-clicks only
+// ========================================
+
+let isAccountsLoading = false;
+
+// Global storage for last call times (shared across all debounced functions)
+const lastCallTimes = {};
+
+// Simple time-based debounce - no locks, just time checking
+function debounce(fn, key, cooldown = 200) {
+    return function(...args) {
+        const now = Date.now();
+        const lastCall = lastCallTimes[key] || 0;
+        const timeSinceLastCall = now - lastCall;
+
+        // If called within cooldown period, ignore
+        if (timeSinceLastCall < cooldown) {
+            console.log(`[Debounce] Ignoring rapid click on ${key} (${timeSinceLastCall}ms < ${cooldown}ms)`);
+            return;
+        }
+
+        // Update last call time and execute immediately
+        lastCallTimes[key] = now;
+        console.log(`[Debounce] Executing ${key}`);
+        return fn.apply(this, args);
+    };
+}
+
+// ========================================
+// End of Debounce Mechanism
+// ========================================
+
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -928,13 +962,39 @@ function initPhoneInput(countryCodeId, customCodeId, phoneNumberId) {
 }
 
 // Modal functions
-function openModal(modalId) {
-    document.getElementById(modalId).classList.add('show');
+function openModalCore(modalId) {
+    // Check if modal is already open (prevent double-opening)
+    const modal = document.getElementById(modalId);
+    if(!modal) {
+        console.error('[openModal] Modal not found:', modalId);
+        return;
+    }
 
-    // Prevent background scrolling on mobile (v1.10.1)
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
+    if(modal.classList.contains('show')) {
+        console.log('[openModal] Modal already open, ignoring duplicate call');
+        return;
+    }
+
+    // CRITICAL FIX: Add 'show' class first, but DON'T lock body yet
+    modal.classList.add('show');
+
+    // Verify modal is actually visible before locking body
+    setTimeout(() => {
+        const computedStyle = window.getComputedStyle(modal);
+        const isVisible = computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden' && computedStyle.opacity !== '0';
+
+        if (isVisible && modal.classList.contains('show')) {
+            // Modal is confirmed visible - now lock body
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            console.log('[openModal] Modal visible, body locked');
+        } else {
+            // Modal failed to display - remove 'show' class and don't lock
+            modal.classList.remove('show');
+            console.error('[openModal] Modal failed to display, removed show class');
+        }
+    }, 50); // Small delay to let CSS transitions apply
 
     // Initialize MAC address inputs in the modal
     setTimeout(() => {
@@ -961,6 +1021,10 @@ function openModal(modalId) {
         const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
         if (isResellerWithoutAdmin) {
+            // Disable username and password fields (permanent restriction for resellers)
+            document.getElementById('account-username').readOnly = true;
+            document.getElementById('account-password').readOnly = true;
+
             // Hide admin plan/status dropdowns
             document.getElementById('add-admin-plan-group').style.display = 'none';
             document.getElementById('add-admin-status-group').style.display = 'none';
@@ -968,9 +1032,20 @@ function openModal(modalId) {
             // Show reseller plan card selection
             document.getElementById('add-reseller-plan-section').style.display = 'block';
 
-            // Load new device plans
-            loadNewDevicePlans();
+            // Load new device plans with error handling
+            try {
+                loadNewDevicePlans().catch(error => {
+                    console.error('[openModal] Failed to load plans:', error);
+                    // Modal should still be visible even if plans fail to load
+                });
+            } catch(error) {
+                console.error('[openModal] Exception loading plans:', error);
+            }
         } else {
+            // Enable username and password fields for admin
+            document.getElementById('account-username').readOnly = false;
+            document.getElementById('account-password').readOnly = false;
+
             // Show admin plan/status dropdowns
             document.getElementById('add-admin-plan-group').style.display = 'block';
             document.getElementById('add-admin-status-group').style.display = 'block';
@@ -988,6 +1063,10 @@ function openModal(modalId) {
     }
 }
 
+// Debounced wrapper for openModal (prevents rapid-fire modal openings)
+// Use 100ms cooldown for quick synchronous function
+const openModal = debounce(openModalCore, 'openModal', 100);
+
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('show');
 
@@ -995,6 +1074,8 @@ function closeModal(modalId) {
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
+
+    console.log('[closeModal] Modal closed successfully');
 
     // Reset form when closing add account modal
     if(modalId === 'addAccountModal') {
@@ -1016,6 +1097,9 @@ function showAlert(message, type) {
 // Load Accounts
 async function loadAccounts() {
     try {
+        // Set loading flag
+        isAccountsLoading = true;
+
         // Get view mode preference for reseller admins
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const url = `get_accounts.php?viewAllAccounts=${viewAllAccounts}`;
@@ -1058,6 +1142,9 @@ async function loadAccounts() {
     } catch(error) {
         console.error('Error loading accounts:', error);
         showAlert('Error loading accounts', 'error');
+    } finally {
+        // Always clear loading flag
+        isAccountsLoading = false;
     }
 }
 
@@ -2306,7 +2393,7 @@ async function toggleAccountStatus(username, newStatus) {
 }
 
 // Assign Reseller
-async function assignReseller(username, currentResellerId) {
+async function assignResellerCore(username, currentResellerId) {
     try {
         // Open modal
         const modal = document.getElementById('assignResellerModal');
@@ -2375,6 +2462,9 @@ async function submitAssignReseller(event) {
         showAlert('Error assigning reseller: ' + error.message, 'error');
     }
 }
+
+// Debounced wrapper for assignReseller (200ms cooldown for async function)
+const assignReseller = debounce(assignResellerCore, 'assignReseller', 200);
 
 // Delete Plan
 async function deletePlan(planId, currency) {
@@ -2536,13 +2626,25 @@ async function deleteReseller(resellerId) {
 }
 
 // Edit Account
-async function editAccount(username) {
+async function editAccountCore(username) {
     try {
+        // Safety check: Prevent clicking while accounts are still loading
+        if(isAccountsLoading) {
+            showAlert('Please wait for accounts to finish loading', 'warning');
+            return;
+        }
+
+        // Safety check: Ensure accounts are loaded
+        if(!accountsPagination || !accountsPagination.allAccounts || accountsPagination.allAccounts.length === 0) {
+            showAlert('No accounts loaded. Please refresh the page.', 'warning');
+            return;
+        }
+
         // Find account data from the loaded accounts
         const account = accountsPagination.allAccounts.find(acc => acc.username === username);
 
         if(!account) {
-            showAlert('Account not found', 'error');
+            showAlert('Account not found. Please refresh the page.', 'error');
             return;
         }
 
@@ -2706,6 +2808,9 @@ async function loadRenewalPlans() {
     }
 }
 
+// Debounced wrapper for editAccount (200ms cooldown for async function)
+const editAccount = debounce(editAccountCore, 'editAccount', 200);
+
 // Load New Device Plans for Add Account Modal (Resellers Only)
 async function loadNewDevicePlans() {
     try {
@@ -2726,7 +2831,8 @@ async function loadNewDevicePlans() {
 
                     const card = document.createElement('div');
                     card.className = 'renewal-plan-card';
-                    card.dataset.planId = plan.id;
+                    // Store in format expected by add_account.php: "external_id-currency_id"
+                    card.dataset.planId = plan.external_id + '-' + plan.currency_id;
                     card.innerHTML = `
                         <div class="renewal-plan-checkbox"></div>
                         <div class="renewal-plan-name">${plan.name}</div>
@@ -4345,26 +4451,23 @@ function escapeHtml(text) {
  */
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape' || event.keyCode === 27) {
-        // Find and close all open modals
-        const allModals = document.querySelectorAll('.modal');
-        allModals.forEach(modal => {
-            if (modal.style.display === 'block' || modal.classList.contains('show')) {
-                modal.style.display = 'none';
-                modal.classList.remove('show');
+        // Find and close all open modals using closeModal() function
+        const allModals = document.querySelectorAll('.modal.show');
 
-                // Clear modal content if needed
-                const modalContent = modal.querySelector('.modal-content');
-                if (modalContent) {
-                    // Call specific close handlers if they exist
-                    const modalId = modal.id;
-                    if (modalId === 'editAccountModal' && typeof closeEditModal === 'function') {
-                        closeEditModal();
-                    } else if (modalId === 'addAccountModal' && typeof closeAddModal === 'function') {
-                        closeAddModal();
-                    } else if (modalId === 'editResellerModal' && typeof closeEditResellerModal === 'function') {
-                        closeEditResellerModal();
-                    }
-                }
+        allModals.forEach(modal => {
+            const modalId = modal.id;
+            console.log('[ESC Key] Closing modal:', modalId);
+
+            // Use the closeModal function to properly close
+            closeModal(modalId);
+
+            // Call specific close handlers if they exist
+            if (modalId === 'editAccountModal' && typeof closeEditModal === 'function') {
+                closeEditModal();
+            } else if (modalId === 'addAccountModal' && typeof closeAddModal === 'function') {
+                closeAddModal();
+            } else if (modalId === 'editResellerModal' && typeof closeEditResellerModal === 'function') {
+                closeEditResellerModal();
             }
         });
     }
@@ -4986,4 +5089,51 @@ if (window.innerWidth <= 768) {
 
 // ========================================
 // End of iOS PWA Enhancements (v1.10.1)
+// ========================================
+
+// ========================================
+// Modal State Safety Mechanism (v1.11.3)
+// Prevents page from getting stuck/locked
+// ========================================
+
+// Safety check: Ensure no modals are blocking interaction
+function resetBodyScrollState() {
+    // Check if any modals are actually open
+    const modals = document.querySelectorAll('.modal.show');
+
+    if (modals.length === 0) {
+        // No modals are open, ensure body is not locked
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+    }
+}
+
+// Run safety check periodically (every 2 seconds)
+setInterval(resetBodyScrollState, 2000);
+
+// Also reset on any click event (in case modal state is stuck)
+document.addEventListener('click', function() {
+    // Small delay to allow modal operations to complete first
+    setTimeout(resetBodyScrollState, 100);
+}, true);
+
+// Escape key should always close modals and unlock page
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        // Close all open modals
+        const openModals = document.querySelectorAll('.modal.show');
+        openModals.forEach(modal => {
+            closeModal(modal.id);
+        });
+
+        // Force reset body state
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+    }
+});
+
+// ========================================
+// End of Modal Safety Mechanism
 // ========================================

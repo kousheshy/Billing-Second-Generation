@@ -459,7 +459,7 @@ if($decoded->status == 'OK')
         $details = 'Plan "'.$plan_name.'" assigned for '.$username.$tmp;
 
         $stmt = $pdo->prepare('INSERT INTO _transactions (creator, for_user, amount, currency, type, details, timestamp) VALUES (?,?,?,?,?,?,?)');
-        $stmt->execute(['system', $reseller_info['id'], $price, $reseller_info['currency_name'], 0, $details, time()]);
+        $stmt->execute(['system', $reseller_info['id'], -$price, $reseller_info['currency_name'], 0, $details, time()]);
 
     }
 

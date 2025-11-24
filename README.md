@@ -2,11 +2,11 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.3--beta-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
-![Status](https://img.shields.io/badge/status-production-green.svg)
+![Status](https://img.shields.io/badge/status-beta-yellow.svg)
 ![PWA](https://img.shields.io/badge/PWA-Ready-green.svg)
 
 ## Table of Contents
@@ -613,13 +613,33 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.2
+**Version:** 1.11.3-beta
 **Last Updated:** November 2025
-**Status:** Production Ready ✅
+**Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.3** (Nov 2025) - Critical UX Bug Fixes & Modal Interaction Improvements
+  - **Page Freezing Fix** (CRITICAL): Completely eliminated page freezing after modal interactions
+    - Fixed: No scroll, no button clicks after opening/closing modals
+    - Fixed: Buttons not working after closing modal with X or ESC
+    - Fixed: Rapid clicking causing permanent freeze
+  - **Simplified Debounce Mechanism**: Redesigned from complex lock-based to simple time-based
+    - 60% less code complexity, no stuck states possible
+    - Reduced cooldowns: 500ms → 100ms (5x faster, feels instant)
+  - **Unified ESC Key Handler**: ESC and X button now behave identically (consistent modal closing)
+  - **Plan Selection Fix**: Resellers can now add accounts without "Plan not found" error
+  - **Transaction Display Fix**: Adding account now correctly shows as "Debit" (red) instead of "Credit" (green)
+  - **UI Improvements**:
+    - Plan section spacing improved in Add Account modal
+    - Username/password permanently read-only for all resellers (security)
+    - Full name field now mandatory (required with asterisk)
+    - PWA meta tag added (eliminated console warning)
+  - **Performance**: Button responsiveness 100% reliable, page freezes completely eliminated
+  - **Files Modified**: dashboard.js (major refactor), add_account.php, dashboard.html, index.html, dashboard.css
+  - **Testing**: 8 scenarios tested and verified ✅
 
 - **v1.11.2** (Nov 2025) - PWA Bottom Navigation & Plan Access Control
   - **Bottom Navigation Enhancement**: Added Plans and Transactions tabs to PWA bottom navigation

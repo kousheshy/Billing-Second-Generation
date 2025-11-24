@@ -4229,6 +4229,16 @@ body.pwa-mode .modal-header {
     border: 1px solid var(--border-color);
 }
 
+/* Add Account Modal - Plan Section Spacing */
+#add-reseller-plan-section {
+    margin-top: 25px;
+    margin-bottom: 20px;
+}
+
+#add-reseller-plan-section .renewal-header {
+    margin-bottom: 15px;
+}
+
 .renewal-header h4 {
     margin: 0 0 5px 0;
     color: var(--text-primary);
