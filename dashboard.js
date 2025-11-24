@@ -1730,7 +1730,7 @@ async function loadPlans() {
         console.log('[loadPlans] Received plans:', result);
 
         const tbody = document.getElementById('plans-tbody');
-        const planSelect = document.getElementById('plan-select');
+        const planSelect = document.getElementById('add-plan-select');
         const resellerPlansSelect = document.getElementById('reseller-plans-select');
         const assignPlansSelect = document.getElementById('assign-plans-select');
 
