@@ -1,7 +1,7 @@
 /* Persian Font */
 @font-face {
     font-family: 'BYekan';
-    src: url('BYekan+.ttf') format('truetype');
+    src: url('assets/fonts/BYekan+.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;

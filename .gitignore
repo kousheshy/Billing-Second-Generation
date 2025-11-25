@@ -1,1 +1,22 @@
-reseller_assignments_backup.json
+# Backups
+backups/*.sql
+backups/*.json
+
+# Logs
+*.log
+error_log
+
+# Temp files
+*.tmp
+temp/
+
+# Config (contains credentials)
+config.php
+reqs/config.php
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store

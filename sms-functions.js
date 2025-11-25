@@ -60,7 +60,7 @@ function switchSMSMode(mode) {
 // Load SMS settings from server
 async function loadSMSSettings() {
     try {
-        const response = await fetch('get_sms_settings.php');
+        const response = await fetch('api/get_sms_settings.php');
         const data = await response.json();
 
         if (data.error === 0) {
@@ -128,7 +128,7 @@ async function saveSMSSettings() {
         formData.append('days_before_expiry', 7); // Not used, but kept for compatibility
         formData.append('expiry_template', ''); // Not used, but kept for compatibility
 
-        const response = await fetch('update_sms_settings.php', {
+        const response = await fetch('api/update_sms_settings.php', {
             method: 'POST',
             body: formData
         });
@@ -154,7 +154,7 @@ async function loadAccountsWithPhone() {
     countText.textContent = 'Loading accounts...';
 
     try {
-        const response = await fetch('get_accounts.php');
+        const response = await fetch('api/get_accounts.php');
         const data = await response.json();
 
         if (data.error === 0) {
@@ -283,7 +283,7 @@ async function sendManualSMS() {
         formData.append('recipient_number', recipientNumber);
         formData.append('message', message);
 
-        const response = await fetch('send_sms.php', {
+        const response = await fetch('api/send_sms.php', {
             method: 'POST',
             body: formData
         });
@@ -334,7 +334,7 @@ async function sendAccountsSMS() {
         formData.append('account_ids', JSON.stringify(accountIds));
         formData.append('message', message);
 
-        const response = await fetch('send_sms.php', {
+        const response = await fetch('api/send_sms.php', {
             method: 'POST',
             body: formData
         });
@@ -383,7 +383,7 @@ async function loadSMSHistory() {
     console.log('Loading SMS history for date:', selectedDate);
 
     try {
-        let url = `get_sms_logs.php?page=${smsCurrentPage}&limit=${smsPageSize}`;
+        let url = `api/get_sms_logs.php?page=${smsCurrentPage}&limit=${smsPageSize}`;
 
         // Add date filter if a date is selected
         if (selectedDate) {
@@ -721,7 +721,7 @@ async function saveTemplate(event) {
         formData.append('description', description);
         formData.append('template', template);
 
-        const response = await fetch('save_sms_template.php', {
+        const response = await fetch('api/save_sms_template.php', {
             method: 'POST',
             body: formData
         });
@@ -753,7 +753,7 @@ async function deleteTemplate(templateId) {
         const formData = new FormData();
         formData.append('template_id', templateId);
 
-        const response = await fetch('delete_sms_template.php', {
+        const response = await fetch('api/delete_sms_template.php', {
             method: 'POST',
             body: formData
         });

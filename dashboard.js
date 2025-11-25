@@ -140,6 +140,16 @@ let accountsPagination = {
     sortDirection: 'asc'
 };
 
+// Transactions pagination state
+let transactionsPagination = {
+    currentPage: 1,
+    perPage: 25,
+    totalItems: 0,
+    allTransactions: [],
+    sortColumn: 'timestamp',
+    sortDirection: 'desc'  // Default: newest first
+};
+
 // Theme Management
 function toggleTheme() {
     const html = document.documentElement;
@@ -190,7 +200,7 @@ function isExpired(endDate) {
 // Check authentication
 async function checkAuth() {
     try {
-        const response = await fetch('get_user_info.php');
+        const response = await fetch('api/get_user_info.php');
         const result = await response.json();
 
         if(result.error == 1) {
@@ -356,7 +366,7 @@ async function checkAuth() {
 // Auto-sync accounts on login
 async function autoSyncAccounts() {
     try {
-        const response = await fetch('sync_accounts.php', {
+        const response = await fetch('api/sync_accounts.php', {
             method: 'POST'
         });
 
@@ -1137,7 +1147,7 @@ async function loadAccounts() {
 
         // Get view mode preference for reseller admins
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
-        const url = `get_accounts.php?viewAllAccounts=${viewAllAccounts}`;
+        const url = `api/get_accounts.php?viewAllAccounts=${viewAllAccounts}`;
         console.log('[loadAccounts] Fetching with viewAllAccounts:', viewAllAccounts);
 
         const response = await fetch(url);
@@ -1778,7 +1788,7 @@ function searchAccounts() {
 // Load Resellers
 async function loadResellers() {
     try {
-        const response = await fetch('get_resellers.php');
+        const response = await fetch('api/get_resellers.php');
         const result = await response.json();
 
         const tbody = document.getElementById('resellers-tbody');
@@ -1848,7 +1858,7 @@ async function loadPlans() {
     try {
         // Get view mode preference for reseller admins
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
-        const url = `get_plans.php?viewAllAccounts=${viewAllAccounts}`;
+        const url = `api/get_plans.php?viewAllAccounts=${viewAllAccounts}`;
         console.log('[loadPlans] Fetching plans with URL:', url);
 
         const response = await fetch(url);
@@ -1956,7 +1966,7 @@ let availablePlans = [];
 // Load Tariffs from Stalker Portal Server (auto-fetch on login)
 async function loadTariffs() {
     try {
-        const response = await fetch('get_tariffs.php');
+        const response = await fetch('api/get_tariffs.php');
         const result = await response.json();
 
         if (result.error === 0 && result.tariffs) {
@@ -2012,7 +2022,7 @@ let availableThemes = [];
 // Load Themes from server
 async function loadThemes() {
     try {
-        const response = await fetch('get_themes.php');
+        const response = await fetch('api/get_themes.php');
         const result = await response.json();
 
         if (result.error === 0 && result.themes) {
@@ -2070,55 +2080,217 @@ async function loadTransactions() {
     try {
         // Get view mode preference for reseller admins (affects transaction filtering)
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
-        const response = await fetch(`get_transactions.php?viewAllAccounts=${viewAllAccounts}`);
+        const response = await fetch(`api/get_transactions.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
-        const tbody = document.getElementById('transactions-tbody');
+        if(result.error == 0 && result.transactions) {
+            // Store all transactions for pagination
+            transactionsPagination.allTransactions = result.transactions;
+            transactionsPagination.totalItems = result.transactions.length;
 
-        // Check if current user is admin, reseller admin in All Accounts mode, or observer (to show reseller column)
-        const isSuperAdmin = currentUser && currentUser.super_user == 1;
-        const isObserver = currentUser && currentUser.is_observer == 1;
-        const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
-        const showResellerColumn = isSuperAdmin || isObserver || (isResellerAdmin && viewAllAccounts);
+            // Sort transactions by default (newest first)
+            sortTransactionsData();
 
-        // Show/hide reseller column header based on user type
-        const resellerHeader = document.getElementById('reseller-column-header');
-        if(resellerHeader) {
-            resellerHeader.style.display = showResellerColumn ? '' : 'none';
-        }
-
-        if(result.error == 0 && result.transactions && result.transactions.length > 0) {
-            tbody.innerHTML = '';
-
-            result.transactions.forEach(tx => {
-                const tr = document.createElement('tr');
-                const type = tx.type == 1 ? 'Credit' : 'Debit';
-                const currencySymbol = getCurrencySymbol(tx.currency);
-                const formattedAmount = formatBalance(tx.amount, tx.currency);
-
-                // Build reseller column if needed
-                const resellerColumn = showResellerColumn
-                    ? `<td>${tx.reseller_name || tx.reseller_username || 'N/A'}</td>`
-                    : '';
-
-                tr.innerHTML = `
-                    <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
-                    <td>${currencySymbol}${formattedAmount}</td>
-                    <td>${tx.currency || ''}</td>
-                    <td><span class="badge ${tx.type == 1 ? 'active' : 'inactive'}">${type}</span></td>
-                    ${resellerColumn}
-                    <td>${tx.details || ''}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+            // Render first page
+            renderTransactionsPage();
         } else {
-            const colspan = showResellerColumn ? '6' : '5';
-            tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:40px;color:#999">No transactions found</td></tr>`;
+            transactionsPagination.allTransactions = [];
+            transactionsPagination.totalItems = 0;
+            renderTransactionsPage();
         }
     } catch(error) {
         console.error('Error loading transactions:', error);
         showAlert('Error loading transactions', 'error');
     }
+}
+
+// Sort transactions data
+function sortTransactionsData() {
+    const { sortColumn, sortDirection, allTransactions } = transactionsPagination;
+
+    allTransactions.sort((a, b) => {
+        let valueA, valueB;
+
+        if (sortColumn === 'timestamp') {
+            valueA = parseInt(a.timestamp) || 0;
+            valueB = parseInt(b.timestamp) || 0;
+        } else {
+            valueA = a[sortColumn] || '';
+            valueB = b[sortColumn] || '';
+        }
+
+        if (sortDirection === 'asc') {
+            return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+        } else {
+            return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+        }
+    });
+}
+
+// Sort transactions by column
+function sortTransactions(column) {
+    // Toggle direction if clicking same column
+    if (transactionsPagination.sortColumn === column) {
+        transactionsPagination.sortDirection = transactionsPagination.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        transactionsPagination.sortColumn = column;
+        transactionsPagination.sortDirection = 'desc'; // Default to newest first for date
+    }
+
+    // Update sort icon in header
+    updateTransactionsSortIcon();
+
+    // Sort data and re-render
+    sortTransactionsData();
+    transactionsPagination.currentPage = 1; // Reset to first page
+    renderTransactionsPage();
+}
+
+// Update sort icon in transactions table header
+function updateTransactionsSortIcon() {
+    const table = document.getElementById('transactions-table');
+    const headers = table.querySelectorAll('th.sortable');
+
+    headers.forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === transactionsPagination.sortColumn) {
+            th.classList.add(transactionsPagination.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
+
+// Render current transactions page
+function renderTransactionsPage() {
+    const tbody = document.getElementById('transactions-tbody');
+    const { currentPage, perPage, allTransactions, totalItems } = transactionsPagination;
+
+    // Check if current user is admin, reseller admin in All Accounts mode, or observer (to show reseller column)
+    const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+    const isSuperAdmin = currentUser && currentUser.super_user == 1;
+    const isObserver = currentUser && currentUser.is_observer == 1;
+    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+    const showResellerColumn = isSuperAdmin || isObserver || (isResellerAdmin && viewAllAccounts);
+
+    // Show/hide reseller column header based on user type
+    const resellerHeader = document.getElementById('reseller-column-header');
+    if(resellerHeader) {
+        resellerHeader.style.display = showResellerColumn ? '' : 'none';
+    }
+
+    if(totalItems > 0) {
+        tbody.innerHTML = '';
+
+        // Calculate pagination
+        const startIndex = (currentPage - 1) * perPage;
+        const endIndex = Math.min(startIndex + perPage, totalItems);
+        const pageTransactions = allTransactions.slice(startIndex, endIndex);
+
+        pageTransactions.forEach(tx => {
+            const tr = document.createElement('tr');
+            const type = tx.type == 1 ? 'Credit' : 'Debit';
+            const currencySymbol = getCurrencySymbol(tx.currency);
+            const formattedAmount = formatBalance(tx.amount, tx.currency);
+
+            // Build reseller column if needed
+            const resellerColumn = showResellerColumn
+                ? `<td>${tx.reseller_name || tx.reseller_username || 'N/A'}</td>`
+                : '';
+
+            tr.innerHTML = `
+                <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
+                <td>${currencySymbol}${formattedAmount}</td>
+                <td>${tx.currency || ''}</td>
+                <td><span class="badge ${tx.type == 1 ? 'active' : 'inactive'}">${type}</span></td>
+                ${resellerColumn}
+                <td>${tx.details || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Update pagination info
+        document.getElementById('transactions-pagination-info').textContent =
+            `Showing ${startIndex + 1}-${endIndex} of ${totalItems} transactions`;
+
+        // Render pagination buttons
+        renderTransactionsPagination();
+    } else {
+        const colspan = showResellerColumn ? '6' : '5';
+        tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:40px;color:#999">No transactions found</td></tr>`;
+        document.getElementById('transactions-pagination-info').textContent = '';
+        document.getElementById('transactions-pagination').innerHTML = '';
+    }
+
+    // Update sort icon on initial load
+    updateTransactionsSortIcon();
+}
+
+// Render transactions pagination buttons
+function renderTransactionsPagination() {
+    const { currentPage, perPage, totalItems } = transactionsPagination;
+    const totalPages = Math.ceil(totalItems / perPage);
+    const paginationDiv = document.getElementById('transactions-pagination');
+
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+
+    let buttonsHTML = '';
+
+    // Previous button
+    buttonsHTML += `<button onclick="goToTransactionsPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>« Prev</button>`;
+
+    // Page numbers with ellipsis
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+        buttonsHTML += `<button class="page-btn" onclick="goToTransactionsPage(1)">1</button>`;
+        if (startPage > 2) {
+            buttonsHTML += `<span class="ellipsis">...</span>`;
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        buttonsHTML += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToTransactionsPage(${i})">${i}</button>`;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            buttonsHTML += `<span class="ellipsis">...</span>`;
+        }
+        buttonsHTML += `<button class="page-btn" onclick="goToTransactionsPage(${totalPages})">${totalPages}</button>`;
+    }
+
+    // Next button
+    buttonsHTML += `<button onclick="goToTransactionsPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next »</button>`;
+
+    paginationDiv.innerHTML = buttonsHTML;
+}
+
+// Go to specific transactions page
+function goToTransactionsPage(page) {
+    const totalPages = Math.ceil(transactionsPagination.totalItems / transactionsPagination.perPage);
+    if (page >= 1 && page <= totalPages) {
+        transactionsPagination.currentPage = page;
+        renderTransactionsPage();
+
+        // Scroll to top of transactions table
+        document.getElementById('transactions-table').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// Change transactions per page
+function changeTransactionsPerPage() {
+    const select = document.getElementById('transactions-per-page');
+    transactionsPagination.perPage = parseInt(select.value);
+    transactionsPagination.currentPage = 1; // Reset to first page
+    renderTransactionsPage();
 }
 
 // Add Account
@@ -2212,7 +2384,7 @@ async function addAccount(e) {
 async function submitAddAccountForm(formData) {
 
     try {
-        const response = await fetch('add_account.php', {
+        const response = await fetch('api/add_account.php', {
             method: 'POST',
             body: formData
         });
@@ -2271,7 +2443,7 @@ async function addReseller(e) {
     formData.set('is_observer', isObserver); // Add is_observer to form data
 
     try {
-        const response = await fetch('add_reseller.php', {
+        const response = await fetch('api/add_reseller.php', {
             method: 'POST',
             body: formData
         });
@@ -2299,7 +2471,7 @@ async function addPlan(e) {
     const params = new URLSearchParams(formData).toString();
 
     try {
-        const response = await fetch('add_plan.php?' + params, {
+        const response = await fetch('api/add_plan.php?' + params, {
             method: 'GET'
         });
 
@@ -2365,7 +2537,7 @@ async function submitEditPlan(e) {
     const params = new URLSearchParams(formData).toString();
 
     try {
-        const response = await fetch('edit_plan.php?' + params, {
+        const response = await fetch('api/edit_plan.php?' + params, {
             method: 'GET'
         });
 
@@ -2393,7 +2565,7 @@ async function deleteAccount(username) {
     formData.append('id', username);
 
     try {
-        const response = await fetch('remove_account.php', {
+        const response = await fetch('api/remove_account.php', {
             method: 'POST',
             body: formData
         });
@@ -2415,7 +2587,7 @@ async function deleteAccount(username) {
 // Toggle Account Status
 async function toggleAccountStatus(username, newStatus) {
     try {
-        const response = await fetch(`toggle_account_status.php?username=${encodeURIComponent(username)}&status=${newStatus}`);
+        const response = await fetch(`api/toggle_account_status.php?username=${encodeURIComponent(username)}&status=${newStatus}`);
         const result = await response.json();
 
         if(result.error == 0) {
@@ -2453,7 +2625,7 @@ async function assignResellerCore(username, currentResellerId) {
 
         // Load resellers list
         console.log('Fetching resellers...');
-        const response = await fetch('get_resellers.php');
+        const response = await fetch('api/get_resellers.php');
         const result = await response.json();
         console.log('Resellers response:', result);
 
@@ -2487,7 +2659,7 @@ async function submitAssignReseller(event) {
     const formData = new FormData(event.target);
 
     try {
-        const response = await fetch('assign_reseller.php', {
+        const response = await fetch('api/assign_reseller.php', {
             method: 'POST',
             body: formData
         });
@@ -2516,7 +2688,7 @@ async function deletePlan(planId, currency) {
     }
 
     try {
-        const response = await fetch(`remove_plan.php?plan=${planId}&currency=${currency}`, {
+        const response = await fetch(`api/remove_plan.php?plan=${planId}&currency=${currency}`, {
             method: 'GET'
         });
 
@@ -2541,7 +2713,7 @@ async function editReseller(resellerId) {
             await loadThemes();
         }
 
-        const response = await fetch('get_resellers.php');
+        const response = await fetch('api/get_resellers.php');
         const result = await response.json();
 
         if (result.error == 0 && result.resellers) {
@@ -2620,7 +2792,7 @@ async function updateReseller(e) {
     // Plans are managed separately via "Assign Plans" button
 
     try {
-        const response = await fetch('update_reseller.php', {
+        const response = await fetch('api/update_reseller.php', {
             method: 'POST',
             body: formData
         });
@@ -2651,7 +2823,7 @@ async function deleteReseller(resellerId) {
     }
 
     try {
-        const response = await fetch(`remove_reseller.php?id=${resellerId}`, {
+        const response = await fetch(`api/remove_reseller.php?id=${resellerId}`, {
             method: 'GET'
         });
 
@@ -2802,7 +2974,7 @@ async function editAccountCore(username) {
 async function loadPlansForEdit() {
     try {
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
-        const response = await fetch(`get_plans.php?viewAllAccounts=${viewAllAccounts}`);
+        const response = await fetch(`api/get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const planSelect = document.getElementById('edit-plan');
@@ -2829,7 +3001,7 @@ async function loadPlansForEdit() {
 async function loadRenewalPlans() {
     try {
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
-        const response = await fetch(`get_plans.php?viewAllAccounts=${viewAllAccounts}`);
+        const response = await fetch(`api/get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const container = document.getElementById('renewal-plans-container');
@@ -2884,7 +3056,7 @@ const editAccount = debounce(editAccountCore, 'editAccount', 200);
 async function loadNewDevicePlans() {
     try {
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
-        const response = await fetch(`get_plans.php?viewAllAccounts=${viewAllAccounts}`);
+        const response = await fetch(`api/get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const container = document.getElementById('add-new-device-plans-container');
@@ -3027,7 +3199,7 @@ async function submitEditAccount(e) {
 
     try {
         console.log('Sending request to edit_account.php');
-        const response = await fetch('edit_account.php', {
+        const response = await fetch('api/edit_account.php', {
             method: 'POST',
             body: formData
         });
@@ -3087,7 +3259,7 @@ async function submitCreditAdjustment(e) {
     const formData = new FormData(e.target);
 
     try {
-        const response = await fetch('adjust_credit.php', {
+        const response = await fetch('api/adjust_credit.php', {
             method: 'POST',
             body: formData
         });
@@ -3171,7 +3343,7 @@ async function submitPlanAssignment(e) {
     formData.append('plans', plansString);
 
     try {
-        const response = await fetch('assign_plans.php', {
+        const response = await fetch('api/assign_plans.php', {
             method: 'POST',
             body: formData
         });
@@ -3209,7 +3381,7 @@ async function changePassword(e) {
     formData.append('renew_pass', confirmPass);
 
     try {
-        const response = await fetch('update_password.php', {
+        const response = await fetch('api/update_password.php', {
             method: 'POST',
             body: formData
         });
@@ -3230,7 +3402,7 @@ async function changePassword(e) {
 
 // Logout
 function logout() {
-    fetch('logout.php').then(() => {
+    fetch('api/logout.php').then(() => {
         window.location.href = 'index.html';
     });
 }
@@ -3248,7 +3420,7 @@ async function syncAccounts() {
         syncStatus.className = 'sync-status info';
         syncStatus.textContent = 'Syncing accounts from server...';
 
-        const response = await fetch('sync_accounts.php', {
+        const response = await fetch('api/sync_accounts.php', {
             method: 'POST'
         });
 
@@ -3314,7 +3486,7 @@ async function exportDatabase(buttonElement) {
         exportStatus.className = 'sync-status info';
         exportStatus.textContent = 'Generating database backup...';
 
-        const response = await fetch('export_database.php', {
+        const response = await fetch('scripts/export_database.php', {
             method: 'POST'
         });
 
@@ -3405,7 +3577,7 @@ async function importDatabase() {
         importStatus.className = 'sync-status info';
         importStatus.textContent = 'Importing database... This may take a few minutes.';
 
-        const response = await fetch('import_database.php', {
+        const response = await fetch('scripts/import_database.php', {
             method: 'POST',
             body: formData
         });
@@ -3728,7 +3900,7 @@ async function sendStbEvent(event) {
     const formData = new FormData(event.target);
 
     try {
-        const response = await fetch('send_stb_event.php', {
+        const response = await fetch('api/send_stb_event.php', {
             method: 'POST',
             body: formData
         });
@@ -3765,7 +3937,7 @@ async function sendStbMessage(event) {
     const formData = new FormData(event.target);
 
     try {
-        const response = await fetch('send_stb_message.php', {
+        const response = await fetch('api/send_stb_message.php', {
             method: 'POST',
             body: formData
         });
@@ -4154,7 +4326,7 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 async function loadReminderSettings() {
     try {
-        const response = await fetch('get_reminder_settings.php');
+        const response = await fetch('api/get_reminder_settings.php');
         const result = await response.json();
 
         if(result.error == 0) {
@@ -4213,7 +4385,7 @@ async function saveReminderSettings() {
         formData.append('message_template', template);
         formData.append('auto_send_enabled', autoSendEnabled);
 
-        const response = await fetch('update_reminder_settings.php', {
+        const response = await fetch('api/update_reminder_settings.php', {
             method: 'POST',
             body: formData
         });
@@ -4257,7 +4429,7 @@ async function sendExpiryReminders() {
     try {
         console.log('[Reminder Debug] Attempting to fetch send_expiry_reminders.php...');
 
-        const response = await fetch('send_expiry_reminders.php', {
+        const response = await fetch('api/send_expiry_reminders.php', {
             method: 'POST'
         });
 
@@ -4450,7 +4622,7 @@ async function loadReminderHistory() {
     }
 
     try {
-        const response = await fetch(`get_reminder_history.php?date=${date}`);
+        const response = await fetch(`api/get_reminder_history.php?date=${date}`);
         const result = await response.json();
 
         if(result.error == 0) {
@@ -5287,7 +5459,7 @@ function saveNewPassword() {
     // Call change password API
     const username = localStorage.getItem('currentUser') || sessionStorage.getItem('username');
 
-    fetch('change_password.php', {
+    fetch('api/change_password.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.11.12-debug-logging';
+const CACHE_NAME = 'showbox-billing-v1.11.13-transactions-pagination';
 const urlsToCache = [
   '/dashboard.php',
   '/index.html',
@@ -6,9 +6,9 @@ const urlsToCache = [
   '/dashboard.js',
   '/sms-functions.js',
   '/manifest.json',
-  '/BYekan+.ttf',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/assets/fonts/BYekan+.ttf',
+  '/assets/icons/icon-192x192.png',
+  '/assets/icons/icon-512x512.png'
 ];
 
 // Install event - cache resources
@@ -137,8 +137,8 @@ self.addEventListener('message', event => {
 
       const options = {
         body: body,
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
+        icon: '/assets/icons/icon-192x192.png',
+        badge: '/assets/icons/icon-72x72.png',
         tag: 'reminder-notification',
         requireInteraction: false,
         silent: false,
