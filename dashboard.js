@@ -859,7 +859,7 @@ function validatePhoneNumber(phoneNumber, countryCode) {
  * @param {string} countryCodeSelect - Country code selector value
  * @param {string} customCode - Custom country code input value
  * @param {string} phoneNumber - Phone number input value
- * @returns {string} - Full phone number with country code
+ * @returns {string} - Full phone number with country code (always starts with +)
  */
 function getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber) {
     if (!phoneNumber) return '';
@@ -867,7 +867,13 @@ function getFullPhoneNumber(countryCodeSelect, customCode, phoneNumber) {
     const normalized = normalizePhoneNumber(phoneNumber);
     if (!normalized) return '';
 
-    const code = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
+    let code = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
+
+    // Ensure code starts with + sign
+    if (code && !code.startsWith('+')) {
+        code = '+' + code;
+    }
+
     return code + normalized;
 }
 

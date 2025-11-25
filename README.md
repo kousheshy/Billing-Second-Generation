@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.5--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.6--beta-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,26 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.5-beta
+**Version:** 1.11.6-beta
 **Last Updated:** November 2025
 **Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.6-beta** (Nov 2025) - Phone Number Format & UI Refinements
+  - **E.164 Format Enforcement**: Automatic + prefix addition for all phone numbers
+  - **Sync Phone Format Fix**: Sanitization during Stalker Portal sync (removes non-digits, adds + prefix)
+  - **Phone Input UI Polish**: Dropdown width optimized (190px → 140px), cleaner styling with CSS variables
+  - **Data Consistency**: All phone numbers follow international E.164 standard (+[country][number])
+  - **SMS Compatibility**: Proper format for Kavenegar and other SMS APIs
+  - **Technical Changes**:
+    - `getFullPhoneNumber()`: Auto-adds + if country code missing it
+    - `sync_accounts.php`: Phone sanitization with regex and prefix validation
+    - `dashboard.css`: 116 lines refined for better visual balance
+  - **Files Created**: fix_phone_numbers.php (migration utility)
+  - **Benefits**: Global phone standard compliance, SMS API ready, future-proof
 
 - **v1.11.5-beta** (Nov 2025) - Dark Mode Login Page
   - **Dark Mode Theme Toggle**: Moon/Sun icon button in login page for theme switching

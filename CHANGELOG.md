@@ -7,6 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.6-beta] - 2025-11-25
+
+### Fixed - Phone Number Format & UI Refinements
+
+**Status:** Beta Testing - Bug Fixes & UI Polish
+
+**Overview**
+Critical fixes for phone number formatting to ensure E.164 compliance and UI refinements for better phone input usability.
+
+**Bug Fixes**
+
+1. **Phone Number E.164 Format Enforcement** (Critical Fix)
+   - **Issue**: Phone numbers sometimes stored without + prefix
+   - **Fix**: Automatic + prefix addition in `getFullPhoneNumber()` function
+   - **Impact**: Ensures all phone numbers follow international E.164 standard
+   - **Logic**: Checks if country code starts with +, adds if missing
+   - **Files**: `dashboard.js` (lines 870-875)
+
+2. **Sync Accounts Phone Format** (Data Integrity)
+   - **Issue**: Synced accounts from Stalker Portal might have inconsistent phone formats
+   - **Fix**: Added phone number sanitization during sync process
+   - **Process**:
+     - Remove all non-digit characters except +
+     - Add + prefix if missing
+     - Ensures E.164 compliance from external data source
+   - **Files**: `sync_accounts.php` (lines 200-208)
+
+3. **Phone Input UI Refinements** (Visual Polish)
+   - **Country Code Dropdown**: Width reduced from 190px to 140px for better balance
+   - **Simplified Styling**: Uses CSS variables for consistency with theme
+   - **Cleaner Borders**: Reduced from 1.5px to 1px, softer transitions
+   - **Better Hover States**: Smoother animations with CSS variable timing
+   - **Background Updates**: Matches main theme background colors
+   - **Arrow Icon**: Repositioned for better visual alignment
+   - **Files**: `dashboard.css` (116 lines modified)
+
+**Technical Details**
+
+- **E.164 Standard**: International phone numbering plan
+  - Format: +[country code][subscriber number]
+  - Example: +989121234567 (Iran), +14155552671 (USA)
+  - Required for SMS APIs and international calling
+
+- **Function Updates**:
+  ```javascript
+  // Added validation in getFullPhoneNumber()
+  if (code && !code.startsWith('+')) {
+      code = '+' + code;
+  }
+  ```
+
+- **Sync Process Enhancement**:
+  ```php
+  // Sanitize and format phone numbers during sync
+  $phone_number = preg_replace('/[^\d+]/', '', $phone_number);
+  if (!str_starts_with($phone_number, '+')) {
+      $phone_number = '+' . $phone_number;
+  }
+  ```
+
+**Files Modified**
+- `dashboard.js` - Phone number format validation (10 lines)
+- `sync_accounts.php` - Phone sanitization during sync (11 lines)
+- `dashboard.css` - Phone input UI refinements (116 lines)
+
+**Files Created**
+- `fix_phone_numbers.php` - Utility script to fix existing phone numbers in database
+
+**Benefits**
+- **Data Consistency**: All phone numbers follow E.164 standard
+- **SMS Compatibility**: Proper format for Kavenegar and other SMS APIs
+- **International Support**: Standard format works globally
+- **Better UX**: Cleaner, more consistent phone input UI
+- **Future-Proof**: Prevents format issues with new integrations
+
+**Migration Required**
+- Run `fix_phone_numbers.php` to update existing phone numbers in database
+- Script adds + prefix to numbers missing it
+- Safe to run multiple times (idempotent)
+
+**Testing Required**
+- [ ] Add account with phone number (verify + prefix)
+- [ ] Edit account phone number (verify + prefix preserved)
+- [ ] Sync accounts from Stalker Portal (verify format)
+- [ ] Send SMS to fixed phone numbers (verify delivery)
+- [ ] Test with various country codes (+1, +98, +44, etc.)
+
+---
+
 ## [1.11.5-beta] - 2025-11-25
 
 ### Added - Dark Mode Login Page

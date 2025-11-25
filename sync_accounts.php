@@ -197,6 +197,17 @@ try {
         // If Stalker doesn't have a phone, local database won't have it either
         $phone_number = $stalker_user->phone ?? null;
 
+        // Ensure phone number starts with + (E.164 format)
+        if ($phone_number && !empty($phone_number)) {
+            // Remove any non-digit characters except +
+            $phone_number = preg_replace('/[^\d+]/', '', $phone_number);
+
+            // Add + if it's missing and the number is not empty
+            if ($phone_number && !str_starts_with($phone_number, '+')) {
+                $phone_number = '+' . $phone_number;
+            }
+        }
+
         // Insert account into local database
         $stmt = $pdo->prepare('INSERT INTO _accounts (username, email, mac, phone_number, full_name, tariff_plan, end_date, status, reseller, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute([

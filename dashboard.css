@@ -4378,7 +4378,7 @@ body.pwa-mode .modal-header {
 
 /* Override .form-group input width for phone components */
 .phone-input-container .country-code-select {
-    width: 190px !important;
+    width: 140px !important;
 }
 
 .phone-input-container .custom-code-input {
@@ -4392,93 +4392,94 @@ body.pwa-mode .modal-header {
 }
 
 .country-code-select {
-    flex: 0 0 190px;
-    width: 190px;
+    flex: 0 0 140px;
+    width: 140px;
     height: 48px;
-    padding: 12px 40px 12px 14px;
-    border: 1.5px solid rgba(71, 85, 105, 0.25);
-    border-radius: 10px;
-    background-color: rgba(15, 23, 42, 0.5);
-    color: var(--text);
+    padding: 12px 32px 12px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: 500;
     line-height: 1.5;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-fast);
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23cbd5e1' d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 14px center;
+    background-position: right 10px center;
     background-size: 12px 12px;
 }
 
 .country-code-select:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    background-color: rgba(59, 130, 246, 0.08);
+    border-color: var(--text-tertiary);
 }
 
 .country-code-select:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.8);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    background-color: rgba(59, 130, 246, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
 }
 
 .custom-code-input {
     flex: 0 0 auto;
     width: 100px;
     height: 48px;
-    padding: 0 14px;
-    border: 1.5px solid rgba(71, 85, 105, 0.25);
-    border-radius: 10px;
-    background-color: rgba(15, 23, 42, 0.5);
-    color: var(--text);
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: 500;
     text-align: center;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-fast);
+}
+
+.custom-code-input:hover {
+    border-color: var(--text-tertiary);
 }
 
 .custom-code-input:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.8);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    background-color: rgba(59, 130, 246, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
 }
 
 .phone-number-input {
     flex: 1;
     min-width: 200px;
     height: 48px;
-    padding: 0 14px;
-    border: 1.5px solid rgba(71, 85, 105, 0.25);
-    border-radius: 10px;
-    background-color: rgba(15, 23, 42, 0.5);
-    background-image: none !important;
-    color: var(--text);
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: 400;
     letter-spacing: 0.3px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-fast);
 }
 
 .phone-number-input::placeholder {
-    color: rgba(148, 163, 184, 0.5);
+    color: var(--text-tertiary);
     font-weight: 400;
 }
 
 .phone-number-input:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    background-color: rgba(59, 130, 246, 0.08);
+    border-color: var(--text-tertiary);
 }
 
 .phone-number-input:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.8);
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-    background: rgba(59, 130, 246, 0.08);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
 }
 
 .phone-hint {
@@ -4490,45 +4491,12 @@ body.pwa-mode .modal-header {
     font-weight: 400;
 }
 
-/* Dark Mode for Phone Inputs */
-[data-theme="dark"] .country-code-select,
-[data-theme="dark"] .custom-code-input,
-[data-theme="dark"] .phone-number-input {
-    background-color: rgba(30, 41, 59, 0.4);
-    border-color: rgba(71, 85, 105, 0.4);
-    color: #e2e8f0;
-}
-
+/* Dark Mode for Phone Inputs - now uses CSS variables from form-group styles */
 [data-theme="dark"] .country-code-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23cbd5e1' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23cbd5e1' d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 14px center;
-}
-
-[data-theme="dark"] .phone-number-input {
-    background-image: none !important;
-}
-
-[data-theme="dark"] .country-code-select:hover,
-[data-theme="dark"] .custom-code-input:hover,
-[data-theme="dark"] .phone-number-input:hover {
-    border-color: rgba(59, 130, 246, 0.6);
-    background-color: rgba(59, 130, 246, 0.1);
-}
-
-[data-theme="dark"] .country-code-select:focus,
-[data-theme="dark"] .custom-code-input:focus,
-[data-theme="dark"] .phone-number-input:focus {
-    border-color: rgba(59, 130, 246, 0.9);
-    background-color: rgba(59, 130, 246, 0.15);
-}
-
-[data-theme="dark"] .phone-number-input::placeholder {
-    color: rgba(148, 163, 184, 0.6);
-}
-
-[data-theme="dark"] .phone-hint {
-    color: rgba(148, 163, 184, 0.75);
+    background-position: right 10px center;
+    background-size: 12px 12px;
 }
 
 /* Responsive Design for Phone Inputs */
