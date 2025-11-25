@@ -37,14 +37,29 @@ try {
 
     $is_observer = $user_info['is_observer'] == 1;
 
+    // Parse permissions to check if user is reseller admin
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    // Get view mode preference from request (only for reseller admins)
+    $viewAllAccounts = isset($_GET['viewAllAccounts']) ? $_GET['viewAllAccounts'] === 'true' : false;
+
+    // Determine what transactions to show
     if($user_info['super_user'] == 1 || $is_observer)
     {
-        // Admin and observers see all transactions with reseller names
+        // Super admins and observers always see all transactions with reseller names
+        $stmt = $pdo->prepare('SELECT t.*, u.name as reseller_name, u.username as reseller_username FROM _transactions t LEFT JOIN _users u ON t.for_user = u.id ORDER BY t.id DESC LIMIT 100');
+        $stmt->execute([]);
+    }
+    else if($is_reseller_admin && $viewAllAccounts)
+    {
+        // Reseller admin in "All Accounts" mode sees all transactions
         $stmt = $pdo->prepare('SELECT t.*, u.name as reseller_name, u.username as reseller_username FROM _transactions t LEFT JOIN _users u ON t.for_user = u.id ORDER BY t.id DESC LIMIT 100');
         $stmt->execute([]);
     }
     else
     {
+        // Reseller admin in "My Accounts" mode or regular resellers see only their own transactions
         $stmt = $pdo->prepare('SELECT * FROM _transactions WHERE for_user = ? ORDER BY id DESC LIMIT 100');
         $stmt->execute([$user_info['id']]);
     }

@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.6--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.7--beta-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -906,6 +906,21 @@ Unauthorized copying, modification, or distribution is prohibited.
   - **Files Modified**: `add_plan.php`, `get_tariffs.php`, `dashboard.js`
   - **No DB Migration Required**: Pure authorization & frontend logic enhancement
   - **Documentation Updated**: README & CHANGELOG reflect new capabilities
+
+- **v1.11.7-beta** (Nov 2025) - Reseller Admin Permissions & View Toggle Refinement
+  - **Status**: Beta Testing - Major Feature Release
+  - **Reseller Admin Permissions**: Complete system for managing resellers (add, edit, delete, adjust credit, assign plans)
+  - **Permission Hierarchy**: Super Admin → Reseller Admin → Regular Reseller → Observer
+  - **View Toggle Refinement**: Plans always show ALL for reseller admins; Transactions respect toggle
+  - **Card-Based Plan Selection**: Beautiful cards for reseller admins in "My Accounts" mode
+  - **Security Enhancements**: Self-permission removal protection, self-deletion protection
+  - **Backend Updates**: Permission checks added to 7 PHP files (assign_plans, adjust_credit, get_resellers, etc.)
+  - **Frontend Updates**: 8+ functions modified in dashboard.js for new behavior
+  - **UI Enhancements**: 84 new CSS lines for refined toggle styling
+  - **Documentation**: Added comprehensive reseller admin and view toggle docs (2 new MD files)
+  - **Bug Fixes**: Fixed critical "error loading resellers" undefined variable issue
+  - **Testing**: All features tested and verified working correctly
+  - **Files Modified**: 14 PHP files + dashboard.js + dashboard.css + dashboard.html (312+ insertions, 81 deletions)
 
 - **v1.7.4** (Nov 2025) - Reseller Theme Bulk Propagation & Enhanced MAC Initialization
   - **Automatic Theme Propagation**: Changing a reseller's theme now updates ALL existing subscriber accounts on Stalker Portal

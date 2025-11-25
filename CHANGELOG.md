@@ -7,6 +7,257 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.7-beta] - 2025-11-25
+
+### Added - Reseller Admin Permissions & View Toggle Refinement
+
+**Status:** Beta Testing - Major Feature Release
+
+**Overview**
+Comprehensive reseller admin permission system enabling elevated privileges for managing resellers, plus refined view toggle behavior for better UX. This release introduces a new permission hierarchy and complete documentation.
+
+**Major Features**
+
+1. **Reseller Admin Permissions System** ⭐
+   - **New Permission Flag**: `is_reseller_admin` (index 2 in permissions string)
+   - **Permission Hierarchy**: Super Admin → Reseller Admin → Regular Reseller → Observer
+   - **Capabilities**:
+     - ✅ Manage all resellers (add, edit, delete, adjust credit)
+     - ✅ Assign plans to resellers
+     - ✅ Toggle between "All Accounts" and "My Accounts" view
+     - ✅ Card-based plan selection in "My Accounts" mode
+     - ✅ Edit username/password fields (unlike regular resellers)
+     - ✅ Access all reseller management features
+   - **Restrictions**:
+     - ❌ Cannot remove own admin permission
+     - ❌ Cannot delete own account
+     - ❌ Cannot become super admin (super_user = 0 locked)
+     - ❌ No balance/credit (exempt from credit checks)
+
+2. **View Toggle Scope Refinement** 🔄
+   - **Plans Section**: Always shows ALL plans for reseller admins (toggle independent)
+   - **Transaction History**: Now respects view toggle for reseller admins
+   - **Accounts Section**: Continues to respect toggle (unchanged)
+   - **Reports Section**: Continues to respect toggle (unchanged)
+   - **Benefits**:
+     - Clearer separation: viewing data vs. available resources
+     - No need to toggle for plan access
+     - Transaction visibility on demand
+
+3. **Card-Based Plan Selection** 🎴
+   - Beautiful card UI for reseller admins in "My Accounts" mode
+   - Add Account modal shows cards instead of dropdown
+   - Edit/Renew modal shows cards instead of dropdown
+   - Visual plan details (price, duration, features)
+   - Same experience as regular resellers but with admin privileges
+
+4. **Delete Button Visibility** 🗑️
+   - Reseller admins see delete buttons in Resellers tab
+   - Backend protection prevents self-deletion
+   - Frontend shows buttons, backend enforces security
+   - Error message when attempting self-deletion
+
+**Backend Changes (7 PHP Files)**
+
+1. **assign_plans.php** (lines 41-54)
+   - Added reseller admin permission check
+   - Pattern: `$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1'`
+   - Condition: `if($user_info['super_user'] != 1 && !$is_reseller_admin)`
+
+2. **adjust_credit.php** (lines 41-54)
+   - Added reseller admin permission check
+   - Allows reseller admins to adjust credit for other resellers
+
+3. **get_resellers.php** (lines 34-50)
+   - Added reseller admin permission check
+   - Previously had no permission check (security fix)
+
+4. **remove_reseller.php** (lines 48-60, 76-83)
+   - Added reseller admin permission check
+   - Added self-deletion protection
+   - Error: "You cannot delete your own account. Contact a super admin."
+
+5. **update_reseller.php** (lines 94-108)
+   - Self-permission removal protection (already existed)
+   - Reseller admins cannot remove own admin flag
+   - Error: "You cannot remove your own admin permissions. Contact a super admin."
+
+6. **get_themes.php** (lines 38-49)
+   - Added reseller admin permission check
+   - Needed for reseller editing functionality
+
+7. **get_transactions.php** (lines 40-65)
+   - Added view toggle support for reseller admins
+   - Shows all transactions when `viewAllAccounts=true`
+   - Shows only own transactions when `viewAllAccounts=false`
+   - Reseller column visibility based on view mode
+
+8. **get_plans.php** (lines 48-55, 84-92)
+   - Reseller admins now always see all plans
+   - Removed category filtering logic
+   - Aligned behavior with super admins
+
+9. **add_account.php** (multiple locations)
+   - Skip credit checks for reseller admins
+   - Skip balance deduction for reseller admins
+   - Permission-aware account creation
+
+**Frontend Changes (dashboard.js - 8+ Functions)**
+
+1. **loadResellers()** (lines 1782-1804)
+   - Added `isResellerAdmin` variable definition (critical fix)
+   - Delete button visibility logic
+   - Fixed "error loading resellers" bug
+
+2. **openModal()** (lines 1035-1077)
+   - Card-based plan selection for Add Account
+   - View mode awareness (`viewAllAccounts`)
+   - Username/password editability for reseller admins
+
+3. **editAccountCore()** (lines 2717-2760)
+   - Card-based plan selection for Edit/Renew
+   - View mode awareness
+   - Username/password editability for reseller admins
+
+4. **loadPlans()** (lines 1910-1915)
+   - Removed category filtering
+   - All plans shown to reseller admins
+
+5. **loadPlansForEdit()** (lines 2783-2785)
+   - Removed renewal category filtering
+   - All plans shown in dropdown
+
+6. **loadRenewalPlans()** (lines 2808-2811)
+   - Removed category filtering for cards
+   - All plans shown in card display
+
+7. **loadNewDevicePlans()** (lines 2861-2864)
+   - Removed category filtering for cards
+   - All plans shown in card display
+
+8. **loadTransactions()** (lines 2057-2068)
+   - Added `viewAllAccounts` parameter to API call
+   - Reseller column visibility logic
+   - View mode awareness
+
+9. **toggleAccountViewMode()** (lines 4026-4032)
+   - Changed to reload transactions instead of plans
+   - Plans no longer affected by toggle
+
+**UI Enhancements (dashboard.css)**
+
+- 84 new lines for view mode toggle styling
+- Toggle slider refinements:
+  - Background: `rgba(255, 255, 255, 0.1)` for better contrast
+  - Border: Reduced from 2px to 1px
+  - Slider size: 18px (increased from 16px)
+  - Smoother transitions with CSS variables
+- New CSS classes:
+  - `.view-mode-toggle`: Container styling
+  - `.view-mode-switch`: Switch wrapper
+  - `.view-mode-slider`: Toggle slider
+  - `.view-mode-label`: Label text
+
+**Documentation Added**
+
+1. **RESELLER_ADMIN_PERMISSIONS_DOCUMENTATION.md** (Complete Guide)
+   - Permission system architecture
+   - Implemented features breakdown
+   - Security controls documentation
+   - Backend and frontend changes
+   - Testing guide with 7 test cases
+   - Troubleshooting section
+   - Database schema reference
+   - API endpoints reference
+
+2. **VIEW_TOGGLE_SCOPE_UPDATE.md** (Behavior Documentation)
+   - Before/after behavior comparison
+   - Files modified breakdown
+   - Testing guide with 4 test cases
+   - Benefits of the change
+   - Migration notes
+
+**Security Enhancements**
+
+1. **Self-Permission Protection**
+   - Reseller admins cannot remove their own admin flag
+   - Backend check in `update_reseller.php`
+   - Error message displayed to user
+
+2. **Self-Deletion Protection**
+   - Reseller admins cannot delete their own accounts
+   - Backend check in `remove_reseller.php`
+   - Must contact super admin for deletion
+
+3. **Account Deletion Validation**
+   - Cannot delete resellers with active accounts
+   - Must delete all accounts first
+   - Prevents data integrity issues
+
+4. **Credit Check Exemptions**
+   - Reseller admins exempt from balance checks
+   - No credit deduction on account creation
+   - No "not enough credit" errors
+
+5. **Super User Lock**
+   - All resellers maintain `super_user = 0`
+   - No privilege escalation possible
+   - Admin permissions via permissions string only
+
+**Technical Details**
+
+- **Permission String Format**:
+  ```
+  can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
+  ```
+- **Example Reseller Admin**: `1|1|1|1|1|1|0` (super_user = 0)
+- **Example Regular Reseller**: `1|1|0|0|1|0|0` (super_user = 0)
+- **Permission Check Pattern**:
+  ```php
+  $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0|0');
+  $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+  ```
+
+**Testing Results**
+
+- ✅ Reseller admins can manage all resellers
+- ✅ View toggle affects Accounts and Transactions only
+- ✅ Plans always show all items for reseller admins
+- ✅ Self-protection mechanisms working correctly
+- ✅ Card-based plan selection in "My Accounts" mode
+- ✅ Delete button visible with backend protection
+- ✅ Transaction history filtered by view mode
+- ✅ Username/password editability for reseller admins
+
+**Statistics**
+
+- **Files Modified**: 14 PHP files + dashboard.js + dashboard.css + dashboard.html
+- **Insertions**: 312+ lines
+- **Deletions**: 81 lines
+- **New Files**: 2 documentation files
+- **Functions Modified**: 8+ JavaScript functions
+- **Permission Checks Added**: 7 backend files
+
+**Bug Fixes**
+
+- **Critical**: Fixed "error loading resellers" - undefined `isResellerAdmin` variable (line 1785)
+- Category filtering now consistent across all modals
+- Transaction history visibility for reseller admins
+- Username/password editability logic corrected
+
+**Breaking Changes**
+
+None. All changes are additive and backwards compatible.
+
+**Upgrade Notes**
+
+- No database schema changes required
+- Existing resellers unaffected
+- To enable reseller admin: Set permissions index 2 to '1'
+- Example SQL: `UPDATE _users SET permissions = '1|1|1|1|1|1|0' WHERE id = ?`
+
+---
+
 ## [1.11.6-beta] - 2025-11-25
 
 ### Fixed - Phone Number Format & UI Refinements

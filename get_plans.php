@@ -46,14 +46,14 @@ try {
     $viewAllAccounts = isset($_GET['viewAllAccounts']) ? $_GET['viewAllAccounts'] === 'true' : false;
 
     // Super admins and observers always see all plans
-    // Reseller admins can toggle between all plans and their own
-    // Regular resellers only see their own
+    // Reseller admins see all plans OR assigned plans based on toggle
+    // Regular resellers only see their assigned plans
     if($user_info['super_user'] == 1 || $is_observer) {
         $stmt = $pdo->prepare('SELECT * FROM _plans ORDER BY id DESC');
         $stmt->execute([]);
         $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else if($is_reseller_admin && $viewAllAccounts) {
-        // Reseller admin viewing all plans
+        // Reseller admin in "All Accounts" mode sees all system plans
         $stmt = $pdo->prepare('SELECT * FROM _plans ORDER BY id DESC');
         $stmt->execute([]);
         $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -88,6 +88,7 @@ try {
 
                     if($plan) {
                         error_log('[get_plans.php] Found plan: ' . $plan['name']);
+                        // Regular resellers see all their assigned plans
                         $plans[] = $plan;
                     } else {
                         error_log('[get_plans.php] Plan NOT FOUND for external_id=' . $plan_id . ', currency_id=' . $currency);

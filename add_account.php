@@ -182,14 +182,16 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
 
     $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // Reseller admins don't have balance - skip credit check for them
+    if(!$is_reseller_admin) {
+        if($plan_info['price'] > $user_info['balance'])
+        {
+            $response['error']=1;
+            $response['err_msg']="Not enough credit.";
 
-    if($plan_info['price'] > $user_info['balance'])
-    {
-        $response['error']=1;
-        $response['err_msg']="Not enough credit.";
-
-        echo json_encode($response);
-        exit();
+            echo json_encode($response);
+            exit();
+        }
     }
 
     $price = (int)$plan_info['price'];
@@ -231,11 +233,18 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
         $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Only check credit if admin is adding account for a reseller
-        // Admin doesn't need credit when adding their own accounts
+        // Admin and reseller admin don't need credit when adding their own accounts
         if($user_info['super_user']==1 && !empty($_POST['reseller']))
         {
             // Admin is adding account for a specific reseller - check reseller's credit
-            if($plan_info['price'] > $reseller_info['balance'])
+            // Skip check if target reseller is a reseller admin
+            $stmt_check = $pdo->prepare('SELECT permissions FROM _users WHERE id = ?');
+            $stmt_check->execute([$_POST['reseller']]);
+            $target_user = $stmt_check->fetch(PDO::FETCH_ASSOC);
+            $target_permissions = explode('|', $target_user['permissions'] ?? '0|0|0|0|0');
+            $target_is_reseller_admin = isset($target_permissions[2]) && $target_permissions[2] === '1';
+
+            if(!$target_is_reseller_admin && $plan_info['price'] > $reseller_info['balance'])
             {
                 $response['error']=1;
                 $response['err_msg']="Not enough credit.";
@@ -244,9 +253,10 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
                 exit();
             }
         }
-        elseif($user_info['super_user']==0)
+        elseif($user_info['super_user']==0 && !$is_reseller_admin)
         {
-            // Reseller is adding their own account - check their credit
+            // Regular reseller is adding their own account - check their credit
+            // Reseller admins are exempt from credit check
             if($plan_info['price'] > $reseller_info['balance'])
             {
                 $response['error']=1;
@@ -256,7 +266,7 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
                 exit();
             }
         }
-        // Admin adding their own account (no reseller selected) - no credit check needed
+        // Admin or reseller admin adding their own account (no reseller selected) - no credit check needed
 
         $price = (int)$plan_info['price'];
         
@@ -433,17 +443,24 @@ if($decoded->status == 'OK')
 
     if($price>0)
     {
-        $new_balance = $reseller_info['balance'] - $price;
+        // Skip balance deduction for reseller admins (they don't have balance)
+        // Check if reseller_info is a reseller admin
+        $reseller_permissions = explode('|', $reseller_info['permissions'] ?? '0|0|0|0|0');
+        $reseller_is_admin = isset($reseller_permissions[2]) && $reseller_permissions[2] === '1';
 
-        if($new_balance < 0)
-        {
-            $new_balance = 0;
+        if(!$reseller_is_admin) {
+            $new_balance = $reseller_info['balance'] - $price;
+
+            if($new_balance < 0)
+            {
+                $new_balance = 0;
+            }
+
+            $stmt = $pdo->prepare('UPDATE _users SET balance=? WHERE id=?');
+            $stmt->execute([$new_balance, $reseller_info['id']]);
         }
 
-        $stmt = $pdo->prepare('UPDATE _users SET balance=? WHERE id=?');
-        $stmt->execute([$new_balance, $reseller_info['id']]);
-        
-        
+
         $tmp = '';
 
         if(!empty($name))

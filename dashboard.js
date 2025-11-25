@@ -1032,10 +1032,20 @@ function openModalCore(modalId) {
         const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
         const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
-        if (isResellerWithoutAdmin) {
+        // Check view mode for reseller admins
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+        if (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode) {
             // Disable username and password fields (permanent restriction for resellers)
-            document.getElementById('account-username').readOnly = true;
-            document.getElementById('account-password').readOnly = true;
+            // But allow reseller admins to edit username/password
+            if (isResellerWithoutAdmin) {
+                document.getElementById('account-username').readOnly = true;
+                document.getElementById('account-password').readOnly = true;
+            } else {
+                document.getElementById('account-username').readOnly = false;
+                document.getElementById('account-password').readOnly = false;
+            }
 
             // Hide admin plan/status dropdowns
             document.getElementById('add-admin-plan-group').style.display = 'none';
@@ -1772,6 +1782,7 @@ async function loadResellers() {
                 // Check if user is observer
                 const isObserver = currentUser && currentUser.is_observer == 1;
                 const isSuperAdmin = currentUser && currentUser.super_user == 1;
+                const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
 
                 // Make buttons disabled for observers
                 const editButton = isObserver
@@ -1786,7 +1797,10 @@ async function loadResellers() {
                     ? `<button class="btn-sm btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;">Assign Plans</button>`
                     : `<button class="btn-sm btn-edit" onclick="assignPlans(${reseller.id}, '${reseller.name}', '${reseller.plans || ''}', '${reseller.currency_id}')">Assign Plans</button>`;
 
-                const deleteButton = isSuperAdmin
+                // Show delete button for super admin and reseller admin
+                // Reseller admin cannot delete themselves (checked in backend)
+                const canDelete = isSuperAdmin || isResellerAdmin;
+                const deleteButton = canDelete
                     ? `<button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>`
                     : '';
 
@@ -1895,10 +1909,13 @@ async function loadPlans() {
 
                 // Add to plan select for account creation
                 // Use planID-currency format to ensure correct plan is selected
-                const option = document.createElement('option');
-                option.value = `${plan.external_id}-${plan.currency_id}`;
-                option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
-                planSelect.appendChild(option);
+                // Only add new_device plans to Add Account dropdown
+                if (plan.category === 'new_device') {
+                    const option = document.createElement('option');
+                    option.value = `${plan.external_id}-${plan.currency_id}`;
+                    option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
+                    planSelect.appendChild(option);
+                }
 
                 // Add to reseller plan assignment dropdown with planID-currency format
                 if(resellerPlansSelect) {
@@ -2040,15 +2057,18 @@ function populateThemeDropdowns() {
 // Load Transactions
 async function loadTransactions() {
     try {
-        const response = await fetch('get_transactions.php');
+        // Get view mode preference for reseller admins (affects transaction filtering)
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const response = await fetch(`get_transactions.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const tbody = document.getElementById('transactions-tbody');
 
-        // Check if current user is admin or observer (to show reseller column)
+        // Check if current user is admin, reseller admin in All Accounts mode, or observer (to show reseller column)
         const isSuperAdmin = currentUser && currentUser.super_user == 1;
         const isObserver = currentUser && currentUser.is_observer == 1;
-        const showResellerColumn = isSuperAdmin || isObserver;
+        const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+        const showResellerColumn = isSuperAdmin || isObserver || (isResellerAdmin && viewAllAccounts);
 
         // Show/hide reseller column header based on user type
         const resellerHeader = document.getElementById('reseller-column-header');
@@ -2701,11 +2721,21 @@ async function editAccountCore(username) {
             document.getElementById('edit-phone').readOnly = false;
         }
 
-        // Handle reseller without admin permission
-        if (isResellerWithoutAdmin) {
-            // Make username and password fields read-only (same visual style as name/phone/email)
-            document.getElementById('edit-username').readOnly = true;
-            document.getElementById('edit-password').readOnly = true;
+        // Check view mode for reseller admins
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+        // Handle reseller without admin permission OR reseller admin in "My Accounts" mode
+        if (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode) {
+            // Make username and password fields read-only for regular resellers only
+            if (isResellerWithoutAdmin) {
+                document.getElementById('edit-username').readOnly = true;
+                document.getElementById('edit-password').readOnly = true;
+            } else {
+                // Reseller admins can edit username/password
+                document.getElementById('edit-username').readOnly = false;
+                document.getElementById('edit-password').readOnly = false;
+            }
 
             // Hide admin-only fields (Plan and Status)
             document.getElementById('edit-plan-group').style.display = 'none';
@@ -2747,7 +2777,8 @@ async function editAccountCore(username) {
 
 async function loadPlansForEdit() {
     try {
-        const response = await fetch('get_plans.php');
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const response = await fetch(`get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const planSelect = document.getElementById('edit-plan');
@@ -2756,7 +2787,10 @@ async function loadPlansForEdit() {
         planSelect.innerHTML = '<option value="0">SELECT ONE TO UPDATE</option>';
 
         if(result.error == 0 && result.plans) {
-            result.plans.forEach(plan => {
+            // Filter to only show renew_device plans for Edit/Renew dropdown
+            const renewalPlans = result.plans.filter(plan => plan.category === 'renew_device');
+
+            renewalPlans.forEach(plan => {
                 const option = document.createElement('option');
                 option.value = plan.id;
                 const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
@@ -2772,14 +2806,15 @@ async function loadPlansForEdit() {
 // Load renewal plans for reseller (as beautiful cards with checkboxes)
 async function loadRenewalPlans() {
     try {
-        const response = await fetch('get_plans.php');
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const response = await fetch(`get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const container = document.getElementById('renewal-plans-container');
         container.innerHTML = ''; // Clear existing
 
         if(result.error == 0 && result.plans) {
-            // Filter plans to only show "Renew Device" category plans
+            // Filter to only show renew_device plans for renewal cards
             const renewalPlans = result.plans.filter(plan => plan.category === 'renew_device');
 
             if(renewalPlans.length > 0) {
@@ -2826,15 +2861,15 @@ const editAccount = debounce(editAccountCore, 'editAccount', 200);
 // Load New Device Plans for Add Account Modal (Resellers Only)
 async function loadNewDevicePlans() {
     try {
-        const response = await fetch('get_plans.php');
+        const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+        const response = await fetch(`get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
 
         const container = document.getElementById('add-new-device-plans-container');
         container.innerHTML = ''; // Clear existing
 
         if(result.error == 0 && result.plans) {
-            // Filter plans to only show "new_device" category plans
-            // Note: get_plans.php already filters by assigned plans for resellers
+            // Filter to only show new_device plans for add account cards
             const newDevicePlans = result.plans.filter(plan => plan.category === 'new_device');
 
             if(newDevicePlans.length > 0) {
@@ -3839,7 +3874,7 @@ function hideObserverActions() {
  * Toggle other permissions based on admin checkbox state
  * Preserves the checkbox states when hiding/showing them
  */
-function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox) {
+function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, canEditPhoneNameCheckbox, observerCheckbox) {
     const isAdmin = adminCheckbox ? adminCheckbox.checked : false;
     const isObserver = observerCheckbox ? observerCheckbox.checked : false;
 
@@ -3864,6 +3899,9 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canAccessMessagingCheckbox) {
             canAccessMessagingCheckbox.closest('.permission-item').style.display = 'none';
         }
+        if (canEditPhoneNameCheckbox) {
+            canEditPhoneNameCheckbox.closest('.permission-item').style.display = 'none';
+        }
         // Uncheck all permissions when observer is checked
         canEditCheckbox.checked = false;
         canAddCheckbox.checked = false;
@@ -3871,6 +3909,7 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canControlStbCheckbox) canControlStbCheckbox.checked = false;
         if (canToggleStatusCheckbox) canToggleStatusCheckbox.checked = false;
         if (canAccessMessagingCheckbox) canAccessMessagingCheckbox.checked = false;
+        if (canEditPhoneNameCheckbox) canEditPhoneNameCheckbox.checked = false;
     } else if (isAdmin) {
         // Admin is checked - hide and uncheck Observer and all other permissions
         // Observer and Admin are mutually exclusive
@@ -3893,6 +3932,9 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canAccessMessagingCheckbox) {
             canAccessMessagingCheckbox.closest('.permission-item').style.display = 'none';
         }
+        if (canEditPhoneNameCheckbox) {
+            canEditPhoneNameCheckbox.closest('.permission-item').style.display = 'none';
+        }
     } else {
         // Neither admin nor observer is checked - show all permission items
         if (adminCheckbox) adminCheckbox.closest('.permission-item').style.display = 'flex';
@@ -3911,6 +3953,9 @@ function handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheck
         if (canAccessMessagingCheckbox) {
             canAccessMessagingCheckbox.closest('.permission-item').style.display = 'flex';
         }
+        if (canEditPhoneNameCheckbox) {
+            canEditPhoneNameCheckbox.closest('.permission-item').style.display = 'flex';
+        }
     }
 }
 
@@ -3926,16 +3971,17 @@ function setupAddResellerPermissions() {
     const canControlStbCheckbox = document.querySelector('#addResellerModal input[name="can_control_stb"]');
     const canToggleStatusCheckbox = document.querySelector('#addResellerModal input[name="can_toggle_status"]');
     const canAccessMessagingCheckbox = document.querySelector('#addResellerModal input[name="can_access_messaging"]');
+    const canEditPhoneNameCheckbox = document.querySelector('#addResellerModal input[name="can_edit_phone_name"]');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, canEditPhoneNameCheckbox, observerCheckbox);
         });
     }
 
     if (observerCheckbox) {
         observerCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, this);
+            handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, canEditPhoneNameCheckbox, this);
         });
     }
 }
@@ -3952,14 +3998,15 @@ function setupEditResellerPermissions() {
     const canControlStbCheckbox = document.getElementById('edit-can-control-stb');
     const canToggleStatusCheckbox = document.getElementById('edit-can-toggle-status');
     const canAccessMessagingCheckbox = document.getElementById('edit-can-access-messaging');
+    const canEditPhoneNameCheckbox = document.getElementById('edit-can-edit-phone-name');
 
     if (adminCheckbox && canEditCheckbox && canAddCheckbox) {
         adminCheckbox.addEventListener('change', function() {
-            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox);
+            handleAdminPermissionToggle(this, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, canEditPhoneNameCheckbox, observerCheckbox);
         });
 
         // Initial state check when modal is opened
-        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, observerCheckbox);
+        handleAdminPermissionToggle(adminCheckbox, canEditCheckbox, canAddCheckbox, canDeleteCheckbox, canControlStbCheckbox, canToggleStatusCheckbox, canAccessMessagingCheckbox, canEditPhoneNameCheckbox, observerCheckbox);
     }
 
     if (observerCheckbox) {
@@ -3989,9 +4036,9 @@ async function toggleAccountViewMode() {
     console.log('[toggleAccountViewMode] Calling loadAccounts()...');
     await loadAccounts();
 
-    // Reload plans with new filter (for reseller admins)
-    console.log('[toggleAccountViewMode] Calling loadPlans()...');
-    await loadPlans();
+    // Reload transactions with new filter (for reseller admins)
+    console.log('[toggleAccountViewMode] Calling loadTransactions()...');
+    await loadTransactions();
 
     // Explicitly refresh dynamic reports to ensure they update
     console.log('[toggleAccountViewMode] Refreshing dynamic reports...');

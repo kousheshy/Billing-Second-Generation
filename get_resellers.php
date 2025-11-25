@@ -31,6 +31,24 @@ $opt = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $opt);
 
+    // Get current user info to check permissions
+    $stmt = $pdo->prepare('SELECT super_user, permissions FROM _users WHERE username = ?');
+    $stmt->execute([$username]);
+    $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Check if user is admin or reseller admin
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    if($user_info['super_user'] != 1 && !$is_reseller_admin) {
+        $response['error'] = 1;
+        $response['message'] = 'Permission denied. Admin or Reseller Admin only.';
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit();
+    }
+
     $stmt = $pdo->prepare('SELECT us.*, cr.name as currency_name FROM _users AS us LEFT OUTER JOIN _currencies AS cr ON us.currency_id=cr.id WHERE us.super_user = 0 ORDER BY us.id DESC');
     $stmt->execute([]);
 

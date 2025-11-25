@@ -40,8 +40,13 @@ try {
 
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if($user_info['super_user']!=1) {
-        echo json_encode(['error' => 1, 'err_msg' => 'Unauthorized. Admin only.']);
+    // Check if user is admin or reseller admin
+    // Format: can_edit|can_add|is_reseller_admin|can_delete|can_control_stb|can_toggle_status|can_access_messaging
+    $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    if($user_info['super_user']!=1 && !$is_reseller_admin) {
+        echo json_encode(['error' => 1, 'err_msg' => 'Unauthorized. Admin or Reseller Admin only.']);
         exit();
     }
 
@@ -85,6 +90,22 @@ try {
     $currency = $_POST['currency'];
     $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : '0|0|0|0|1|0';
     $is_observer = isset($_POST['is_observer']) ? intval($_POST['is_observer']) : 0;
+
+    // CRITICAL SECURITY CHECK: Reseller admins cannot modify their own admin permission
+    // They can modify other resellers' permissions, but not their own
+    if($is_reseller_admin && $user_info['id'] == $id) {
+        // Parse the incoming permissions to check if they're trying to remove admin flag
+        $new_permissions = explode('|', $permissions);
+        $new_is_reseller_admin = isset($new_permissions[2]) && $new_permissions[2] === '1';
+
+        // If they're trying to remove their own admin permission, deny it
+        if(!$new_is_reseller_admin) {
+            echo json_encode(['error' => 1, 'err_msg' => 'You cannot remove your own admin permissions. Contact a super admin.']);
+            exit();
+        }
+
+        error_log("Reseller admin {$user_info['username']} attempted to edit their own account - admin permission preserved");
+    }
 
     // Check if theme has changed
     $theme_changed = ($reseller_info['theme'] !== $theme);
