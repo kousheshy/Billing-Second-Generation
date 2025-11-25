@@ -104,62 +104,50 @@ if($decoded->status == 'OK')
 }
 
 
-
-
-
-
-
-
-
-// DISABLED: Second server deletion - will be enabled in future
-/*
 $data = null;
 $case = 'accounts';
 $op = "DELETE";
 
-$res = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+// Check if both servers are the same (avoid duplicate operations)
+$dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
 
-$decoded = json_decode($res);
-
-if($decoded->status != 'OK')
+if($dual_server_mode)
 {
-    $response['error']=1;
-    $response['err_msg']=$decoded->error;
-    echo json_encode($response);
-    exit();
+    // Step 1: Delete from Server 2 first
+    error_log("Deleting account from Server 2...");
+    $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+    $decoded2 = json_decode($res2);
+    error_log("Server 2 delete response: " . $res2);
+
+    if(!$decoded2 || $decoded2->status != 'OK')
+    {
+        $response['error'] = 1;
+        $response['err_msg'] = 'Failed to delete account from Server 2. ' . ($decoded2 && isset($decoded2->error) ? $decoded2->error : 'Connection error');
+        echo json_encode($response);
+        exit();
+    }
 }
-*/
 
-
-
-
-
-
-$data = null;
-$case = 'accounts';
-$op = "DELETE";
-
+// Step 2: Delete from Server 1 (primary)
+error_log("Deleting account from Server 1...");
 $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-
 $decoded = json_decode($res);
+error_log("Server 1 delete response: " . $res);
 
 if($decoded->status == 'OK')
 {
-
     $stmt = $pdo->prepare('DELETE FROM _accounts WHERE username = ?');
     $stmt->execute([$id]);
 
-    $response['error']=0;
-    $response['err_msg']='';
+    $response['error'] = 0;
+    $response['err_msg'] = '';
 
     echo json_encode($response);
-
-
-}else
+}
+else
 {
-
-    $response['error']=1;
-    $response['err_msg']=$decoded->error;
+    $response['error'] = 1;
+    $response['err_msg'] = 'Failed to delete account. ' . ($decoded && isset($decoded->error) ? $decoded->error : 'Connection error');
 
     echo json_encode($response);
     exit();

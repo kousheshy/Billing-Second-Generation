@@ -135,6 +135,9 @@ try {
             // Send message via Stalker Portal API
             $mac = $account['mac'];
 
+            // Check if both servers are the same (avoid duplicate operations)
+            $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
+
             // Build server config for primary server
             $server1_config = [
                 'WEBSERVICE_URLs' => $WEBSERVICE_URLs,
@@ -142,15 +145,19 @@ try {
                 'WEBSERVICE_PASSWORD' => $WEBSERVICE_PASSWORD
             ];
 
-            // Build server config for secondary server
-            $server2_config = [
-                'WEBSERVICE_URLs' => $WEBSERVICE_2_URLs,
-                'WEBSERVICE_USERNAME' => $WEBSERVICE_USERNAME,
-                'WEBSERVICE_PASSWORD' => $WEBSERVICE_PASSWORD
-            ];
-
+            // Send to Server 1 (primary)
             $response1 = send_message($mac, $message, $server1_config);
-            $response2 = send_message($mac, $message, $server2_config);
+
+            // Send to Server 2 only if dual server mode
+            $response2 = ['error' => 0]; // Default success if not dual mode
+            if($dual_server_mode) {
+                $server2_config = [
+                    'WEBSERVICE_URLs' => $WEBSERVICE_2_URLs,
+                    'WEBSERVICE_USERNAME' => $WEBSERVICE_USERNAME,
+                    'WEBSERVICE_PASSWORD' => $WEBSERVICE_PASSWORD
+                ];
+                $response2 = send_message($mac, $message, $server2_config);
+            }
 
             $success = ($response1['error'] == 0 || $response2['error'] == 0);
 

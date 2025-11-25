@@ -47,7 +47,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.14</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.16</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -542,6 +542,34 @@
                     <p style="color: var(--text-secondary); margin-bottom: 20px;">Configure connection settings to your Stalker Portal server</p>
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <!-- Dual Server Mode Toggle (at top with Edit/Save protection) -->
+                        <div class="form-group" style="margin: 0; padding: 16px; background: var(--bg-tertiary); border-radius: 8px; border: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" id="stalker-dual-server-mode" style="width: 20px; height: 20px;" disabled onchange="toggleDualServerMode(this.checked)">
+                                    <div>
+                                        <span style="font-weight: 600; font-size: 14px;">Enable Dual Server Mode</span>
+                                        <p style="color: var(--text-secondary); font-size: 12px; margin: 4px 0 0 0;">When enabled, all operations (create, update, delete) will be performed on both servers simultaneously</p>
+                                    </div>
+                                </label>
+                                <div style="display: flex; gap: 10px; flex-shrink: 0;">
+                                    <button id="dual-mode-save-btn" class="btn-primary" onclick="saveDualServerMode()" style="display: none; padding: 12px 24px; font-size: 15px; min-width: 110px; border-radius: 8px; font-weight: 500;">
+                                        💾 Save
+                                    </button>
+                                    <button id="dual-mode-cancel-btn" class="btn-secondary" onclick="cancelDualServerModeEdit()" style="display: none; padding: 12px 24px; font-size: 15px; min-width: 110px; border-radius: 8px; font-weight: 500;">
+                                        ✖ Cancel
+                                    </button>
+                                    <button id="dual-mode-edit-btn" class="btn-secondary" onclick="enableDualServerModeEdit()" style="padding: 12px 24px; font-size: 15px; min-width: 110px; border-radius: 8px; font-weight: 500;">
+                                        ✏️ Edit
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="dual-server-status" style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);"></div>
+                            <div id="dual-server-warning" style="display: none; margin-top: 12px; padding: 10px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 6px; color: #856404;">
+                                <strong>⚠️ Warning:</strong> Both servers must have different addresses for dual mode to work. Please set a different Secondary Server Address.
+                            </div>
+                        </div>
+
                         <!-- Server Address -->
                         <div class="form-group" style="margin: 0;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">Primary Server Address *</label>
@@ -549,11 +577,11 @@
                             <small style="color: var(--text-tertiary); font-size: 12px;">Main Stalker Portal server IP or domain</small>
                         </div>
 
-                        <!-- Secondary Server Address -->
-                        <div class="form-group" style="margin: 0;">
+                        <!-- Secondary Server Address (only visible when dual mode enabled) -->
+                        <div id="secondary-server-group" class="form-group" style="margin: 0; display: none;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">Secondary Server Address</label>
                             <input type="text" id="stalker-server-2-address" class="reminder-input stalker-field" value="http://81.12.70.4" style="width: 100%;" readonly>
-                            <small style="color: var(--text-tertiary); font-size: 12px;">Optional backup server (leave empty to use primary)</small>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Second Stalker Portal server for redundancy</small>
                         </div>
 
                         <!-- API Username -->
@@ -577,8 +605,8 @@
                             <small style="color: var(--text-tertiary); font-size: 12px;">Auto-generated from Primary Server Address</small>
                         </div>
 
-                        <!-- Secondary API Base URL (always disabled, auto-generated) -->
-                        <div class="form-group" style="margin: 0;">
+                        <!-- Secondary API Base URL (only visible when dual mode enabled) -->
+                        <div id="secondary-api-url-group" class="form-group" style="margin: 0; display: none;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">Secondary API Base URL</label>
                             <input type="text" id="stalker-api-2-base-url" class="reminder-input" value="http://81.12.70.4/stalker_portal/api/" style="width: 100%; background: var(--bg-tertiary); color: var(--text-secondary);" disabled>
                             <small style="color: var(--text-tertiary); font-size: 12px;">Auto-generated from Secondary Server Address</small>

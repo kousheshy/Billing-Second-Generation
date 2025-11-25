@@ -31,6 +31,7 @@ $WEBSERVICE_USERNAME = "admin";
 $WEBSERVICE_PASSWORD = "kamitest13579";
 $WEBSERVICE_BASE_URL = "http://81.12.70.4/stalker_portal/api/";
 $WEBSERVICE_2_BASE_URL = "http://81.12.70.4/stalker_portal/api/";
+$DUAL_SERVER_MODE_ENABLED = true;
 
 $WEBSERVICE_URLs['stb'] = $WEBSERVICE_BASE_URL."stb/";
 $WEBSERVICE_URLs['accounts'] = $WEBSERVICE_BASE_URL."accounts/";

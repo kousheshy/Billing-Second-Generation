@@ -358,26 +358,25 @@ if($res == 'OK')
 
     $case = 'accounts';
     $op = "PUT";
-    
-    
-    
-    $res = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-    
-    $decoded = json_decode($res);
-    
-    
-    if($decoded->status != 'OK')
+
+    // Check if both servers are the same (avoid duplicate operations)
+    $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
+
+    // Update on Server 2 first (only if dual server mode)
+    if($dual_server_mode)
     {
-        $response['error']=1;
-        $response['err_msg']=$decoded->error;
+        $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
 
-        echo json_encode($response);
+        $decoded2 = json_decode($res2);
+
+        if(!$decoded2 || $decoded2->status != 'OK')
+        {
+            error_log("Warning: Server 2 update failed for $username: " . ($decoded2->error ?? 'Unknown error'));
+            // Continue to update Server 1 - don't fail the whole operation
+        }
     }
-    
-    
-    
-    
 
+    // Update on Server 1 (primary)
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
 
     $decoded = json_decode($res);

@@ -7,6 +7,154 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.16] - 2025-11-25
+
+### Fixed - Critical Account Creation Bug & Reseller Admin View Toggle
+
+**Status:** Production Release - Critical Bug Fixes
+
+**Overview**
+Fixed critical bug where accounts were being created as "unlimited" instead of using the selected plan's expiration date. Also fixed the "Total Accounts" counter not updating when reseller admins toggle between viewing modes.
+
+**Bug Fixes**
+
+1. **Accounts Created as Unlimited Instead of Plan Duration** (Critical Fix)
+   - **Issue**: When adding accounts with a plan selected (e.g., 1-year plan), accounts were created with unlimited expiration on Stalker Portal
+   - **Root Cause**: PHP loose type comparison `$_POST['plan'] == 0` was incorrectly evaluating to TRUE in certain cases due to PHP's type juggling:
+     - Empty string `"" == 0` → TRUE
+     - Null value `null == 0` → TRUE
+     - String "0" `"0" == 0` → TRUE
+   - **Fix**: Changed all loose comparisons to strict string checks using `=== ''` and `=== '0'`
+   - **Files**: `api/add_account.php` (lines 232-234, 378-395, 403-406, 503-504)
+   - **Code Changes**:
+     ```php
+     // Before (broken):
+     if($_POST['plan'] == 0) { ... }
+
+     // After (fixed):
+     $plan_value = trim($_POST['plan'] ?? '');
+     $is_unlimited_plan = ($plan_value === '' || $plan_value === '0');
+     if($is_unlimited_plan) { ... }
+     ```
+
+2. **Local Database Missing end_date on Account Creation** (Data Integrity Fix)
+   - **Issue**: The INSERT statement for new accounts didn't include the `end_date` column, causing NULL values in local database
+   - **Fix**: Added `end_date` to INSERT statement with proper date format conversion
+   - **Files**: `api/add_account.php` (lines 509-513)
+   - **Code Changes**:
+     ```php
+     // Added end_date to INSERT
+     $local_end_date = !empty($expire_billing_date) ? date('Y-m-d', strtotime($expire_billing_date)) : null;
+     $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, phone_number, reseller, plan, end_date, timestamp) VALUES (?,?,?,?,?,?,?,?)');
+     ```
+
+3. **Reseller Admin "Total Accounts" Counter Not Updating** (UI Fix)
+   - **Issue**: When reseller admin toggled "Viewing All Accounts" switch, the Total Accounts counter didn't update
+   - **Root Cause**: `updateAccountCount()` function was calling `get_user_info.php` without the `api/` prefix
+   - **Fix**: Changed URL from `get_user_info.php` to `api/get_user_info.php`
+   - **Files**: `dashboard.js` (line 4318)
+   - **Code Changes**:
+     ```javascript
+     // Before:
+     const url = `get_user_info.php?viewAllAccounts=${viewAllAccounts}`;
+
+     // After:
+     const url = `api/get_user_info.php?viewAllAccounts=${viewAllAccounts}`;
+     ```
+
+**Technical Details**
+
+- **PHP Type Juggling Issue**: PHP's loose comparison (`==`) converts operands to the same type before comparing. When comparing a string to an integer, PHP converts the string to an integer first. An empty string converts to 0, making `"" == 0` evaluate to TRUE.
+- **Strict Comparison**: Using `===` compares both value AND type, so `"" === 0` is FALSE (string vs integer).
+- **Affected User Types**: All users adding accounts (admins, reseller admins, resellers)
+
+**Files Changed**
+
+| File | Changes |
+|------|---------|
+| `api/add_account.php` | Fixed 4 instances of loose comparison, added end_date to INSERT |
+| `dashboard.js` | Fixed API URL path for updateAccountCount() |
+
+**Testing Checklist**
+
+- [ ] Create account with 1-year plan → should have expiration 365 days from now
+- [ ] Create account with "No Plan" → should be unlimited
+- [ ] Toggle "Viewing All Accounts" as reseller admin → Total Accounts should update
+- [ ] Verify local database has correct end_date values
+
+---
+
+## [1.11.15] - 2025-11-25
+
+### Fixed - Account Renewal Bug & Transaction Display
+
+**Status:** Production Release - Critical Bug Fixes
+
+**Overview**
+Fixed critical bug where account renewals weren't working for reseller admins in "My Accounts" mode, and improved transaction history display.
+
+**Bug Fixes**
+
+1. **Account Renewal Not Working** (Critical Fix)
+   - **Issue**: Reseller admins in "My Accounts" mode saw the card-based plan selection UI, but when submitting the form, the system used the hidden dropdown path (value=0), resulting in "Account updated successfully" without actual renewal
+   - **Root Cause**: `submitEditAccount()` only checked `isResellerWithoutAdmin` but not `isResellerAdminInMyAccountsMode`. The modal showed cards based on both conditions, but form submission only checked one
+   - **Fix**: Added `isResellerAdminInMyAccountsMode` check and new `useCardSelection` variable to determine correct submission path
+   - **Files**: `dashboard.js` (lines 3129-3136, 3148, 3170)
+   - **Code Changes**:
+     ```javascript
+     // Added these checks in submitEditAccount()
+     const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+     const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+     const useCardSelection = isResellerWithoutAdmin || isResellerAdminInMyAccountsMode;
+
+     // Changed condition from:
+     if (isResellerWithoutAdmin) { ... }
+     // To:
+     if (useCardSelection) { ... }
+     ```
+
+2. **Transaction History Currency Display** (UI Fix)
+   - **Issue**: Currency symbol (e.g., "IRR") was duplicated - shown in both Amount column and Currency column, or missing from Currency column
+   - **Fix**: Removed currency symbol from Amount column, ensured Currency column shows `tx.currency` with fallback to currency symbol
+   - **Files**: `dashboard.js` (lines 2203-2210)
+   - **Before**: `<td>${currencySymbol}${formattedAmount}</td>` and `<td>${tx.currency || ''}</td>`
+   - **After**: `<td>${formattedAmount}</td>` and `<td>${tx.currency || currencySymbol.trim() || ''}</td>`
+
+**Debug Enhancements**
+
+3. **Edit Account Debug Logging** (Development Aid)
+   - Added comprehensive logging to `edit_account.php` for troubleshooting renewal issues
+   - Logs: received plan_id, plan lookup result, expiration calculation, database update
+   - Added debug info in API response for frontend console logging
+   - **Files**: `api/edit_account.php` (lines 107-118, 150-159, 162-174, 316-322)
+
+4. **Plan Loading Debug** (Development Aid)
+   - Added console logging to `loadPlansForEdit()` function
+   - Logs: API response, number of plans loaded, dropdown options count
+   - **Files**: `dashboard.js` (lines 2980-3008)
+
+**Database Maintenance**
+
+5. **Transactions Table Cleared**
+   - Truncated `_transactions` table to start fresh
+   - Previous data had inconsistent currency values (NULL, IRT, IRR)
+
+**Technical Details**
+
+- **Affected User Type**: Reseller admins viewing "My Accounts" mode
+- **UI Shown**: Card-based plan selection (same as regular resellers)
+- **Previous Behavior**: Form submitted with plan=0 (dropdown default)
+- **Fixed Behavior**: Form submits with selected card's plan ID
+
+**Files Changed**
+
+| File | Changes |
+|------|---------|
+| `dashboard.js` | Fixed submitEditAccount() to check useCardSelection, fixed transaction currency display, added debug logging |
+| `api/edit_account.php` | Added comprehensive debug logging for renewal troubleshooting |
+
+---
+
 ## [1.11.14] - 2025-11-25
 
 ### Added - Stalker Portal Settings UI

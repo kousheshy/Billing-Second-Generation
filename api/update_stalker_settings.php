@@ -41,6 +41,7 @@ $api_username = trim($_POST['api_username'] ?? '');
 $api_password = $_POST['api_password'] ?? '';
 $api_base_url = trim($_POST['api_base_url'] ?? '');
 $api_2_base_url = trim($_POST['api_2_base_url'] ?? '');
+$dual_server_mode_enabled = isset($_POST['dual_server_mode_enabled']) && $_POST['dual_server_mode_enabled'] == '1';
 $test_connection = isset($_POST['test_connection']) && $_POST['test_connection'] == '1';
 
 // Validation
@@ -195,6 +196,14 @@ try {
     $configContent = preg_replace(
         '/\$WEBSERVICE_2_BASE_URL\s*=\s*["\'].*?["\'];/',
         '$WEBSERVICE_2_BASE_URL = "' . addslashes($api_2_base_url) . '";',
+        $configContent
+    );
+
+    // Update dual server mode setting
+    $dual_server_value = $dual_server_mode_enabled ? 'true' : 'false';
+    $configContent = preg_replace(
+        '/\$DUAL_SERVER_MODE_ENABLED\s*=\s*(true|false);/',
+        '$DUAL_SERVER_MODE_ENABLED = ' . $dual_server_value . ';',
         $configContent
     );
 

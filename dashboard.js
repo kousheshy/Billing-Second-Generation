@@ -2202,8 +2202,8 @@ function renderTransactionsPage() {
 
             tr.innerHTML = `
                 <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
-                <td>${currencySymbol}${formattedAmount}</td>
-                <td>${tx.currency || ''}</td>
+                <td>${formattedAmount}</td>
+                <td>${tx.currency || currencySymbol.trim() || ''}</td>
                 <td><span class="badge ${tx.type == 1 ? 'active' : 'inactive'}">${type}</span></td>
                 ${resellerColumn}
                 <td>${tx.details || ''}</td>
@@ -2334,8 +2334,17 @@ async function addAccount(e) {
     const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
     const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
-    // Handle plan selection for resellers
-    if (isResellerWithoutAdmin) {
+    // Check if reseller admin is in "My Accounts" mode (uses cards instead of dropdown)
+    const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+    const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+    // Determine if we should use card selection (reseller path) or dropdown (admin path)
+    const useCardSelection = isResellerWithoutAdmin || isResellerAdminInMyAccountsMode;
+
+    console.log('[submitAddAccount] User type check:', { isSuperUser, isResellerAdmin, isResellerWithoutAdmin, viewAllAccounts, isResellerAdminInMyAccountsMode, useCardSelection });
+
+    // Handle plan selection for resellers and reseller admins in My Accounts mode
+    if (useCardSelection) {
         // Get selected plan from cards
         const selectedCard = document.querySelector('#add-new-device-plans-container .renewal-plan-card.selected');
 
@@ -2346,11 +2355,18 @@ async function addAccount(e) {
 
         const selectedPlan = selectedCard.dataset.planId;
 
+        console.log('[submitAddAccount] Selected card:', selectedCard);
+        console.log('[submitAddAccount] Selected plan from card:', selectedPlan);
+
         // Create formData
         const formData = new FormData(e.target);
 
+        console.log('[submitAddAccount] Plan value BEFORE set:', formData.get('plan'));
+
         // Add the selected plan from cards
         formData.set('plan', selectedPlan);
+
+        console.log('[submitAddAccount] Plan value AFTER set:', formData.get('plan'));
 
         // Force status to active (1) for new accounts
         formData.set('status', '1');
@@ -2387,6 +2403,9 @@ async function addAccount(e) {
 // Helper function to submit add account form
 async function submitAddAccountForm(formData) {
 
+    console.log('[submitAddAccountForm] Final formData entries:', Object.fromEntries(formData));
+    console.log('[submitAddAccountForm] Plan value being sent:', formData.get('plan'));
+
     try {
         const response = await fetch('api/add_account.php', {
             method: 'POST',
@@ -2396,12 +2415,14 @@ async function submitAddAccountForm(formData) {
         const result = await response.json();
 
         if(result.error == 0) {
+            console.log('[submitAddAccountForm] SUCCESS - Debug info:', result.debug);
             showAlert('Account created successfully!', 'success');
             closeModal('addAccountModal');
             document.getElementById('addAccountForm').reset();
             loadAccounts();
             checkAuth(); // Refresh stats
         } else {
+            console.log('[submitAddAccountForm] ERROR - Response:', result);
             showAlert(result.err_msg || 'Error creating account', 'error');
         }
     } catch(error) {
@@ -2977,9 +2998,12 @@ async function editAccountCore(username) {
 
 async function loadPlansForEdit() {
     try {
+        console.log('[loadPlansForEdit] Starting to load plans...');
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const response = await fetch(`api/get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
+
+        console.log('[loadPlansForEdit] API response:', result);
 
         const planSelect = document.getElementById('edit-plan');
 
@@ -2987,6 +3011,7 @@ async function loadPlansForEdit() {
         planSelect.innerHTML = '<option value="0">SELECT ONE TO UPDATE</option>';
 
         if(result.error == 0 && result.plans) {
+            console.log('[loadPlansForEdit] Loading ' + result.plans.length + ' plans');
             // Show ALL plans for admins (no filtering by category)
             result.plans.forEach(plan => {
                 const option = document.createElement('option');
@@ -2995,9 +3020,12 @@ async function loadPlansForEdit() {
                 option.textContent = `${plan.name} - ${formattedPrice} (${plan.days} days)`;
                 planSelect.appendChild(option);
             });
+            console.log('[loadPlansForEdit] Dropdown now has ' + planSelect.options.length + ' options');
+        } else {
+            console.error('[loadPlansForEdit] No plans returned or error:', result);
         }
     } catch(error) {
-        console.error('Error loading plans:', error);
+        console.error('[loadPlansForEdit] Error loading plans:', error);
     }
 }
 
@@ -3119,6 +3147,15 @@ async function submitEditAccount(e) {
     const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
     const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
+    // Check if reseller admin is in "My Accounts" mode (uses cards instead of dropdown)
+    const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
+    const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+    // Determine if we should use card selection (reseller path) or dropdown (admin path)
+    const useCardSelection = isResellerWithoutAdmin || isResellerAdminInMyAccountsMode;
+
+    console.log('[submitEditAccount] User type check:', { isSuperUser, isResellerAdmin, isResellerWithoutAdmin, viewAllAccounts, isResellerAdminInMyAccountsMode, useCardSelection });
+
     // Check if user has permission to edit phone/email/name fields
     const permissions = (currentUser && currentUser.permissions || '0|0|0|0|0|0|0|0').split('|');
     const canEditPhoneName = permissions[7] === '1';
@@ -3129,7 +3166,7 @@ async function submitEditAccount(e) {
     const phoneNumber = document.getElementById('edit-phone').value;
 
     // Skip phone validation if reseller doesn't have permission to edit it
-    const shouldValidatePhone = !isResellerWithoutAdmin || canEditPhoneName;
+    const shouldValidatePhone = !useCardSelection || canEditPhoneName;
 
     if (phoneNumber && shouldValidatePhone) {
         const countryCode = countryCodeSelect === 'custom' ? customCode : countryCodeSelect;
@@ -3151,8 +3188,8 @@ async function submitEditAccount(e) {
     let selectedPlan;
     let formData;
 
-    if (isResellerWithoutAdmin) {
-        // Get selected plan from renewal cards
+    if (useCardSelection) {
+        // Get selected plan from renewal cards (reseller or reseller admin in My Accounts mode)
         const selectedCard = document.querySelector('.renewal-plan-card.selected');
 
         if (!selectedCard) {
@@ -3181,8 +3218,13 @@ async function submitEditAccount(e) {
         // Admin user - get plan from dropdown
         selectedPlan = document.getElementById('edit-plan').value;
 
-        console.log('Form data:', Object.fromEntries(formData));
-        console.log('Selected plan:', selectedPlan);
+        console.log('=== EDIT ACCOUNT DEBUG ===');
+        console.log('Form data entries:', Object.fromEntries(formData));
+        console.log('Selected plan from dropdown:', selectedPlan);
+        console.log('Plan value in formData:', formData.get('plan'));
+        console.log('Dropdown element:', document.getElementById('edit-plan'));
+        console.log('Dropdown selectedIndex:', document.getElementById('edit-plan').selectedIndex);
+        console.log('=== END DEBUG ===');
 
         // Confirm if renewing with a plan
         if(selectedPlan != '0') {
@@ -4273,7 +4315,7 @@ function updateViewModeLabel(viewAllAccounts) {
  */
 async function updateAccountCount(viewAllAccounts) {
     try {
-        const url = `get_user_info.php?viewAllAccounts=${viewAllAccounts}`;
+        const url = `api/get_user_info.php?viewAllAccounts=${viewAllAccounts}`;
         const response = await fetch(url);
         const result = await response.json();
 
@@ -5577,6 +5619,22 @@ async function loadStalkerSettings() {
             document.getElementById('stalker-api-base-url').value = primaryServer ? primaryServer.replace(/\/+$/, '') + '/stalker_portal/api/' : '';
             document.getElementById('stalker-api-2-base-url').value = (secondaryServer || primaryServer) ? (secondaryServer || primaryServer).replace(/\/+$/, '') + '/stalker_portal/api/' : '';
 
+            // Set dual server mode checkbox and update visibility
+            const dualServerCheckbox = document.getElementById('stalker-dual-server-mode');
+            const dualModeEnabled = settings.dual_server_mode_enabled || false;
+            if (dualServerCheckbox) {
+                dualServerCheckbox.checked = dualModeEnabled;
+            }
+
+            // Store the original value for cancel functionality
+            originalDualServerMode = dualModeEnabled;
+
+            // Show/hide secondary server fields based on dual mode
+            updateSecondaryServerVisibility(dualModeEnabled);
+
+            // Show/hide warning based on whether servers are different
+            updateDualServerWarning(primaryServer, secondaryServer);
+
             if (data.from_config) {
                 showStalkerStatus('Settings loaded from config file. Save to enable database storage.', 'info');
             }
@@ -5598,6 +5656,7 @@ async function saveStalkerSettings() {
     const apiUsername = document.getElementById('stalker-api-username').value.trim();
     const apiPassword = document.getElementById('stalker-api-password').value;
     const testConnection = document.getElementById('stalker-test-connection').checked;
+    const dualServerModeEnabled = document.getElementById('stalker-dual-server-mode').checked;
 
     // Auto-generate base URLs from server addresses
     const apiBaseUrl = serverAddress ? serverAddress.replace(/\/+$/, '') + '/stalker_portal/api/' : '';
@@ -5624,6 +5683,7 @@ async function saveStalkerSettings() {
         formData.append('api_password', apiPassword);
         formData.append('api_base_url', apiBaseUrl);
         formData.append('api_2_base_url', api2BaseUrl);
+        formData.append('dual_server_mode_enabled', dualServerModeEnabled ? '1' : '0');
         formData.append('test_connection', testConnection ? '1' : '0');
 
         const response = await fetch('api/update_stalker_settings.php', {
@@ -5639,7 +5699,11 @@ async function saveStalkerSettings() {
             loadStalkerSettings();
             // Exit edit mode after successful save
             document.querySelectorAll('.stalker-field').forEach(field => {
-                field.setAttribute('readonly', 'readonly');
+                if (field.type === 'checkbox') {
+                    field.setAttribute('disabled', 'disabled');
+                } else {
+                    field.setAttribute('readonly', 'readonly');
+                }
             });
             // Remove event listeners from server address fields
             document.getElementById('stalker-server-address').removeEventListener('input', updateStalkerBaseUrls);
@@ -5783,13 +5847,31 @@ function updateStalkerBaseUrls() {
 function enableStalkerEdit() {
     // Remove readonly from all stalker fields (except base URLs which stay disabled)
     document.querySelectorAll('.stalker-field').forEach(field => {
-        field.removeAttribute('readonly');
+        if (field.type === 'checkbox') {
+            field.removeAttribute('disabled');
+        } else {
+            field.removeAttribute('readonly');
+        }
         field.style.backgroundColor = ''; // Reset to default editable color
     });
 
     // Add event listeners to auto-update base URLs when server addresses change
     document.getElementById('stalker-server-address').addEventListener('input', updateStalkerBaseUrls);
     document.getElementById('stalker-server-2-address').addEventListener('input', updateStalkerBaseUrls);
+
+    // Add event listener to update warning when server addresses change
+    document.getElementById('stalker-server-address').addEventListener('input', () => {
+        updateDualServerWarning(
+            document.getElementById('stalker-server-address').value,
+            document.getElementById('stalker-server-2-address').value
+        );
+    });
+    document.getElementById('stalker-server-2-address').addEventListener('input', () => {
+        updateDualServerWarning(
+            document.getElementById('stalker-server-address').value,
+            document.getElementById('stalker-server-2-address').value
+        );
+    });
 
     // Show Save and Cancel buttons, hide Edit button
     document.getElementById('stalker-save-btn').style.display = 'inline-flex';
@@ -5807,9 +5889,13 @@ function enableStalkerEdit() {
  * Cancel edit mode and restore original values
  */
 function cancelStalkerEdit() {
-    // Add readonly back to all stalker fields
+    // Add readonly/disabled back to all stalker fields
     document.querySelectorAll('.stalker-field').forEach(field => {
-        field.setAttribute('readonly', 'readonly');
+        if (field.type === 'checkbox') {
+            field.setAttribute('disabled', 'disabled');
+        } else {
+            field.setAttribute('readonly', 'readonly');
+        }
     });
 
     // Remove event listeners from server address fields
@@ -5829,6 +5915,181 @@ function cancelStalkerEdit() {
 
     // Show cancel message
     showStalkerStatus('Edit cancelled. Original values restored.', 'info');
+}
+
+/**
+ * Update dual server warning visibility based on server addresses
+ * Only shows warning when dual mode is enabled AND servers are same
+ */
+function updateDualServerWarning(primaryServer, secondaryServer) {
+    const warningElement = document.getElementById('dual-server-warning');
+    const dualModeEnabled = document.getElementById('stalker-dual-server-mode')?.checked || false;
+    if (!warningElement) return;
+
+    // Normalize addresses for comparison (remove trailing slashes, lowercase)
+    const normalizeUrl = (url) => (url || '').toLowerCase().replace(/\/+$/, '').trim();
+    const primary = normalizeUrl(primaryServer);
+    const secondary = normalizeUrl(secondaryServer);
+
+    // Show warning if dual mode is enabled AND servers are the same
+    const serversAreSame = !secondary || primary === secondary;
+
+    if (dualModeEnabled && serversAreSame) {
+        warningElement.style.display = 'block';
+    } else {
+        warningElement.style.display = 'none';
+    }
+}
+
+/**
+ * Show/hide secondary server fields based on dual server mode
+ */
+function updateSecondaryServerVisibility(dualModeEnabled) {
+    const secondaryServerGroup = document.getElementById('secondary-server-group');
+    const secondaryApiUrlGroup = document.getElementById('secondary-api-url-group');
+
+    if (secondaryServerGroup) {
+        secondaryServerGroup.style.display = dualModeEnabled ? 'block' : 'none';
+    }
+    if (secondaryApiUrlGroup) {
+        secondaryApiUrlGroup.style.display = dualModeEnabled ? 'block' : 'none';
+    }
+}
+
+// Store original dual server mode value for cancel functionality
+let originalDualServerMode = false;
+
+/**
+ * Enable edit mode for dual server mode toggle
+ */
+function enableDualServerModeEdit() {
+    const checkbox = document.getElementById('stalker-dual-server-mode');
+    const editBtn = document.getElementById('dual-mode-edit-btn');
+    const saveBtn = document.getElementById('dual-mode-save-btn');
+    const cancelBtn = document.getElementById('dual-mode-cancel-btn');
+
+    // Store original value
+    originalDualServerMode = checkbox.checked;
+
+    // Enable checkbox
+    checkbox.removeAttribute('disabled');
+
+    // Show save/cancel, hide edit
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'inline-flex';
+    cancelBtn.style.display = 'inline-flex';
+}
+
+/**
+ * Cancel dual server mode edit
+ */
+function cancelDualServerModeEdit() {
+    const checkbox = document.getElementById('stalker-dual-server-mode');
+    const editBtn = document.getElementById('dual-mode-edit-btn');
+    const saveBtn = document.getElementById('dual-mode-save-btn');
+    const cancelBtn = document.getElementById('dual-mode-cancel-btn');
+    const statusElement = document.getElementById('dual-server-status');
+
+    // Restore original value
+    checkbox.checked = originalDualServerMode;
+
+    // Update visibility based on original value
+    updateSecondaryServerVisibility(originalDualServerMode);
+    updateDualServerWarning(
+        document.getElementById('stalker-server-address')?.value || '',
+        document.getElementById('stalker-server-2-address')?.value || ''
+    );
+
+    // Disable checkbox
+    checkbox.setAttribute('disabled', 'disabled');
+
+    // Hide save/cancel, show edit
+    editBtn.style.display = 'inline-flex';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+
+    // Show cancel message
+    if (statusElement) {
+        statusElement.innerHTML = '<span style="color: var(--text-secondary);">Edit cancelled</span>';
+        setTimeout(() => { statusElement.innerHTML = ''; }, 2000);
+    }
+}
+
+/**
+ * Save dual server mode setting
+ */
+async function saveDualServerMode() {
+    const checkbox = document.getElementById('stalker-dual-server-mode');
+    const editBtn = document.getElementById('dual-mode-edit-btn');
+    const saveBtn = document.getElementById('dual-mode-save-btn');
+    const cancelBtn = document.getElementById('dual-mode-cancel-btn');
+    const statusElement = document.getElementById('dual-server-status');
+    const enabled = checkbox.checked;
+
+    // Show saving status
+    if (statusElement) {
+        statusElement.innerHTML = '<span style="color: var(--primary-color);">Saving...</span>';
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('server_address', document.getElementById('stalker-server-address').value);
+        formData.append('server_2_address', document.getElementById('stalker-server-2-address').value);
+        formData.append('api_username', document.getElementById('stalker-api-username').value);
+        formData.append('api_password', document.getElementById('stalker-api-password').value);
+        formData.append('api_base_url', document.getElementById('stalker-api-base-url').value);
+        formData.append('api_2_base_url', document.getElementById('stalker-api-2-base-url').value);
+        formData.append('dual_server_mode_enabled', enabled ? '1' : '0');
+        formData.append('test_connection', '0'); // Don't test connection for toggle
+
+        const response = await fetch('api/update_stalker_settings.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error === 0) {
+            // Update original value to new saved value
+            originalDualServerMode = enabled;
+
+            // Disable checkbox
+            checkbox.setAttribute('disabled', 'disabled');
+
+            // Hide save/cancel, show edit
+            editBtn.style.display = 'inline-flex';
+            saveBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+
+            if (statusElement) {
+                statusElement.innerHTML = '<span style="color: #28a745;">✓ ' + (enabled ? 'Dual server mode enabled' : 'Dual server mode disabled') + '</span>';
+                setTimeout(() => { statusElement.innerHTML = ''; }, 3000);
+            }
+        } else {
+            if (statusElement) {
+                statusElement.innerHTML = '<span style="color: #dc3545;">✗ Failed to save: ' + (data.message || 'Unknown error') + '</span>';
+            }
+        }
+    } catch (error) {
+        console.error('Error saving dual server mode:', error);
+        if (statusElement) {
+            statusElement.innerHTML = '<span style="color: #dc3545;">✗ Failed to save setting</span>';
+        }
+    }
+}
+
+/**
+ * Toggle dual server mode - called when checkbox changes during edit mode
+ */
+function toggleDualServerMode(enabled) {
+    // Show/hide secondary server fields immediately (preview)
+    updateSecondaryServerVisibility(enabled);
+
+    // Update warning visibility
+    updateDualServerWarning(
+        document.getElementById('stalker-server-address')?.value || '',
+        document.getElementById('stalker-server-2-address')?.value || ''
+    );
 }
 
 // ========================================

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.11.14-stalker-settings';
+const CACHE_NAME = 'showbox-billing-v1.11.16-plan-fix';
 const urlsToCache = [
   '/dashboard.php',
   '/index.html',

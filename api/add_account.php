@@ -1,15 +1,40 @@
 <?php
 
+use PHPMailer\PHPMailer\PHPMailer;
+
+// Set JSON header and error handler FIRST before any includes
+header('Content-Type: application/json');
+ob_start(); // Start output buffering to catch any accidental output
+
+// Global error handler to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_clean(); // Clear any output buffer
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+        }
+        echo json_encode(['error' => 1, 'err_msg' => 'Server error: ' . $error['message'] . ' in ' . $error['file'] . ' on line ' . $error['line']]);
+        exit;
+    }
+});
+
 session_start();
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(0);
-include(__DIR__ . '/../config.php');
-include('api.php');
-include('sms_helper.php');
 
-use PHPMailer\PHPMailer\PHPMailer;
-require 'PHPMailer/src/PHPMailer.php';
+try {
+
+include(__DIR__ . '/../config.php');
+include(__DIR__ . '/api.php');
+include(__DIR__ . '/sms_helper.php');
+
+// PHPMailer is optional - only load if available
+$phpmailer_path = __DIR__ . '/PHPMailer/src/PHPMailer.php';
+if (file_exists($phpmailer_path)) {
+    require $phpmailer_path;
+}
 
 if(isset($_SESSION['login']))
 {
@@ -18,10 +43,12 @@ if(isset($_SESSION['login']))
 
     if($session!=1)
     {
+        echo json_encode(['error' => 1, 'err_msg' => 'Not authenticated']);
         exit();
     }
 
 }else{
+    echo json_encode(['error' => 1, 'err_msg' => 'Not logged in']);
     exit();
 }
 
@@ -202,28 +229,34 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
 
     $discount = isset($_POST['discount']) ? (int)$_POST['discount'] : 0;
 
-    if($_POST['plan']!=0)
+    // Use strict check: only "0" or empty string means no plan
+    $post_plan = trim($_POST['plan'] ?? '');
+    if($post_plan !== '' && $post_plan !== '0')
     {
         // Parse plan value (format: "planID-currency")
-        $plan_parts = explode('-', $_POST['plan']);
+        $plan_parts = explode('-', $post_plan);
         if(count($plan_parts) == 2) {
             $plan_id = $plan_parts[0];
             $plan_currency = $plan_parts[1];
         } else {
             // Fallback to old format (just planID, use reseller's currency)
-            $plan_id = $_POST['plan'];
+            $plan_id = $post_plan;
             $plan_currency = $reseller_info['currency_id'];
         }
+
+        error_log("add_account.php: Looking up plan - external_id=$plan_id, currency_id=$plan_currency");
 
         $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id=? AND currency_id=?');
         $stmt->execute([$plan_id, $plan_currency]);
 
         $count = $stmt->rowCount();
 
+        error_log("add_account.php: Plan lookup found $count rows");
+
         if($count == 0)
         {
             $response['error']=1;
-            $response['err_msg']="Selected plan can not be used for this reseller.";
+            $response['err_msg']="Selected plan can not be used for this reseller. (external_id=$plan_id, currency=$plan_currency)";
 
             echo json_encode($response);
             exit();
@@ -231,6 +264,7 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
 
 
         $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("add_account.php: Plan info - id=" . $plan_info['id'] . ", name=" . $plan_info['name'] . ", days=" . $plan_info['days']);
 
         // Only check credit if admin is adding account for a reseller
         // Admin and reseller admin don't need credit when adding their own accounts
@@ -316,10 +350,19 @@ $decoded = json_decode($res);
 $plans = [];
 $plan_names = [];
 
-foreach ($decoded->results as $plan)
-{
-    $plans[$plan->id]=$plan->external_id;
-    $plan_names[$plan->id]=$plan->name;
+// Check if API response is valid before iterating
+if($decoded && isset($decoded->results)) {
+    // Handle both array and object results
+    $results = is_array($decoded->results) ? $decoded->results : (is_object($decoded->results) ? [$decoded->results] : []);
+    foreach ($results as $plan)
+    {
+        if(isset($plan->id)) {
+            $plans[$plan->id] = isset($plan->external_id) ? $plan->external_id : $plan->id;
+            $plan_names[$plan->id] = isset($plan->name) ? $plan->name : 'Plan '.$plan->id;
+        }
+    }
+} else {
+    error_log("Warning: Failed to get tariffs from Stalker API. Response: " . $res);
 }
 
 
@@ -334,76 +377,71 @@ $phone_number=trim($_POST['phone_number']);
 $account_number=10000000+$last_id;
 $mac=trim($_POST['mac']);
 
-if($_POST['plan'] == 0)
+// Use strict check for plan value (consistent with above)
+$plan_post_value = trim($_POST['plan'] ?? '');
+if($plan_post_value === '' || $plan_post_value === '0')
 {
     $plan="";
+    error_log("add_account.php: No plan selected, tariff_plan will be empty");
 }else
 {
-    $plan=$plans[$_POST['plan']];
+    // Plan is sent in format "external_id-currency" (e.g., "78-IRR")
+    // We need the external_id for Stalker Portal's tariff_plan field
+    $plan_parts_for_stalker = explode('-', $plan_post_value);
+    $external_id_for_stalker = $plan_parts_for_stalker[0];
+
+    // Use external_id directly for Stalker Portal
+    $plan = $external_id_for_stalker;
+
+    error_log("add_account.php: Plan value from POST: " . $plan_post_value . ", external_id for Stalker: " . $plan);
 }
 
 $status=$_POST['status'];
 $expire_billing_date=trim($_POST['expire_billing_date']);
 
+error_log("add_account.php: Calculating expiration - super_user=" . $user_info['super_user'] . ", POST expire_billing_date=" . ($_POST['expire_billing_date'] ?? 'empty') . ", POST plan=" . $_POST['plan']);
+error_log("add_account.php: plan_info set? " . (isset($plan_info) ? 'YES - days=' . ($plan_info['days'] ?? 'null') : 'NO'));
+
+// Determine if plan is "no plan" (unlimited) - use strict check
+// Plan value can be "0", "78-IRR", etc. Only "0" or empty means unlimited
+$plan_value = trim($_POST['plan'] ?? '');
+$is_unlimited_plan = ($plan_value === '' || $plan_value === '0');
+
+error_log("add_account.php: Plan value='$plan_value', is_unlimited=$is_unlimited_plan");
 
 if($user_info['super_user']==1)
 {
     if(empty($expire_billing_date))
     {
-        if($_POST['plan'] == 0)
+        if($is_unlimited_plan)
         {
             $expire_billing_date="";
+            error_log("add_account.php: Admin with no plan, expire_billing_date set to empty (unlimited)");
         }else
         {
             $now = time();
-            $expire = $now+($plan_info['days']*86400);
+            $plan_days = isset($plan_info['days']) ? (int)$plan_info['days'] : 30;
+            $expire = $now+($plan_days*86400);
             $expire_billing_date=date('Y/m/d', $expire);
+            error_log("add_account.php: Admin with plan, calculated expiration: $expire_billing_date (plan_days=$plan_days)");
         }
 
+    } else {
+        error_log("add_account.php: Admin provided expire_billing_date: $expire_billing_date");
     }
 }else
 {
+    // For resellers/reseller admins, always calculate expiration from plan
     $now = time();
-    $expire = $now+($plan_info['days']*86400);
+    $plan_days = isset($plan_info['days']) ? (int)$plan_info['days'] : 30;
+    $expire = $now+($plan_days*86400);
     $expire_billing_date=date('Y/m/d', $expire);
+    error_log("add_account.php: Reseller calculated expiration: $expire_billing_date (plan_days=$plan_days)");
 }
 
 
 
 $comment=trim($_POST['comment']);
-
-
-
-
-// DISABLED: Second server creation - will be enabled in future
-/*
-$data = 'login='.$username.'&password='.$password.'&full_name='.$name.'&account_number='.$account_number.'&tariff_plan='.$plan.'&status='.$status.'&stb_mac='.$mac.'&end_date='.$expire_billing_date.'&comment='.$comment.'';
-$case = 'accounts';
-$op = "POST";
-$res = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
-
-$decoded = json_decode($res);
-
-if(!$decoded || $decoded->status != 'OK')
-{
-
-    $data = null;
-    $case = 'accounts';
-    $op = "DELETE";
-
-    $res = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-
-    $decoded = json_decode($res);
-
-
-    $response['error']=1;
-    $response['err_msg']='Failed to create account on server. ' . ($decoded && isset($decoded->error) ? $decoded->error : 'Connection error');
-
-    echo json_encode($response);
-    exit();
-
-}
-*/
 
 
 
@@ -423,23 +461,69 @@ error_log("Reseller ID being sent: " . $reseller_info['id']);
 
 $case = 'accounts';
 $op = "POST";
+
+// Check if both servers are the same (avoid duplicate operations)
+$dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
+
+if($dual_server_mode)
+{
+    // Step 1: Create account on Server 2 first
+    error_log("Creating account on Server 2...");
+    $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
+    error_log("Server 2 Response: " . $res2);
+
+    $decoded2 = json_decode($res2);
+
+    if(!$decoded2 || $decoded2->status != 'OK')
+    {
+        $response['error'] = 1;
+        $response['err_msg'] = 'Failed to create account on Server 2. ' . ($decoded2 && isset($decoded2->error) ? $decoded2->error : 'Connection error');
+        echo json_encode($response);
+        exit();
+    }
+}
+
+// Step 2: Create account on Server 1 (primary)
+error_log("Creating account on Server 1...");
 $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
 
 // DEBUG: Log Stalker's response
-error_log("Stalker API Response: " . $res);
+error_log("Server 1 Response: " . $res);
 
 $decoded = json_decode($res);
+
+// If Server 1 fails, rollback Server 2 (only if dual server mode)
+if(!$decoded || $decoded->status != 'OK')
+{
+    if($dual_server_mode)
+    {
+        // Delete from Server 2 to rollback
+        error_log("Server 1 failed, rolling back Server 2...");
+        $del_case = 'accounts';
+        $del_op = "DELETE";
+        api_send_request($WEBSERVICE_2_URLs[$del_case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $del_case, $del_op, $mac, null);
+    }
+
+    $response['error'] = 1;
+    $response['err_msg'] = 'Failed to create account on Server 1. ' . ($decoded && isset($decoded->error) ? $decoded->error : 'Connection error');
+    echo json_encode($response);
+    exit();
+}
 
 if($decoded->status == 'OK')
 {
 
-    $plan_id = ($_POST['plan'] != 0 && isset($plan_info['id'])) ? $plan_info['id'] : null;
+    // Use strict check for plan - reuse $plan_post_value from earlier
+    $plan_id = (!$is_unlimited_plan && isset($plan_info['id'])) ? $plan_info['id'] : null;
 
     // Log reseller info for debugging
     error_log("Adding account for reseller - ID: " . $reseller_info['id'] . ", Name: " . $reseller_info['name'] . ", Account Username: " . $username);
 
-    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, phone_number, reseller, plan, timestamp) VALUES (?,?,?,?,?,?,?)');
-    $stmt->execute([$username, $mac, $email, $phone_number, $reseller_info['id'], $plan_id, time()]);
+    // Convert expire_billing_date to MySQL format for local DB (Y-m-d)
+    $local_end_date = !empty($expire_billing_date) ? date('Y-m-d', strtotime($expire_billing_date)) : null;
+
+    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, phone_number, reseller, plan, end_date, timestamp) VALUES (?,?,?,?,?,?,?,?)');
+    $stmt->execute([$username, $mac, $email, $phone_number, $reseller_info['id'], $plan_id, $local_end_date, time()]);
 
     if($price>0)
     {
@@ -483,32 +567,32 @@ if($decoded->status == 'OK')
 
 
 
-    // DISABLED: Second server update - will be enabled in future
-    // $data = "key=f4H75Sgf53GH4dd&login=".$username."&theme=".$reseller_info['theme'];
-    // $url = $SERVER_2_ADDRESS."/stalker_portal/update_account.php";
-    // send_request($url, "POST", $data);
-
     // Log theme information before sending
     error_log("=== THEME UPDATE DEBUG ===");
     error_log("Reseller ID: " . $reseller_info['id']);
     error_log("Reseller Name: " . $reseller_info['name']);
     error_log("Reseller Theme: " . ($reseller_info['theme'] ?? 'NULL'));
     error_log("Account Username: " . $username);
-    error_log("Server Address: " . $SERVER_1_ADDRESS);
 
     $theme_to_apply = !empty($reseller_info['theme']) ? $reseller_info['theme'] : 'HenSoft-TV Realistic-Centered SHOWBOX';
     error_log("Theme to apply: " . $theme_to_apply);
 
     $data = "key=f4H75Sgf53GH4dd&login=".$username."&theme=".$theme_to_apply;
+
+    // Update theme on Server 2 (only if dual server mode)
+    if($dual_server_mode)
+    {
+        $url2 = $SERVER_2_ADDRESS."/stalker_portal/update_account.php";
+        error_log("Updating theme on Server 2: " . $url2);
+        $res2 = send_request($url2, "POST", $data);
+        error_log("Server 2 theme update response: " . $res2);
+    }
+
+    // Update theme on Server 1
     $url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
-
-    error_log("POST Data: " . $data);
-    error_log("POST URL: " . $url);
-
+    error_log("Updating theme on Server 1: " . $url);
     $res = send_request($url, "POST", $data);
-
-    // Log the update_account response
-    error_log("update_account.php response: " . $res);
+    error_log("Server 1 theme update response: " . $res);
     error_log("=== END THEME UPDATE DEBUG ===");
 
     if($res == 'OK')
@@ -523,7 +607,7 @@ if($decoded->status == 'OK')
             $plan_name = "Unlimited";
         }else
         {
-            $plan_name = $plan_names[$_POST['plan']];
+            $plan_name = isset($plan_names[$_POST['plan']]) ? $plan_names[$_POST['plan']] : 'Plan #'.$_POST['plan'];
         }
 
         $msg_body = '<p>'.$PANEL_NAME.' account successfully created.</p><br /><p>Here are the details</p><p><span style="text-decoration: bold;">Name: </span><span>'.$name.'</span></p><p><span style="text-decoration: bold;">Username: </span><span>'.$username.'</span></p><p><span style="text-decoration: bold;">MAC: </span><span>'.$mac.'</span></p><p><span style="text-decoration: bold;">Password: </span><span>'.$password.'</span></p><p><span style="text-decoration: bold;">Plan: </span><span>'.$plan_name.'</span></p><p><span style="text-decoration: bold;">Valid To: </span><span>'.$expire_billing_date.'</span></p>';
@@ -566,9 +650,12 @@ if($decoded->status == 'OK')
         $case = 'stb_msg';
         $op = "POST";
 
-        // DISABLED: Second server welcome message - will be enabled in future
-        // $res = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-
+        // Send welcome message to Server 2 (only if dual server mode)
+        if($dual_server_mode)
+        {
+            api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+        }
+        // Send welcome message to Server 1
         $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
 
         // Send welcome SMS if phone number is provided
@@ -591,6 +678,15 @@ if($decoded->status == 'OK')
 
         $response['error']=0;
         $response['err_msg']='';
+        // Debug info
+        $response['debug'] = [
+            'plan_post' => $_POST['plan'],
+            'plan_for_stalker' => $plan,
+            'expire_billing_date' => $expire_billing_date,
+            'plan_info_set' => isset($plan_info) ? 'YES' : 'NO',
+            'plan_info_days' => isset($plan_info['days']) ? $plan_info['days'] : 'N/A',
+            'super_user' => $user_info['super_user']
+        ];
 
         echo json_encode($response);
 
@@ -641,13 +737,16 @@ if($decoded->status == 'OK')
 {
 
     $response['error']=1;
-    $response['err_msg']=$decoded->error;
+    $response['err_msg']=$decoded->error ?? 'Unknown error from Stalker Portal';
 
     echo json_encode($response);
 }
 
-
-
+} catch (Exception $e) {
+    echo json_encode(['error' => 1, 'err_msg' => 'Exception: ' . $e->getMessage()]);
+} catch (Error $e) {
+    echo json_encode(['error' => 1, 'err_msg' => 'Error: ' . $e->getMessage()]);
+}
 
 ?>
 

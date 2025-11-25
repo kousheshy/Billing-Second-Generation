@@ -117,9 +117,19 @@ try {
     error_log("MAC: " . $mac);
     error_log("Message: " . $message);
 
+    // Check if both servers are the same (avoid duplicate operations)
+    $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
+
+    // Send to Server 2 (only if dual server mode)
+    if($dual_server_mode) {
+        $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+        error_log("Server 2 Response: " . $res2);
+    }
+
+    // Send to Server 1 (primary)
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
 
-    error_log("Stalker API Response: " . $res);
+    error_log("Server 1 Response: " . $res);
 
     $decoded = json_decode($res);
 

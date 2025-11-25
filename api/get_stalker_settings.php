@@ -43,7 +43,8 @@ echo json_encode([
         'api_username' => $WEBSERVICE_USERNAME ?? '',
         'api_password' => !empty($WEBSERVICE_PASSWORD) ? '********' : '',
         'api_base_url' => $WEBSERVICE_BASE_URL ?? '',
-        'api_2_base_url' => $WEBSERVICE_2_BASE_URL ?? ''
+        'api_2_base_url' => $WEBSERVICE_2_BASE_URL ?? '',
+        'dual_server_mode_enabled' => isset($DUAL_SERVER_MODE_ENABLED) ? $DUAL_SERVER_MODE_ENABLED : false
     ]
 ]);
 ?>

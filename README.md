@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.14-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.16-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -620,6 +620,17 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.16** (Nov 2025) - Critical Account Creation Bug Fix
+  - **PHP Loose Comparison Fix**: Fixed accounts being created as "unlimited" instead of using selected plan
+  - **Root Cause**: `$_POST['plan'] == 0` loose comparison was incorrectly evaluating empty strings/null as zero
+  - **Solution**: Changed to strict string comparison `=== ''` and `=== '0'`
+  - **Local DB Fix**: Added missing `end_date` column to account INSERT statement
+  - **UI Fix**: Fixed "Total Accounts" counter not updating for reseller admin view toggle
+
+- **v1.11.15** (Nov 2025) - Account Renewal Bug & Transaction Display
+  - **Renewal Fix**: Fixed reseller admins in "My Accounts" mode not being able to renew accounts
+  - **Transaction Display**: Fixed currency display in transaction history
 
 - **v1.11.6-beta** (Nov 2025) - Phone Number Format & UI Refinements
   - **E.164 Format Enforcement**: Automatic + prefix addition for all phone numbers

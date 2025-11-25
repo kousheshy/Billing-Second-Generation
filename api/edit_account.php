@@ -103,11 +103,19 @@ try {
 
     // If plan is selected (not 0), calculate new expiration date and renew
     $new_expiration_date = $account['end_date'];
+
+    // Debug: Log received plan_id
+    error_log("edit_account.php: Received plan_id = " . $plan_id . " (type: " . gettype($plan_id) . ")");
+    error_log("edit_account.php: POST plan value = " . ($_POST['plan'] ?? 'not set'));
+
     if($plan_id != 0) {
         // Get plan details
         $stmt = $pdo->prepare('SELECT * FROM _plans WHERE id = ?');
         $stmt->execute([$plan_id]);
         $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Debug: Log plan lookup result
+        error_log("edit_account.php: Plan lookup result = " . ($plan ? json_encode($plan) : 'NOT FOUND'));
 
         if($plan) {
             // For resellers, check if they have enough credit
@@ -145,10 +153,21 @@ try {
             $base_date = ($current_expiration < $now) ? $now : $current_expiration;
             $new_expiration_timestamp = $base_date + ($plan['days'] * 24 * 60 * 60);
             $new_expiration_date = date('Y-m-d H:i:s', $new_expiration_timestamp);
+
+            // Debug: Log expiration calculation
+            error_log("edit_account.php: Plan days = " . $plan['days']);
+            error_log("edit_account.php: Current expiration = " . $account['end_date'] . " (timestamp: $current_expiration)");
+            error_log("edit_account.php: Base date used = " . date('Y-m-d H:i:s', $base_date) . " (expired: " . ($current_expiration < $now ? 'yes' : 'no') . ")");
+            error_log("edit_account.php: New expiration = " . $new_expiration_date);
+        } else {
+            error_log("edit_account.php: Plan NOT FOUND for id = " . $plan_id);
         }
+    } else {
+        error_log("edit_account.php: No plan selected (plan_id = 0), skipping renewal");
     }
 
     // Update account in local database
+    error_log("edit_account.php: Updating local DB - end_date = " . $new_expiration_date);
     $stmt = $pdo->prepare('UPDATE _accounts SET username=?, email=?, phone_number=?, full_name=?, end_date=?, plan=?, status=? WHERE username=?');
     $stmt->execute([
         $new_username,
@@ -160,6 +179,7 @@ try {
         $status,
         $original_username
     ]);
+    error_log("edit_account.php: Local DB rows affected = " . $stmt->rowCount());
 
     // Update account on Stalker Portal via API
     $mac = $account['mac'];
@@ -215,7 +235,21 @@ try {
     // Join all parts with & to create URL-encoded string
     $data = implode('&', $data_parts);
 
-    // Send request to Stalker Portal
+    // Check if both servers are the same (avoid duplicate operations)
+    $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
+
+    // Update on Server 2 first (only if dual server mode)
+    if($dual_server_mode) {
+        $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+        $decoded2 = json_decode($res2);
+
+        if(!$decoded2 || $decoded2->status != 'OK') {
+            error_log("Warning: Server 2 update failed for $username_to_send: " . ($decoded2->error ?? 'Unknown error'));
+            // Continue to update Server 1 - don't fail the whole operation
+        }
+    }
+
+    // Send request to Stalker Portal (Server 1 - primary)
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
     $decoded = json_decode($res);
 
@@ -237,9 +271,25 @@ try {
     if($reseller_info && !empty($reseller_info['theme'])) {
         // Use the custom server-side script to update theme
         $theme_data = "key=f4H75Sgf53GH4dd&login=".$username_to_send."&theme=".$reseller_info['theme'];
-        $theme_url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
 
-        // Helper function for simple POST request
+        // Update theme on Server 2 (only if dual server mode)
+        if($dual_server_mode) {
+            $theme_url_2 = $SERVER_2_ADDRESS."/stalker_portal/update_account.php";
+            $curl2 = curl_init();
+            curl_setopt($curl2, CURLOPT_CUSTOMREQUEST, "POST");
+            curl_setopt($curl2, CURLOPT_POSTREDIR, 3);
+            curl_setopt($curl2, CURLOPT_POSTFIELDS, $theme_data);
+            curl_setopt($curl2, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($curl2, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($curl2, CURLOPT_URL, $theme_url_2);
+            curl_setopt($curl2, CURLOPT_RETURNTRANSFER, 1);
+            $theme_result_2 = curl_exec($curl2);
+            curl_close($curl2);
+            error_log("edit_account.php: Server 2 theme update response: " . $theme_result_2);
+        }
+
+        // Update theme on Server 1 (primary)
+        $theme_url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($curl, CURLOPT_POSTREDIR, 3);
@@ -251,7 +301,7 @@ try {
         $theme_result = curl_exec($curl);
         curl_close($curl);
 
-        error_log("edit_account.php: Theme update response: " . $theme_result);
+        error_log("edit_account.php: Server 1 theme update response: " . $theme_result);
     }
 
     // Send renewal SMS if account was renewed (plan_id != 0) and phone number exists
@@ -282,6 +332,14 @@ try {
     if($plan_id != 0) {
         $response['message'] .= ' and renewed';
     }
+
+    // Debug info
+    $response['debug'] = [
+        'received_plan' => $_POST['plan'] ?? 'not set',
+        'parsed_plan_id' => $plan_id,
+        'plan_found' => isset($plan) && $plan ? true : false,
+        'new_expiration' => $new_expiration_date
+    ];
 
 } catch(Exception $e) {
     $response['error'] = 1;
