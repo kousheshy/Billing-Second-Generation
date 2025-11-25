@@ -47,7 +47,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.13</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.14</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -533,6 +533,82 @@
                             </button>
                             <div id="import-status" style="margin-top: 10px; display:none;"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Stalker Portal Settings Section (Super Admin Only) -->
+                <div id="stalker-settings-section" class="settings-item" style="display:none; margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 10px;">🖥️ Stalker Portal Connection</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Configure connection settings to your Stalker Portal server</p>
+
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <!-- Server Address -->
+                        <div class="form-group" style="margin: 0;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500;">Primary Server Address *</label>
+                            <input type="text" id="stalker-server-address" class="reminder-input stalker-field" value="http://81.12.70.4" style="width: 100%;" readonly>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Main Stalker Portal server IP or domain</small>
+                        </div>
+
+                        <!-- Secondary Server Address -->
+                        <div class="form-group" style="margin: 0;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500;">Secondary Server Address</label>
+                            <input type="text" id="stalker-server-2-address" class="reminder-input stalker-field" value="http://81.12.70.4" style="width: 100%;" readonly>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Optional backup server (leave empty to use primary)</small>
+                        </div>
+
+                        <!-- API Username -->
+                        <div class="form-group" style="margin: 0;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500;">API Username *</label>
+                            <input type="text" id="stalker-api-username" class="reminder-input stalker-field" value="admin" style="width: 100%;" readonly>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Stalker Portal API username</small>
+                        </div>
+
+                        <!-- API Password -->
+                        <div class="form-group" style="margin: 0;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500;">API Password *</label>
+                            <input type="password" id="stalker-api-password" class="reminder-input stalker-field" value="********" style="width: 100%;" readonly>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Stalker Portal API password (leave empty to keep current)</small>
+                        </div>
+
+                        <!-- API Base URL (always disabled, auto-generated) -->
+                        <div class="form-group" style="margin: 0;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500;">API Base URL</label>
+                            <input type="text" id="stalker-api-base-url" class="reminder-input" value="http://81.12.70.4/stalker_portal/api/" style="width: 100%; background: var(--bg-tertiary); color: var(--text-secondary);" disabled>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Auto-generated from Primary Server Address</small>
+                        </div>
+
+                        <!-- Secondary API Base URL (always disabled, auto-generated) -->
+                        <div class="form-group" style="margin: 0;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500;">Secondary API Base URL</label>
+                            <input type="text" id="stalker-api-2-base-url" class="reminder-input" value="http://81.12.70.4/stalker_portal/api/" style="width: 100%; background: var(--bg-tertiary); color: var(--text-secondary);" disabled>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Auto-generated from Secondary Server Address</small>
+                        </div>
+
+                        <!-- Test Connection Checkbox (hidden when not editing) -->
+                        <div id="stalker-test-checkbox-group" class="form-group" style="margin: 0; display: none;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="stalker-test-connection" checked style="width: 18px; height: 18px;">
+                                <span>Test connection before saving</span>
+                            </label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; gap: 12px; margin-top: 8px;">
+                            <button id="stalker-save-btn" class="btn-primary" onclick="saveStalkerSettings()" style="display: none;">
+                                💾 Save Settings
+                            </button>
+                            <button id="stalker-cancel-btn" class="btn-secondary" onclick="cancelStalkerEdit()" style="display: none;">
+                                ✖ Cancel
+                            </button>
+                            <button id="stalker-edit-btn" class="btn-primary" onclick="enableStalkerEdit()">
+                                ✏️ Edit
+                            </button>
+                            <button class="btn-secondary" onclick="testStalkerConnection()">
+                                🔌 Test Connection
+                            </button>
+                        </div>
+
+                        <div id="stalker-settings-status" style="margin-top: 10px; display:none;"></div>
                     </div>
                 </div>
             </div>

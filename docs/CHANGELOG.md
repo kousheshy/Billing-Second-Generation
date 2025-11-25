@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.14] - 2025-11-25
+
+### Added - Stalker Portal Settings UI
+
+**Status:** Production Release - Admin Configuration Feature
+
+**Overview**
+Added a new settings section for super admins to configure Stalker Portal connection settings directly from the UI, without needing to edit config.php.
+
+**New Features**
+
+1. **Stalker Portal Settings UI** (Super Admin Only)
+   - **Location**: Settings tab → Stalker Portal Connection section
+   - **Fields**:
+     - Primary Server Address (required)
+     - Secondary Server Address (optional, for backup)
+     - API Username (required)
+     - API Password (hidden, change detection)
+     - API Base URL (auto-generated if empty)
+     - Secondary API Base URL (auto-generated if empty)
+   - **Features**:
+     - Test connection before saving
+     - Connection test button for validation
+     - Auto-fills with current config.php values on first load
+     - Saves to database for persistence
+   - **Security**: Only visible to super_user=1 (NOT reseller admins)
+   - **Files**: `dashboard.php` (lines 539-607), `dashboard.js` (lines 5552-5740)
+
+2. **New API Endpoints**
+   - `api/get_stalker_settings.php` - Retrieves Stalker Portal settings
+   - `api/update_stalker_settings.php` - Saves settings with connection testing
+
+3. **Database Table**
+   - `_stalker_settings` - Stores key-value pairs for Stalker configuration
+   - Migration script: `scripts/create_stalker_settings_table.php`
+
+**Technical Details**
+
+- **New Functions in dashboard.js**:
+  - `loadStalkerSettings()` - Loads settings from server/config
+  - `saveStalkerSettings()` - Saves settings with optional connection test
+  - `testStalkerConnection()` - Tests Stalker Portal connectivity
+  - `showStalkerStatus(message, type)` - Displays status messages
+
+- **Connection Test**: Uses cURL to verify Stalker Portal API is reachable and credentials are valid
+
+**Version Updates**
+
+- **service-worker.js**: Cache name `showbox-billing-v1.11.14-stalker-settings`
+- **index.html**: Login page version `v1.11.14`
+- **dashboard.php**: Dashboard version `v1.11.14`
+- **README.md**: Version badge `1.11.14`
+
+**Files Changed**
+
+| File | Changes |
+|------|---------|
+| `dashboard.php` | Added Stalker Portal Settings section |
+| `dashboard.js` | Added 4 new functions for Stalker settings |
+| `api/get_stalker_settings.php` | New file - Get settings API |
+| `api/update_stalker_settings.php` | New file - Update settings API |
+| `scripts/create_stalker_settings_table.php` | New file - DB migration |
+| `service-worker.js` | Updated cache version |
+| `index.html` | Updated version display |
+| `README.md` | Updated version badge |
+
+---
+
 ## [1.11.13] - 2025-11-25
 
 ### Added - Transaction Pagination & Project Restructuring

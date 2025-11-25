@@ -253,6 +253,10 @@ async function checkAuth() {
             // Show database backup section for super admin
             document.getElementById('database-backup-section').style.display = 'block';
 
+            // Show Stalker Portal settings section for super admin only (NOT reseller admin)
+            document.getElementById('stalker-settings-section').style.display = 'block';
+            loadStalkerSettings();
+
             // Hide Plans and Transactions tabs in bottom navigation (PWA) for super admin
             document.querySelectorAll('.bottom-nav-item').forEach(item => {
                 const tabName = item.getAttribute('data-tab');
@@ -5544,4 +5548,289 @@ document.addEventListener('keydown', function(e) {
 // ========================================
 // End of Modal Safety Mechanism
 // ========================================
-// Cache bust test
+
+// ========================================
+// Stalker Portal Settings (v1.11.14)
+// Super Admin Only
+// ========================================
+
+/**
+ * Load Stalker Portal settings from server
+ */
+async function loadStalkerSettings() {
+    try {
+        const response = await fetch('api/get_stalker_settings.php');
+        const data = await response.json();
+
+        if (data.error === 0) {
+            const settings = data.settings;
+
+            // Populate form fields
+            document.getElementById('stalker-server-address').value = settings.server_address || '';
+            document.getElementById('stalker-server-2-address').value = settings.server_2_address || '';
+            document.getElementById('stalker-api-username').value = settings.api_username || '';
+            document.getElementById('stalker-api-password').value = settings.api_password || '';
+
+            // Auto-generate base URLs from server addresses
+            const primaryServer = settings.server_address || '';
+            const secondaryServer = settings.server_2_address || '';
+            document.getElementById('stalker-api-base-url').value = primaryServer ? primaryServer.replace(/\/+$/, '') + '/stalker_portal/api/' : '';
+            document.getElementById('stalker-api-2-base-url').value = (secondaryServer || primaryServer) ? (secondaryServer || primaryServer).replace(/\/+$/, '') + '/stalker_portal/api/' : '';
+
+            if (data.from_config) {
+                showStalkerStatus('Settings loaded from config file. Save to enable database storage.', 'info');
+            }
+        } else {
+            showStalkerStatus(data.message || 'Failed to load settings', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading Stalker settings:', error);
+        showStalkerStatus('Failed to load Stalker settings', 'error');
+    }
+}
+
+/**
+ * Save Stalker Portal settings
+ */
+async function saveStalkerSettings() {
+    const serverAddress = document.getElementById('stalker-server-address').value.trim();
+    const server2Address = document.getElementById('stalker-server-2-address').value.trim();
+    const apiUsername = document.getElementById('stalker-api-username').value.trim();
+    const apiPassword = document.getElementById('stalker-api-password').value;
+    const testConnection = document.getElementById('stalker-test-connection').checked;
+
+    // Auto-generate base URLs from server addresses
+    const apiBaseUrl = serverAddress ? serverAddress.replace(/\/+$/, '') + '/stalker_portal/api/' : '';
+    const api2BaseUrl = (server2Address || serverAddress) ? (server2Address || serverAddress).replace(/\/+$/, '') + '/stalker_portal/api/' : '';
+
+    // Validation
+    if (!serverAddress) {
+        showStalkerStatus('Primary server address is required', 'error');
+        return;
+    }
+
+    if (!apiUsername) {
+        showStalkerStatus('API username is required', 'error');
+        return;
+    }
+
+    showStalkerStatus('Saving settings...', 'info');
+
+    try {
+        const formData = new FormData();
+        formData.append('server_address', serverAddress);
+        formData.append('server_2_address', server2Address);
+        formData.append('api_username', apiUsername);
+        formData.append('api_password', apiPassword);
+        formData.append('api_base_url', apiBaseUrl);
+        formData.append('api_2_base_url', api2BaseUrl);
+        formData.append('test_connection', testConnection ? '1' : '0');
+
+        const response = await fetch('api/update_stalker_settings.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error === 0) {
+            showStalkerStatus(data.message, 'success');
+            // Reload settings to get updated values
+            loadStalkerSettings();
+            // Exit edit mode after successful save
+            document.querySelectorAll('.stalker-field').forEach(field => {
+                field.setAttribute('readonly', 'readonly');
+            });
+            // Remove event listeners from server address fields
+            document.getElementById('stalker-server-address').removeEventListener('input', updateStalkerBaseUrls);
+            document.getElementById('stalker-server-2-address').removeEventListener('input', updateStalkerBaseUrls);
+            document.getElementById('stalker-save-btn').style.display = 'none';
+            document.getElementById('stalker-cancel-btn').style.display = 'none';
+            document.getElementById('stalker-edit-btn').style.display = 'inline-flex';
+            document.getElementById('stalker-test-checkbox-group').style.display = 'none';
+        } else {
+            showStalkerStatus(data.message || 'Failed to save settings', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving Stalker settings:', error);
+        showStalkerStatus('Failed to save settings. Check console for details.', 'error');
+    }
+}
+
+/**
+ * Test Stalker Portal connection
+ */
+async function testStalkerConnection() {
+    const serverAddress = document.getElementById('stalker-server-address').value.trim();
+    const apiUsername = document.getElementById('stalker-api-username').value.trim();
+    const apiPassword = document.getElementById('stalker-api-password').value;
+
+    if (!serverAddress) {
+        showStalkerStatus('Please enter server address first', 'error');
+        return;
+    }
+
+    if (!apiUsername) {
+        showStalkerStatus('Please enter API username first', 'error');
+        return;
+    }
+
+    // Auto-generate base URL from server address
+    const apiBaseUrl = serverAddress.replace(/\/+$/, '') + '/stalker_portal/api/';
+
+    showStalkerStatus('Testing connection...', 'info');
+
+    try {
+        const formData = new FormData();
+        formData.append('server_address', serverAddress);
+        formData.append('server_2_address', serverAddress);
+        formData.append('api_username', apiUsername);
+        formData.append('api_password', apiPassword);
+        formData.append('api_base_url', apiBaseUrl);
+        formData.append('api_2_base_url', apiBaseUrl);
+        formData.append('test_connection', '1');
+
+        const response = await fetch('api/update_stalker_settings.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error === 0) {
+            showStalkerStatus('Connection successful! Stalker Portal is reachable.', 'success');
+        } else {
+            showStalkerStatus(data.message || 'Connection failed', 'error');
+        }
+    } catch (error) {
+        console.error('Error testing connection:', error);
+        showStalkerStatus('Connection test failed. Check console for details.', 'error');
+    }
+}
+
+/**
+ * Show status message for Stalker settings
+ */
+function showStalkerStatus(message, type) {
+    const statusDiv = document.getElementById('stalker-settings-status');
+    statusDiv.style.display = 'block';
+    statusDiv.className = '';
+
+    let bgColor, textColor, borderColor;
+    switch(type) {
+        case 'success':
+            bgColor = 'rgba(34, 197, 94, 0.1)';
+            textColor = '#22c55e';
+            borderColor = '#22c55e';
+            break;
+        case 'error':
+            bgColor = 'rgba(239, 68, 68, 0.1)';
+            textColor = '#ef4444';
+            borderColor = '#ef4444';
+            break;
+        case 'info':
+        default:
+            bgColor = 'rgba(59, 130, 246, 0.1)';
+            textColor = '#3b82f6';
+            borderColor = '#3b82f6';
+    }
+
+    statusDiv.style.cssText = `
+        display: block;
+        padding: 12px 16px;
+        border-radius: 6px;
+        background: ${bgColor};
+        color: ${textColor};
+        border-left: 4px solid ${borderColor};
+        font-size: 14px;
+    `;
+    statusDiv.textContent = message;
+
+    // Auto-hide success messages after 5 seconds
+    if (type === 'success') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+/**
+ * Generate API Base URL from server address
+ */
+function generateStalkerBaseUrl(serverAddress) {
+    if (!serverAddress) return '';
+    // Remove trailing slash and add /stalker_portal/api/
+    return serverAddress.replace(/\/+$/, '') + '/stalker_portal/api/';
+}
+
+/**
+ * Update base URLs when server addresses change
+ */
+function updateStalkerBaseUrls() {
+    const primaryServer = document.getElementById('stalker-server-address').value.trim();
+    const secondaryServer = document.getElementById('stalker-server-2-address').value.trim();
+
+    // Update primary base URL
+    document.getElementById('stalker-api-base-url').value = generateStalkerBaseUrl(primaryServer);
+
+    // Update secondary base URL (use secondary server if set, otherwise use primary)
+    document.getElementById('stalker-api-2-base-url').value = generateStalkerBaseUrl(secondaryServer || primaryServer);
+}
+
+/**
+ * Enable edit mode for Stalker Portal settings
+ */
+function enableStalkerEdit() {
+    // Remove readonly from all stalker fields (except base URLs which stay disabled)
+    document.querySelectorAll('.stalker-field').forEach(field => {
+        field.removeAttribute('readonly');
+        field.style.backgroundColor = ''; // Reset to default editable color
+    });
+
+    // Add event listeners to auto-update base URLs when server addresses change
+    document.getElementById('stalker-server-address').addEventListener('input', updateStalkerBaseUrls);
+    document.getElementById('stalker-server-2-address').addEventListener('input', updateStalkerBaseUrls);
+
+    // Show Save and Cancel buttons, hide Edit button
+    document.getElementById('stalker-save-btn').style.display = 'inline-flex';
+    document.getElementById('stalker-cancel-btn').style.display = 'inline-flex';
+    document.getElementById('stalker-edit-btn').style.display = 'none';
+
+    // Show test connection checkbox
+    document.getElementById('stalker-test-checkbox-group').style.display = 'block';
+
+    // Clear any previous status message
+    document.getElementById('stalker-settings-status').style.display = 'none';
+}
+
+/**
+ * Cancel edit mode and restore original values
+ */
+function cancelStalkerEdit() {
+    // Add readonly back to all stalker fields
+    document.querySelectorAll('.stalker-field').forEach(field => {
+        field.setAttribute('readonly', 'readonly');
+    });
+
+    // Remove event listeners from server address fields
+    document.getElementById('stalker-server-address').removeEventListener('input', updateStalkerBaseUrls);
+    document.getElementById('stalker-server-2-address').removeEventListener('input', updateStalkerBaseUrls);
+
+    // Hide Save and Cancel buttons, show Edit button
+    document.getElementById('stalker-save-btn').style.display = 'none';
+    document.getElementById('stalker-cancel-btn').style.display = 'none';
+    document.getElementById('stalker-edit-btn').style.display = 'inline-flex';
+
+    // Hide test connection checkbox
+    document.getElementById('stalker-test-checkbox-group').style.display = 'none';
+
+    // Reload original values from server
+    loadStalkerSettings();
+
+    // Show cancel message
+    showStalkerStatus('Edit cancelled. Original values restored.', 'info');
+}
+
+// ========================================
+// End of Stalker Portal Settings
+// ========================================

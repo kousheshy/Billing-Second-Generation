@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.11.13-transactions-pagination';
+const CACHE_NAME = 'showbox-billing-v1.11.14-stalker-settings';
 const urlsToCache = [
   '/dashboard.php',
   '/index.html',
