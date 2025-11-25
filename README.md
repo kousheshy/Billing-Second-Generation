@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.7--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.12-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -907,6 +907,18 @@ Unauthorized copying, modification, or distribution is prohibited.
   - **No DB Migration Required**: Pure authorization & frontend logic enhancement
   - **Documentation Updated**: README & CHANGELOG reflect new capabilities
 
+- **v1.11.12** (Nov 2025) - Admin Plan Dropdown & Service Worker Improvements
+  - **Status**: Production Release - Critical Bug Fixes
+  - **Admin Plan Dropdown Fix**: Removed category filtering so admins see all plans in dropdowns
+  - **Super User Detection**: Fixed type coercion issue with super_user field (string vs integer)
+  - **Dashboard Migration**: Transitioned from dashboard.html to dashboard.php for dynamic content
+  - **Service Worker Enhancement**: Network-first strategy for JS/CSS files (always fresh updates)
+  - **Debug Logging**: Added comprehensive console logging for user role detection
+  - **Cache Strategy**: Improved caching with fallback for offline scenarios
+  - **Files Modified**: dashboard.js (3 functions), service-worker.js (caching logic), index.html (redirect)
+  - **Bug Fixes**: Plan dropdown filtering, super user type comparison, dashboard.php offline support
+  - **Testing**: All admin dropdowns now show complete plan lists
+
 - **v1.11.7-beta** (Nov 2025) - Reseller Admin Permissions & View Toggle Refinement
   - **Status**: Beta Testing - Major Feature Release
   - **Reseller Admin Permissions**: Complete system for managing resellers (add, edit, delete, adjust credit, assign plans)
@@ -982,3 +994,7 @@ Unauthorized copying, modification, or distribution is prohibited.
 - **v1.2.0** (Nov 2025) - Dark mode improvements and legacy data compatibility
 - **v1.1.0** (Nov 2025) - Currency standardization and auto-sync features
 - **v1.0.0** (Jan 2025) - Initial production release
+
+---
+
+**ShowBox Billing System v1.11.12**

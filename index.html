@@ -228,7 +228,7 @@
         <div class="login-header">
             <h1>ShowBox</h1>
             <p>Billing Management System</p>
-            <small class="login-version">© 2025 All Rights Reserved | v1.11.5-beta</small>
+            <small class="login-version">© 2025 All Rights Reserved | v1.11.12</small>
         </div>
 
         <div id="alert" class="alert"></div>
@@ -311,7 +311,7 @@
                     sessionStorage.setItem('freshLogin', 'true');
                     console.log('[Login] Set freshLogin flag to:', sessionStorage.getItem('freshLogin'));
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = 'dashboard.php';
                     }, 1000);
                 } else {
                     showAlert(result.message || 'Login failed', 'error');

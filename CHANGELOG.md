@@ -7,6 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.12] - 2025-11-25
+
+### Fixed - Admin Plan Dropdown & Service Worker Improvements
+
+**Status:** Production Release - Critical Bug Fixes
+
+**Overview**
+Critical fixes for admin plan selection dropdowns and enhanced service worker caching strategy with comprehensive debugging for user role detection.
+
+**Bug Fixes**
+
+1. **Admin Plan Dropdown Not Showing All Plans** (Critical Fix)
+   - **Issue**: Admin users saw filtered plan dropdowns (only specific categories)
+   - **Root Cause**: Category filtering applied to admin dropdowns in Add Account and Edit/Renew modals
+   - **Fix**: Removed category filtering from `loadPlans()` and `loadPlansForEdit()`
+   - **Impact**: Admins now see all available plans in dropdown menus
+   - **Files**: `dashboard.js` (lines 1910-1916, 2787-2796)
+
+2. **Super User Detection Logic** (Type Coercion Fix)
+   - **Issue**: `super_user` field comparison failing due to type mismatch (string vs integer)
+   - **Fix**: Updated comparison to handle both string and integer values
+   - **Logic**: `currentUser.super_user == 1 || currentUser.super_user === '1'`
+   - **Locations**: `openModalCore()`, `addAccount()`, `editAccountCore()` functions
+   - **Files**: `dashboard.js` (lines 1031, 2146, 2685)
+
+3. **Dashboard.html Deleted → Dashboard.php Migration**
+   - **Change**: Removed static `dashboard.html`, replaced with `dashboard.php`
+   - **Reason**: Dynamic content generation, better session management
+   - **Files Affected**: 
+     - Deleted: `dashboard.html` (1,733 lines)
+     - Added: `dashboard.php` (new)
+     - Updated: `index.html` (redirect to dashboard.php)
+     - Updated: `service-worker.js` (cache dashboard.php instead of .html)
+
+**Service Worker Enhancements**
+
+1. **Network-First Strategy for JS/CSS**
+   - **Change**: Switched from cache-first to network-first for JavaScript and CSS files
+   - **Benefit**: Users always get the latest code updates immediately
+   - **Fallback**: Still serves cached version if offline
+   - **Files**: `service-worker.js` (lines 68-88)
+
+2. **Dashboard.php Caching Logic**
+   - **Added**: Special handling for dashboard.php with cache busting
+   - **Behavior**: Always fetch from network, cache as fallback for offline
+   - **Files**: `service-worker.js` (lines 49-64)
+
+3. **Cache Version Update**
+   - **Old**: `showbox-billing-v1.11.7-beta`
+   - **New**: `showbox-billing-v1.11.12-debug-logging`
+   - **Purpose**: Force cache refresh for all users
+   - **Files**: `service-worker.js` (line 1)
+
+**Debug Improvements**
+
+1. **Comprehensive Console Logging**
+   - Added detailed logging in `openModalCore()` (Add Account modal)
+   - Added detailed logging in `editAccountCore()` (Edit/Renew modal)
+   - Logs include: user object, super_user raw value, all role flags, view mode state
+   - **Purpose**: Diagnose user role detection and UI rendering issues
+   - **Files**: `dashboard.js` (lines 1039-1049, 2739-2749)
+
+**Version Updates**
+
+- **README.md**: Version badge updated from `1.11.7-beta` to `1.11.12`
+- **index.html**: Login page version updated to `v1.11.12`
+- **service-worker.js**: Cache name updated to `v1.11.12-debug-logging`
+
+**Technical Details**
+
+- **Files Modified**: 5 files (README.md, dashboard.js, index.html, service-worker.js, dashboard.html deleted)
+- **Lines Changed**: +96 insertions, -1,785 deletions
+- **Category Filter Removal**: `plan.category === 'new_device'` and `plan.category === 'renew_device'` checks removed
+- **Type Safety**: Added dual comparison for super_user field (handles string and integer)
+
+**Testing Notes**
+
+- ✅ Admin users can now see all plans in Add Account dropdown
+- ✅ Admin users can now see all plans in Edit/Renew dropdown
+- ✅ Super user detection works correctly regardless of data type
+- ✅ Service worker serves fresh JS/CSS files
+- ✅ Dashboard.php caching works offline
+- ✅ Console logs provide debugging information
+
+**Migration Impact**
+
+- Users on old version (1.11.7-beta) will need hard refresh to clear cache
+- Dashboard URL changed from `.html` to `.php`
+- All functionality preserved, only file extension changed
+
+---
+
 ## [1.11.7-beta] - 2025-11-25
 
 ### Added - Reseller Admin Permissions & View Toggle Refinement

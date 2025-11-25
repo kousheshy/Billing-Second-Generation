@@ -1028,13 +1028,26 @@ function openModalCore(modalId) {
         }, 10);
 
         // Check if user is reseller without admin permission
-        const isSuperUser = currentUser ? currentUser.super_user : true;
+        const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : true;
         const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
         const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
         // Check view mode for reseller admins
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+        // Debug logging
+        console.log('[Add Account Modal] User detection:', {
+            currentUser: currentUser,
+            super_user_raw: currentUser?.super_user,
+            isSuperUser: isSuperUser,
+            isResellerAdmin: isResellerAdmin,
+            isResellerWithoutAdmin: isResellerWithoutAdmin,
+            viewAllAccounts: viewAllAccounts,
+            isResellerAdminInMyAccountsMode: isResellerAdminInMyAccountsMode,
+            willShowCards: (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode),
+            willShowDropdown: !(isResellerWithoutAdmin || isResellerAdminInMyAccountsMode)
+        });
 
         if (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode) {
             // Disable username and password fields (permanent restriction for resellers)
@@ -1909,13 +1922,11 @@ async function loadPlans() {
 
                 // Add to plan select for account creation
                 // Use planID-currency format to ensure correct plan is selected
-                // Only add new_device plans to Add Account dropdown
-                if (plan.category === 'new_device') {
-                    const option = document.createElement('option');
-                    option.value = `${plan.external_id}-${plan.currency_id}`;
-                    option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
-                    planSelect.appendChild(option);
-                }
+                // Add ALL plans to dropdown (admins see all plans)
+                const option = document.createElement('option');
+                option.value = `${plan.external_id}-${plan.currency_id}`;
+                option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
+                planSelect.appendChild(option);
 
                 // Add to reseller plan assignment dropdown with planID-currency format
                 if(resellerPlansSelect) {
@@ -2143,7 +2154,7 @@ async function addAccount(e) {
     }
 
     // Check if user is reseller without admin permission
-    const isSuperUser = currentUser ? currentUser.super_user : true;
+    const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : true;
     const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
     const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
@@ -2682,7 +2693,7 @@ async function editAccountCore(username) {
 
         // Check if user is reseller without admin permission
         // If currentUser is not loaded, assume admin to show all fields
-        const isSuperUser = currentUser ? currentUser.super_user : true;
+        const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : true;
         const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
         const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
@@ -2724,6 +2735,19 @@ async function editAccountCore(username) {
         // Check view mode for reseller admins
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+        // Debug logging
+        console.log('[Edit Account Modal] User detection:', {
+            currentUser: currentUser,
+            super_user_raw: currentUser?.super_user,
+            isSuperUser: isSuperUser,
+            isResellerAdmin: isResellerAdmin,
+            isResellerWithoutAdmin: isResellerWithoutAdmin,
+            viewAllAccounts: viewAllAccounts,
+            isResellerAdminInMyAccountsMode: isResellerAdminInMyAccountsMode,
+            willShowCards: (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode),
+            willShowDropdown: !(isResellerWithoutAdmin || isResellerAdminInMyAccountsMode)
+        });
 
         // Handle reseller without admin permission OR reseller admin in "My Accounts" mode
         if (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode) {
@@ -2787,10 +2811,8 @@ async function loadPlansForEdit() {
         planSelect.innerHTML = '<option value="0">SELECT ONE TO UPDATE</option>';
 
         if(result.error == 0 && result.plans) {
-            // Filter to only show renew_device plans for Edit/Renew dropdown
-            const renewalPlans = result.plans.filter(plan => plan.category === 'renew_device');
-
-            renewalPlans.forEach(plan => {
+            // Show ALL plans for admins (no filtering by category)
+            result.plans.forEach(plan => {
                 const option = document.createElement('option');
                 option.value = plan.id;
                 const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
@@ -2917,7 +2939,7 @@ async function submitEditAccount(e) {
     e.preventDefault();
 
     // Check if user is reseller without admin permission
-    const isSuperUser = currentUser ? currentUser.super_user : true;
+    const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : true;
     const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
     const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
@@ -5350,3 +5372,4 @@ document.addEventListener('keydown', function(e) {
 // ========================================
 // End of Modal Safety Mechanism
 // ========================================
+// Cache bust test

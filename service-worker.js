@@ -1,6 +1,6 @@
-const CACHE_NAME = 'showbox-billing-v1.11.7-beta';
+const CACHE_NAME = 'showbox-billing-v1.11.12-debug-logging';
 const urlsToCache = [
-  '/dashboard.html',
+  '/dashboard.php',
   '/index.html',
   '/dashboard.css',
   '/dashboard.js',
@@ -46,11 +46,16 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip caching for API requests (PHP files)
+  // Skip caching for PHP files (including dashboard.php with dynamic cache busting)
+  // Always fetch PHP files from network to get fresh content
   if (url.pathname.endsWith('.php')) {
     event.respondWith(
       fetch(request)
         .catch(() => {
+          // For dashboard.php, try to return cached version if offline
+          if (url.pathname.includes('dashboard.php')) {
+            return caches.match('/dashboard.php');
+          }
           return new Response(
             JSON.stringify({ error: 1, message: 'Offline - Cannot reach server' }),
             { headers: { 'Content-Type': 'application/json' } }
@@ -60,39 +65,55 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // For static resources, use cache-first strategy
-  event.respondWith(
-    caches.match(request)
-      .then(response => {
-        if (response) {
-          console.log('[Service Worker] Serving from cache:', request.url);
-          return response;
-        }
+  // Use NETWORK-FIRST strategy for JS and CSS files (always get fresh versions)
+  // Cache-first only for images and fonts
+  const isJsOrCss = url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
 
-        console.log('[Service Worker] Fetching from network:', request.url);
-        return fetch(request).then(response => {
-          // Don't cache if not a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+  if (isJsOrCss) {
+    // Network-first strategy for JS/CSS
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          // Cache the new version
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if offline
+          return caches.match(request);
+        })
+    );
+  } else {
+    // Cache-first strategy for images, fonts, etc.
+    event.respondWith(
+      caches.match(request)
+        .then(response => {
+          if (response) {
             return response;
           }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, responseToCache);
+          return fetch(request).then(response => {
+            if (response && response.status === 200) {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME).then(cache => {
+                cache.put(request, responseToCache);
+              });
+            }
+            return response;
           });
-
-          return response;
-        });
-      })
-      .catch(() => {
-        // Return offline page for HTML requests
-        if (request.headers.get('accept').includes('text/html')) {
-          return caches.match('/index.html');
-        }
-      })
-  );
+        })
+        .catch(() => {
+          // Return offline page for HTML requests
+          if (request.headers.get('accept') && request.headers.get('accept').includes('text/html')) {
+            return caches.match('/index.html');
+          }
+        })
+    );
+  }
 });
 
 // Listen for messages from the main thread
@@ -145,13 +166,13 @@ self.addEventListener('notificationclick', event => {
       .then(clientList => {
         // If dashboard is already open, focus it
         for (let client of clientList) {
-          if (client.url.includes('dashboard.html') && 'focus' in client) {
+          if (client.url.includes('dashboard.php') && 'focus' in client) {
             return client.focus();
           }
         }
         // Otherwise, open a new window
         if (clients.openWindow) {
-          return clients.openWindow('/dashboard.html');
+          return clients.openWindow('/dashboard.php');
         }
       })
   );

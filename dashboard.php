@@ -30,7 +30,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="shortcut icon" href="favicon.png">
 
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="dashboard.css?v=<?php echo filemtime('dashboard.css'); ?>">
 
     <!-- Export Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -47,7 +47,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.5-beta</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.12</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -1001,7 +1001,7 @@
                         <option value="0">Inactive</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="display: none;">
                     <label>Expiry Date (leave empty for auto)</label>
                     <input type="text" name="expire_billing_date" placeholder="YYYY/MM/DD">
                 </div>
@@ -1727,7 +1727,7 @@
     <!-- Alert notification (placed at end of body to ensure it appears on top of modals) -->
     <div id="alert" class="alert"></div>
 
-    <script src="dashboard.js"></script>
-    <script src="sms-functions.js"></script>
+    <script src="dashboard.js?v=<?php echo filemtime('dashboard.js'); ?>"></script>
+    <script src="sms-functions.js?v=<?php echo filemtime('sms-functions.js'); ?>"></script>
 </body>
 </html>
