@@ -12,7 +12,7 @@ $WELCOME_MSG = "Welcome to ShowBox - 24/7 Support and Movie Order on Whatsapp: 0
 
 $ub_main_db="showboxt_panel";
 
-$ub_db_host="localhost";
+$ub_db_host="127.0.0.1";
 $ub_db_username="root";
 $ub_db_password="";
 
