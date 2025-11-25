@@ -36,6 +36,15 @@ try {
 
     $resellers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Add account count for each reseller
+    foreach ($resellers as &$reseller) {
+        $stmt_count = $pdo->prepare('SELECT COUNT(*) as account_count FROM _accounts WHERE reseller = ?');
+        $stmt_count->execute([$reseller['id']]);
+        $count_result = $stmt_count->fetch(PDO::FETCH_ASSOC);
+        $reseller['account_count'] = $count_result['account_count'] ?? 0;
+    }
+    unset($reseller); // Break reference
+
     $response['error'] = 0;
     $response['resellers'] = $resellers;
 

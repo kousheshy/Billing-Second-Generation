@@ -169,7 +169,7 @@
                             <th>Username</th>
                             <th>Email</th>
                             <th>Balance</th>
-                            <th>Max Users</th>
+                            <th>Total Accounts</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -489,6 +489,41 @@
                     </button>
                 </div>
                 <div id="sync-status" class="sync-status" style="display:none;"></div>
+
+                <!-- Database Backup & Restore Section (Admin & Reseller Admin Only) -->
+                <div id="database-backup-section" class="settings-item" style="display:none; margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 10px;">💾 Database Backup & Restore</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Export and import your database for backup or migration purposes.</p>
+
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Export Section -->
+                        <div style="padding: 15px; background: var(--bg-primary); border-radius: 6px; border-left: 4px solid var(--success);">
+                            <h4 style="margin: 0 0 8px 0; color: var(--success);">📤 Export Database</h4>
+                            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Download a complete backup of your database as an SQL file.</p>
+                            <button class="btn-primary" onclick="exportDatabase(this)" style="background: var(--success); border-color: var(--success);">
+                                <span id="export-icon">💾</span> Export Database (.sql)
+                            </button>
+                            <div id="export-status" style="margin-top: 10px; display:none;"></div>
+                        </div>
+
+                        <!-- Import Section -->
+                        <div style="padding: 15px; background: var(--bg-primary); border-radius: 6px; border-left: 4px solid var(--warning);">
+                            <h4 style="margin: 0 0 8px 0; color: var(--warning);">📥 Import Database</h4>
+                            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">⚠️ <strong>Warning:</strong> Importing will replace your current database. Make sure to export first!</p>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="file" id="db-import-file" accept=".sql" style="display: none;" onchange="handleDBFileSelected()">
+                                <button class="btn-secondary" onclick="document.getElementById('db-import-file').click()">
+                                    📁 Choose SQL File
+                                </button>
+                                <span id="selected-file-name" style="color: var(--text-secondary); font-size: 13px;"></span>
+                            </div>
+                            <button id="import-db-btn" class="btn-primary" onclick="importDatabase()" style="margin-top: 12px; background: var(--warning); border-color: var(--warning); display: none;">
+                                <span id="import-icon">📥</span> Import Database
+                            </button>
+                            <div id="import-status" style="margin-top: 10px; display:none;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Messaging Tab -->

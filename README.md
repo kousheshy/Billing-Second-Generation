@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.3--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.4--beta-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,7 +613,7 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.3-beta
+**Version:** 1.11.4-beta
 **Last Updated:** November 2025
 **Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
@@ -621,7 +621,21 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ## Version History
 
-- **v1.11.3** (Nov 2025) - Critical UX Bug Fixes & Modal Interaction Improvements
+- **v1.11.4-beta** (Nov 2025) - Database Backup & Restore System
+  - **Database Export**: One-click download of complete database backup as SQL file with timestamp naming
+  - **Database Import**: Upload and restore SQL backup files with safety warnings and progress tracking
+  - **Reseller Account Tracking**: Changed "Max Users" to "Total Accounts" showing actual count per reseller
+  - **Admin-Only Access**: Backup/restore features restricted to Super Admin and Reseller Admin
+  - **Visual Feedback**: Color-coded UI (green for export, orange for import) with real-time status
+  - **Technical Changes**:
+    - New PHP endpoints: export_database.php, import_database.php
+    - Dashboard backup section: 37 lines HTML, 162 lines JS
+    - Reseller query enhanced with LEFT JOIN for account counts
+    - Backups stored in protected backups/ directory
+  - **Files Created**: export_database.php, import_database.php, backups/ directory
+  - **Benefits**: Easy backup before changes, simple migration, disaster recovery, no phpMyAdmin needed
+
+- **v1.11.3-beta** (Nov 2025) - Critical UX Bug Fixes & Modal Interaction Improvements
   - **Page Freezing Fix** (CRITICAL): Completely eliminated page freezing after modal interactions
     - Fixed: No scroll, no button clicks after opening/closing modals
     - Fixed: Buttons not working after closing modal with X or ESC

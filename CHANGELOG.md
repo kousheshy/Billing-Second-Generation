@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.4-beta] - 2025-11-25
+
+### Added - Database Backup & Restore System
+
+**Status:** Beta Testing - Requires thorough testing before production deployment
+
+**Overview**
+Added comprehensive database backup and restore functionality for Super Admins and Reseller Admins, plus improved reseller account tracking.
+
+**Features**
+
+1. **Database Export Functionality** (New Feature)
+   - **Export Database**: One-click download of complete database backup as SQL file
+   - **Automatic Naming**: Files named with timestamp (showbox_backup_YYYYMMDD_HHMMSS.sql)
+   - **Visual Feedback**: Progress indicator during export, success/error messages
+   - **Admin Only**: Visible only to Super Admin and Reseller Admin users
+   - **Files**: `export_database.php` (new), `dashboard.js` (lines 3234-3286), `dashboard.html` (lines 494-507)
+
+2. **Database Import Functionality** (New Feature)
+   - **Import Database**: Upload and restore SQL backup files
+   - **File Selection**: Choose .sql file with visual feedback showing selected filename
+   - **Safety Warning**: Clear warning about replacing current database
+   - **Progress Tracking**: Real-time import status with success/error handling
+   - **Admin Only**: Restricted to Super Admin and Reseller Admin users
+   - **Files**: `import_database.php` (new), `dashboard.js` (lines 3288-3390), `dashboard.html` (lines 509-527)
+
+3. **Reseller Account Tracking** (Enhancement)
+   - **Changed Column**: "Max Users" → "Total Accounts" in Resellers table
+   - **Live Count**: Shows actual number of accounts per reseller
+   - **Database Query**: Added LEFT JOIN to count accounts in real-time
+   - **Better UX**: More useful information than max users limit
+   - **Files**: `get_resellers.php` (lines 78-86), `dashboard.html` (line 172), `dashboard.js` (line 1792)
+
+4. **UI Improvements** (Visual Enhancement)
+   - **Backup Section**: New dedicated section in Settings tab
+   - **Color Coding**: Green for export (safe), Orange for import (warning)
+   - **Icons**: 💾 Export, 📥 Import, 📁 Choose File
+   - **Responsive Design**: Mobile-friendly layout with proper spacing
+   - **Files**: `dashboard.css` (lines added for backup section styling)
+
+**Technical Implementation**
+
+- **Export Process**:
+  - PHP `mysqldump` command execution
+  - Temporary file creation in backups/ directory
+  - Automatic file download via JavaScript
+  - File cleanup after download
+
+- **Import Process**:
+  - File upload handling with validation
+  - SQL file parsing and execution
+  - Transaction support for data integrity
+  - Error handling and rollback capability
+
+- **Security**:
+  - Admin-only access (permission checks)
+  - File type validation (.sql only)
+  - SQL injection prevention
+  - Backup file storage in protected directory
+
+**Files Modified**
+- `dashboard.html` - Added backup/restore UI section (37 lines)
+- `dashboard.js` - Export/import functions and file handling (162 lines)
+- `dashboard.css` - Styling for backup section (10 lines)
+- `get_resellers.php` - Account count query (9 lines)
+
+**Files Created**
+- `export_database.php` - Database export endpoint
+- `import_database.php` - Database import endpoint
+- `backups/` - Directory for temporary backup files
+
+**Benefits**
+- **Data Safety**: Easy backup before major changes
+- **Migration**: Simple database transfer between servers
+- **Disaster Recovery**: Quick restore from backup files
+- **Better Insights**: See actual account counts per reseller
+- **User-Friendly**: No need for phpMyAdmin or command line
+
+**Testing Required**
+- [ ] Export database and verify SQL file content
+- [ ] Import database from backup file
+- [ ] Test with large databases (performance)
+- [ ] Verify permission restrictions (regular resellers can't access)
+- [ ] Test error handling (corrupted files, insufficient permissions)
+- [ ] Verify reseller account counts are accurate
+
+**Deployment Notes**
+- Ensure `backups/` directory exists with write permissions
+- Set proper file permissions on export/import PHP files
+- Test on staging environment before production
+- Verify mysqldump is available on server
+
+---
+
 ## [1.11.3-beta] - 2025-11-24
 
 ### Fixed - Critical UX Bug Fixes & Modal Interaction Improvements

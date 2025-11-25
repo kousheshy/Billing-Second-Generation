@@ -240,6 +240,9 @@ async function checkAuth() {
             // Show sync section for super admin only
             document.getElementById('sync-section').style.display = 'block';
 
+            // Show database backup section for super admin
+            document.getElementById('database-backup-section').style.display = 'block';
+
             // Hide Plans and Transactions tabs in bottom navigation (PWA) for super admin
             document.querySelectorAll('.bottom-nav-item').forEach(item => {
                 const tabName = item.getAttribute('data-tab');
@@ -254,6 +257,9 @@ async function checkAuth() {
 
             // Show sync section for reseller admins
             document.getElementById('sync-section').style.display = 'block';
+
+            // Show database backup section for reseller admin
+            document.getElementById('database-backup-section').style.display = 'block';
 
             // Show view mode toggle for reseller admins
             document.getElementById('view-mode-toggle').style.display = 'flex';
@@ -1783,7 +1789,7 @@ async function loadResellers() {
                     <td>${reseller.username || ''}</td>
                     <td>${reseller.email || ''}</td>
                     <td>${getCurrencySymbol(reseller.currency_name)}${formatBalance(reseller.balance || 0, reseller.currency_name)}</td>
-                    <td>${reseller.max_users || 'Unlimited'}</td>
+                    <td>${reseller.account_count || 0}</td>
                     <td>
                         <div class="action-buttons">
                             ${editButton}
@@ -3222,6 +3228,160 @@ async function syncAccounts() {
             syncStatus.className = 'sync-status';
             syncStatus.textContent = '';
         }, 5000);
+    }
+}
+
+// ===========================
+// Database Export/Import Functions
+// ===========================
+
+// Export Database
+async function exportDatabase(buttonElement) {
+    const exportIcon = document.getElementById('export-icon');
+    const exportStatus = document.getElementById('export-status');
+    const exportBtn = buttonElement;
+
+    console.log('[exportDatabase] Starting export...');
+
+    try {
+        // Disable button and show exporting state
+        if (exportBtn) exportBtn.disabled = true;
+        exportIcon.textContent = '⏳';
+        exportStatus.style.display = 'block';
+        exportStatus.className = 'sync-status info';
+        exportStatus.textContent = 'Generating database backup...';
+
+        const response = await fetch('export_database.php', {
+            method: 'POST'
+        });
+
+        console.log('[exportDatabase] Response received:', response.status);
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const result = await response.json();
+        console.log('[exportDatabase] Result:', result);
+
+        if (result.error == 0) {
+            // Download the file
+            const downloadLink = document.createElement('a');
+            downloadLink.href = result.file_url;
+            downloadLink.download = result.filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+            exportStatus.className = 'sync-status success';
+            exportStatus.textContent = `✓ Database exported successfully! File: ${result.filename}`;
+        } else {
+            exportStatus.className = 'sync-status error';
+            exportStatus.textContent = `✗ Export failed: ${result.message}`;
+        }
+
+    } catch(error) {
+        console.error('[exportDatabase] Error:', error);
+        exportStatus.className = 'sync-status error';
+        exportStatus.textContent = `✗ Export failed: ${error.message}`;
+    } finally {
+        // Re-enable button
+        if (exportBtn) exportBtn.disabled = false;
+        exportIcon.textContent = '💾';
+
+        // Clear status after 5 seconds
+        setTimeout(() => {
+            exportStatus.style.display = 'none';
+            exportStatus.textContent = '';
+        }, 5000);
+    }
+}
+
+// Handle file selection for import
+function handleDBFileSelected() {
+    const fileInput = document.getElementById('db-import-file');
+    const fileName = document.getElementById('selected-file-name');
+    const importBtn = document.getElementById('import-db-btn');
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        importBtn.style.display = 'block';
+    } else {
+        fileName.textContent = '';
+        importBtn.style.display = 'none';
+    }
+}
+
+// Import Database
+async function importDatabase() {
+    const fileInput = document.getElementById('db-import-file');
+    const importBtn = document.getElementById('import-db-btn');
+    const importIcon = document.getElementById('import-icon');
+    const importStatus = document.getElementById('import-status');
+
+    if (fileInput.files.length === 0) {
+        alert('Please select an SQL file to import');
+        return;
+    }
+
+    // Confirm import
+    if (!confirm('⚠️ WARNING: This will replace your entire database with the uploaded file. This action cannot be undone. Are you sure you want to continue?')) {
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('sql_file', file);
+
+    try {
+        // Disable button and show importing state
+        importBtn.disabled = true;
+        importIcon.textContent = '⏳';
+        importStatus.style.display = 'block';
+        importStatus.className = 'sync-status info';
+        importStatus.textContent = 'Importing database... This may take a few minutes.';
+
+        const response = await fetch('import_database.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.error == 0) {
+            importStatus.className = 'sync-status success';
+            importStatus.textContent = `✓ Database imported successfully! ${result.message}`;
+
+            // Clear file selection
+            fileInput.value = '';
+            document.getElementById('selected-file-name').textContent = '';
+            importBtn.style.display = 'none';
+
+            // Reload page after 3 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        } else {
+            importStatus.className = 'sync-status error';
+            importStatus.textContent = `✗ Import failed: ${result.message}`;
+        }
+
+    } catch(error) {
+        importStatus.className = 'sync-status error';
+        importStatus.textContent = `✗ Import failed: ${error.message}`;
+    } finally {
+        // Re-enable button
+        importBtn.disabled = false;
+        importIcon.textContent = '📥';
+
+        // Clear status after 10 seconds (longer for import)
+        setTimeout(() => {
+            if (!importStatus.textContent.includes('successfully')) {
+                importStatus.style.display = 'none';
+                importStatus.textContent = '';
+            }
+        }, 10000);
     }
 }
 

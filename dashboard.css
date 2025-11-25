@@ -726,6 +726,12 @@ table tbody tr:last-child td {
     border-bottom: none;
 }
 
+/* Center Total Accounts column in Resellers table (5th column) */
+#resellers-table thead tr th:nth-child(5),
+#resellers-table tbody tr td:nth-child(5) {
+    text-align: center;
+}
+
 /* Expiration Cell */
 .expiration-cell {
     display: flex;
@@ -3615,7 +3621,7 @@ body.pwa-mode .modal-header {
         display: none;
     }
 
-    /* Resellers table columns: 1=Name, 2=Username, 3=Email, 4=Balance, 5=Max Users, 6=Actions */
+    /* Resellers table columns: 1=Name, 2=Username, 3=Email, 4=Balance, 5=Total Accounts, 6=Actions */
     /* Show: Name (1), Username (2), Balance (4), Actions (6) */
 
     /* Hide Email column (3rd) in Resellers table */
@@ -3624,7 +3630,7 @@ body.pwa-mode .modal-header {
         display: none;
     }
 
-    /* Hide Max Users column (5th) in Resellers table */
+    /* Hide Total Accounts column (5th) in Resellers table on mobile */
     #resellers-table thead tr th:nth-child(5),
     #resellers-table tbody tr td:nth-child(5) {
         display: none;
