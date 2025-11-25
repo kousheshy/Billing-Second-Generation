@@ -24,6 +24,34 @@
     <link rel="shortcut icon" href="favicon.png">
 
     <style>
+        :root {
+            /* Light mode colors */
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --container-bg: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --input-border: #dddddd;
+            --input-bg: #ffffff;
+            --input-text: #333333;
+            --btn-gradient-start: #667eea;
+            --btn-gradient-end: #764ba2;
+        }
+
+        body.dark-mode {
+            /* Dark mode colors */
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --container-bg: #0f1419;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --input-border: #333333;
+            --input-bg: #1a1a2e;
+            --input-text: #e0e0e0;
+            --btn-gradient-start: #667eea;
+            --btn-gradient-end: #764ba2;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -32,19 +60,44 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background 0.3s ease;
         }
 
         .login-container {
-            background: white;
+            background: var(--container-bg);
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             width: 400px;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(20deg) scale(1.1);
+            border-color: var(--text-primary);
         }
 
         .login-header {
@@ -53,14 +106,16 @@
         }
 
         .login-header h1 {
-            color: #333;
+            color: var(--text-primary);
             font-size: 28px;
             margin-bottom: 10px;
+            transition: color 0.3s ease;
         }
 
         .login-header p {
-            color: #666;
+            color: var(--text-secondary);
             font-size: 14px;
+            transition: color 0.3s ease;
         }
 
         .form-group {
@@ -70,17 +125,20 @@
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
+            color: var(--text-primary);
             font-weight: 500;
+            transition: color 0.3s ease;
         }
 
         .form-group input {
             width: 100%;
             padding: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--input-text);
             border-radius: 5px;
             font-size: 14px;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
         }
 
         .form-group input:focus {
@@ -91,7 +149,7 @@
         .btn {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--btn-gradient-start) 0%, var(--btn-gradient-end) 100%);
             color: white;
             border: none;
             border-radius: 5px;
@@ -119,6 +177,7 @@
             border-radius: 5px;
             margin-bottom: 20px;
             display: none;
+            transition: all 0.3s ease;
         }
 
         .alert.error {
@@ -127,10 +186,22 @@
             border: 1px solid #fcc;
         }
 
+        body.dark-mode .alert.error {
+            background: #3a1a1a;
+            color: #ff6b6b;
+            border: 1px solid #5a2a2a;
+        }
+
         .alert.success {
             background: #efe;
             color: #3c3;
             border: 1px solid #cfc;
+        }
+
+        body.dark-mode .alert.success {
+            background: #1a3a1a;
+            color: #51cf66;
+            border: 1px solid #2a5a2a;
         }
 
         .alert.show {
@@ -142,18 +213,22 @@
             display: block;
             margin-top: 8px;
             font-size: 11px;
-            color: #888;
+            color: var(--text-secondary);
             font-weight: 400;
             letter-spacing: 0.3px;
+            transition: color 0.3s ease;
         }
     </style>
 </head>
-<body>
+<body class="dark-mode">
     <div class="login-container">
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+            🌙
+        </button>
         <div class="login-header">
             <h1>ShowBox</h1>
             <p>Billing Management System</p>
-            <small class="login-version">© 2025 All Rights Reserved | v1.7.9</small>
+            <small class="login-version">© 2025 All Rights Reserved | v1.11.5-beta</small>
         </div>
 
         <div id="alert" class="alert"></div>
@@ -174,6 +249,45 @@
     </div>
 
     <script>
+        // Theme Management - Dark mode is default
+        function initTheme() {
+            const savedTheme = localStorage.getItem('login-theme');
+            const themeToggle = document.getElementById('themeToggle');
+
+            // Default to dark mode if no preference saved
+            if (!savedTheme) {
+                localStorage.setItem('login-theme', 'dark');
+                document.body.classList.add('dark-mode');
+                themeToggle.textContent = '🌙';
+            } else if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeToggle.textContent = '🌙';
+            } else {
+                document.body.classList.remove('dark-mode');
+                themeToggle.textContent = '☀️';
+            }
+
+            console.log('[Theme] Initialized:', savedTheme || 'dark (default)');
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            const isDark = body.classList.toggle('dark-mode');
+
+            themeToggle.textContent = isDark ? '🌙' : '☀️';
+            localStorage.setItem('login-theme', isDark ? 'dark' : 'light');
+
+            console.log('[Theme] Switched to:', isDark ? 'dark' : 'light');
+        }
+
+        // Initialize theme on page load
+        initTheme();
+
+        // Theme toggle button
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+        // Login form handling
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 

@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.4--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.5--beta-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -613,13 +613,28 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.4-beta
+**Version:** 1.11.5-beta
 **Last Updated:** November 2025
 **Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.5-beta** (Nov 2025) - Dark Mode Login Page
+  - **Dark Mode Theme Toggle**: Moon/Sun icon button in login page for theme switching
+  - **Default Dark Theme**: Dark mode enabled by default for better eye comfort
+  - **Theme Persistence**: User preference saved to localStorage across sessions
+  - **Smooth Transitions**: 0.3s ease animations for all color changes
+  - **Complete Coverage**: All elements (inputs, alerts, text) styled for both modes
+  - **Dark Color Scheme**: Dark gradient background, dark container (#0f1419), light text (#e0e0e0)
+  - **Light Mode Support**: Original purple gradient design preserved as alternative
+  - **Version Updates**: Both login and dashboard pages show v1.11.5-beta
+  - **Technical Changes**:
+    - CSS variables for theme-dependent colors
+    - `body.dark-mode` class toggle with localStorage
+    - 180 lines added to index.html for dark mode implementation
+  - **Benefits**: Reduced eye strain, modern design, follows contemporary UI trends
 
 - **v1.11.4-beta** (Nov 2025) - Database Backup & Restore System
   - **Database Export**: One-click download of complete database backup as SQL file with timestamp naming

@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.5-beta] - 2025-11-25
+
+### Added - Dark Mode Login Page
+
+**Status:** Beta Testing - UI Enhancement
+
+**Overview**
+Added dark mode theme toggle to login page with persistent theme preference.
+
+**Features**
+
+1. **Dark Mode Theme Toggle** (New Feature)
+   - **Toggle Button**: Moon/Sun icon in top-right corner of login container
+   - **Default Theme**: Dark mode enabled by default for better eye comfort
+   - **Theme Persistence**: User preference saved to localStorage
+   - **Smooth Transitions**: 0.3s ease animations for all color changes
+   - **Complete Coverage**: All elements styled for both light and dark modes
+   - **Files**: `index.html` (180 lines added)
+
+2. **Dark Mode Color Scheme** (Visual Enhancement)
+   - **Background**: Dark gradient (#1a1a2e → #16213e)
+   - **Container**: Dark background (#0f1419) with proper contrast
+   - **Text**: Light text (#e0e0e0) for primary, muted (#a0a0a0) for secondary
+   - **Inputs**: Dark backgrounds with light text, proper borders
+   - **Alerts**: Dark-themed success (green) and error (red) messages
+   - **Buttons**: Gradient preserved for brand consistency
+
+3. **Light Mode Support** (Alternative Theme)
+   - **Background**: Purple gradient (#667eea → #764ba2) - original design
+   - **Container**: White background with dark text
+   - **Full Compatibility**: All original styles preserved
+   - **Easy Toggle**: Switch themes with single click
+
+4. **Version Display Updates** (Consistency)
+   - **Login Page**: Updated to v1.11.5-beta
+   - **Dashboard**: Updated to v1.11.5-beta
+   - **Consistent Branding**: Both pages show current version
+   - **Files**: `index.html` (line 231), `dashboard.html` (line 50)
+
+**Technical Implementation**
+
+- **CSS Variables**: Used for all theme-dependent colors
+- **Class Toggle**: `body.dark-mode` class controls theme
+- **LocalStorage**: Stores user preference as 'login-theme'
+- **Default State**: Dark mode pre-applied on page load
+- **Smooth UX**: All transitions use 0.3s ease timing
+- **Accessibility**: Proper contrast ratios maintained
+
+**User Experience**
+
+- **Eye Comfort**: Dark mode reduces eye strain, especially at night
+- **User Choice**: Easy toggle preserves user preference
+- **Modern Design**: Follows contemporary UI/UX trends
+- **Brand Consistency**: Logo and primary colors maintained
+
+**Files Modified**
+- `index.html` - Dark mode implementation (180 lines added)
+- `dashboard.html` - Version number update (1 line)
+
+**Benefits**
+- **Better UX**: Reduced eye strain with dark mode default
+- **User Preference**: Theme choice persists across sessions
+- **Modern Look**: Contemporary dark theme design
+- **Accessibility**: Better readability in low-light conditions
+- **Professional**: Follows modern app design standards
+
+**Testing Required**
+- [ ] Theme toggle functionality
+- [ ] Theme persistence across browser sessions
+- [ ] All form elements visible in dark mode
+- [ ] Alert messages readable in dark mode
+- [ ] Smooth transitions between themes
+- [ ] Mobile responsiveness with theme toggle
+
+---
+
 ## [1.11.4-beta] - 2025-11-25
 
 ### Added - Database Backup & Restore System
