@@ -32,8 +32,8 @@ $opt = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $opt);
 
-    // Get user ID
-    $stmt = $pdo->prepare('SELECT id, super_user FROM _users WHERE username = ?');
+    // Get user ID and permissions
+    $stmt = $pdo->prepare('SELECT id, super_user, permissions FROM _users WHERE username = ?');
     $stmt->execute([$username]);
     $user_data = $stmt->fetch();
 
@@ -43,7 +43,11 @@ try {
     }
 
     $user_id = $user_data['id'];
-    $is_super_user = $user_data['super_user'];
+    $is_super_user = $user_data['super_user'] == 1;
+
+    // Check if user is reseller admin
+    $permissions = explode('|', $user_data['permissions'] ?? '0|0|0|0|0');
+    $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
 
     // Pagination
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -59,7 +63,8 @@ try {
     $where_clauses = [];
     $params = [];
 
-    if (!$is_super_user) {
+    // Super admins and reseller admins see all logs, regular users see only their own
+    if (!$is_super_user && !$is_reseller_admin) {
         $where_clauses[] = 'sl.sent_by = ?';
         $params[] = $user_id;
     }
