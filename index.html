@@ -172,6 +172,63 @@
             cursor: not-allowed;
         }
 
+        .btn-biometric {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.3s;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .btn-biometric:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-biometric:active {
+            transform: translateY(0);
+        }
+
+        .btn-biometric.show {
+            display: block;
+        }
+
+        .btn-biometric:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .divider.show {
+            display: flex;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--input-border);
+        }
+
+        .divider span {
+            padding: 0 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
         .alert {
             padding: 12px;
             border-radius: 5px;
@@ -228,7 +285,7 @@
         <div class="login-header">
             <h1>ShowBox</h1>
             <p>Billing Management System</p>
-            <small class="login-version">© 2025 All Rights Reserved | v1.11.17</small>
+            <small class="login-version">© 2025 All Rights Reserved | v1.11.20</small>
         </div>
 
         <div id="alert" class="alert"></div>
@@ -246,6 +303,14 @@
 
             <button type="submit" class="btn" id="loginBtn">Login</button>
         </form>
+
+        <div class="divider" id="biometricDivider">
+            <span>or</span>
+        </div>
+
+        <button class="btn-biometric" id="biometricBtn">
+            🔐 Login with Face ID / Touch ID
+        </button>
     </div>
 
     <script>
@@ -333,6 +398,342 @@
             setTimeout(() => {
                 alert.classList.remove('show');
             }, 5000);
+        }
+
+        // ==========================================
+        // WebAuthn / Biometric Authentication
+        // ==========================================
+
+        // Check if WebAuthn is supported
+        function isWebAuthnSupported() {
+            return window.PublicKeyCredential !== undefined &&
+                   typeof window.PublicKeyCredential === 'function';
+        }
+
+        // Check if platform authenticator (Face ID/Touch ID) is available
+        async function isPlatformAuthenticatorAvailable() {
+            if (!isWebAuthnSupported()) return false;
+            try {
+                return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+            } catch (e) {
+                console.error('[WebAuthn] Error checking platform authenticator:', e);
+                return false;
+            }
+        }
+
+        // Check if user has biometric credentials registered
+        async function checkBiometricAvailable(username) {
+            try {
+                const response = await fetch(`api/webauthn_authenticate.php?username=${encodeURIComponent(username)}`);
+                const result = await response.json();
+                return result.error === 0 && result.biometric_available === true ? result : null;
+            } catch (e) {
+                console.error('[WebAuthn] Error checking biometric:', e);
+                return null;
+            }
+        }
+
+        // Base64URL decode helper
+        function base64UrlDecode(base64url) {
+            // Convert base64url to base64
+            let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            // Add padding if needed
+            while (base64.length % 4) {
+                base64 += '=';
+            }
+            // Decode base64 to binary string
+            const binary = atob(base64);
+            // Convert to Uint8Array
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        // Base64URL encode helper
+        function base64UrlEncode(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        // Authenticate with biometric
+        async function authenticateWithBiometric() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                showAlert('Please enter your username first', 'error');
+                return;
+            }
+
+            const biometricBtn = document.getElementById('biometricBtn');
+            biometricBtn.disabled = true;
+            biometricBtn.textContent = 'Authenticating...';
+
+            try {
+                // Get challenge and allowed credentials
+                const authData = await checkBiometricAvailable(username);
+                if (!authData) {
+                    showAlert('Biometric not available for this user', 'error');
+                    biometricBtn.disabled = false;
+                    biometricBtn.textContent = '🔐 Login with Face ID / Touch ID';
+                    return;
+                }
+
+                // Prepare credential request options
+                const publicKeyCredentialRequestOptions = {
+                    challenge: base64UrlDecode(authData.challenge),
+                    rpId: authData.rpId,
+                    allowCredentials: authData.allowCredentials.map(cred => ({
+                        type: cred.type,
+                        id: base64UrlDecode(cred.id),
+                        transports: cred.transports
+                    })),
+                    timeout: authData.timeout,
+                    userVerification: authData.userVerification
+                };
+
+                // Request credential assertion
+                const assertion = await navigator.credentials.get({
+                    publicKey: publicKeyCredentialRequestOptions
+                });
+
+                // Send assertion to server for verification
+                const response = await fetch('api/webauthn_authenticate.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        credential_id: base64UrlEncode(assertion.rawId),
+                        authenticator_data: base64UrlEncode(assertion.response.authenticatorData),
+                        client_data_json: base64UrlEncode(assertion.response.clientDataJSON),
+                        signature: base64UrlEncode(assertion.response.signature),
+                        counter: assertion.response.authenticatorData ?
+                            new DataView(assertion.response.authenticatorData.slice(33, 37)).getUint32(0, false) : 0
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.error === 0) {
+                    showAlert('Login successful! Redirecting...', 'success');
+                    sessionStorage.setItem('freshLogin', 'true');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.php';
+                    }, 1000);
+                } else {
+                    showAlert(result.message || 'Biometric authentication failed', 'error');
+                    biometricBtn.disabled = false;
+                    biometricBtn.textContent = '🔐 Login with Face ID / Touch ID';
+                }
+
+            } catch (e) {
+                console.error('[WebAuthn] Authentication error:', e);
+                if (e.name === 'NotAllowedError') {
+                    showAlert('Biometric authentication cancelled or failed', 'error');
+                } else {
+                    showAlert('Biometric authentication error: ' + e.message, 'error');
+                }
+                biometricBtn.disabled = false;
+                biometricBtn.textContent = '🔐 Login with Face ID / Touch ID';
+            }
+        }
+
+        // Show biometric button if credentials exist for the user
+        async function updateBiometricUI() {
+            const username = document.getElementById('username').value.trim();
+            const biometricBtn = document.getElementById('biometricBtn');
+            const biometricDivider = document.getElementById('biometricDivider');
+
+            // Only show for PWA or when platform authenticator is available
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                          window.navigator.standalone === true;
+
+            if (!isPWA) {
+                // In browser mode, only show if platform authenticator is available
+                const hasAuthenticator = await isPlatformAuthenticatorAvailable();
+                if (!hasAuthenticator) {
+                    biometricBtn.classList.remove('show');
+                    biometricDivider.classList.remove('show');
+                    return;
+                }
+            }
+
+            if (!username) {
+                biometricBtn.classList.remove('show');
+                biometricDivider.classList.remove('show');
+                return;
+            }
+
+            // Check if user has biometric credentials
+            const authData = await checkBiometricAvailable(username);
+            if (authData) {
+                biometricBtn.classList.add('show');
+                biometricDivider.classList.add('show');
+            } else {
+                biometricBtn.classList.remove('show');
+                biometricDivider.classList.remove('show');
+            }
+        }
+
+        // Auto-authenticate with biometric (for PWA auto-login)
+        async function autoAuthenticateWithBiometric(username) {
+            console.log('[WebAuthn] Auto-starting biometric authentication for:', username);
+
+            const biometricBtn = document.getElementById('biometricBtn');
+            const usernameInput = document.getElementById('username');
+
+            // Set username in field
+            usernameInput.value = username;
+
+            // Show UI feedback
+            biometricBtn.classList.add('show');
+            document.getElementById('biometricDivider').classList.add('show');
+            biometricBtn.disabled = true;
+            biometricBtn.textContent = 'Authenticating...';
+
+            try {
+                // Get challenge and allowed credentials
+                const authData = await checkBiometricAvailable(username);
+                if (!authData) {
+                    console.log('[WebAuthn] No biometric credentials found for auto-login');
+                    biometricBtn.disabled = false;
+                    biometricBtn.textContent = '🔐 Login with Face ID / Touch ID';
+                    return;
+                }
+
+                // Prepare credential request options
+                const publicKeyCredentialRequestOptions = {
+                    challenge: base64UrlDecode(authData.challenge),
+                    rpId: authData.rpId,
+                    allowCredentials: authData.allowCredentials.map(cred => ({
+                        type: cred.type,
+                        id: base64UrlDecode(cred.id),
+                        transports: cred.transports
+                    })),
+                    timeout: authData.timeout,
+                    userVerification: authData.userVerification
+                };
+
+                // Request credential assertion
+                const assertion = await navigator.credentials.get({
+                    publicKey: publicKeyCredentialRequestOptions
+                });
+
+                // Send assertion to server for verification
+                const response = await fetch('api/webauthn_authenticate.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        credential_id: base64UrlEncode(assertion.rawId),
+                        authenticator_data: base64UrlEncode(assertion.response.authenticatorData),
+                        client_data_json: base64UrlEncode(assertion.response.clientDataJSON),
+                        signature: base64UrlEncode(assertion.response.signature),
+                        counter: assertion.response.authenticatorData ?
+                            new DataView(assertion.response.authenticatorData.slice(33, 37)).getUint32(0, false) : 0
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.error === 0) {
+                    showAlert('Login successful! Redirecting...', 'success');
+                    sessionStorage.setItem('freshLogin', 'true');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.php';
+                    }, 1000);
+                } else {
+                    showAlert(result.message || 'Biometric authentication failed', 'error');
+                    biometricBtn.disabled = false;
+                    biometricBtn.textContent = '🔐 Login with Face ID / Touch ID';
+                }
+
+            } catch (e) {
+                console.error('[WebAuthn] Auto-authentication error:', e);
+                // Don't show error for cancelled - user might have dismissed on purpose
+                if (e.name !== 'NotAllowedError') {
+                    showAlert('Biometric error: ' + e.message, 'error');
+                }
+                biometricBtn.disabled = false;
+                biometricBtn.textContent = '🔐 Login with Face ID / Touch ID';
+            }
+        }
+
+        // Initialize biometric button
+        async function initBiometric() {
+            const biometricBtn = document.getElementById('biometricBtn');
+            const usernameInput = document.getElementById('username');
+
+            // Debounce for username input
+            let debounceTimer;
+            usernameInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(updateBiometricUI, 500);
+            });
+
+            // Also check on blur
+            usernameInput.addEventListener('blur', updateBiometricUI);
+
+            // Biometric button click handler
+            biometricBtn.addEventListener('click', authenticateWithBiometric);
+
+            // Check if this is a PWA
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                          window.navigator.standalone === true;
+
+            console.log('[WebAuthn] Biometric login initialized, isPWA:', isPWA);
+
+            // Check for saved username with biometric
+            const savedUsername = localStorage.getItem('biometric_username');
+
+            if (savedUsername) {
+                usernameInput.value = savedUsername;
+
+                // If PWA mode and has saved username, auto-start biometric
+                if (isPWA) {
+                    console.log('[WebAuthn] PWA mode detected with saved username, checking biometric...');
+
+                    // Check if user has biometric credentials before auto-starting
+                    const hasAuthenticator = await isPlatformAuthenticatorAvailable();
+                    if (hasAuthenticator) {
+                        const authData = await checkBiometricAvailable(savedUsername);
+                        if (authData) {
+                            console.log('[WebAuthn] User has biometric credentials, auto-starting authentication...');
+                            // Small delay to let the page render first
+                            setTimeout(() => {
+                                autoAuthenticateWithBiometric(savedUsername);
+                            }, 500);
+                        } else {
+                            console.log('[WebAuthn] User has no biometric credentials registered');
+                            updateBiometricUI();
+                        }
+                    } else {
+                        console.log('[WebAuthn] Platform authenticator not available');
+                        updateBiometricUI();
+                    }
+                } else {
+                    // Not PWA, just update the UI
+                    updateBiometricUI();
+                }
+            }
+        }
+
+        // Initialize on page load
+        initBiometric();
+
+        // Check for session expired message
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('expired') === '1') {
+            showAlert('Your session has expired due to inactivity. Please log in again.', 'error');
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     </script>
 </body>

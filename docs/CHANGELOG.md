@@ -7,6 +7,181 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.22] - 2025-11-25
+
+### Fixed - Auto-Logout Session Timeout Bug Fix
+
+**Status:** Production Release - Critical Bug Fix
+
+**Overview**
+Fixed auto-logout feature not working correctly when user refreshes the page after timeout period.
+
+**Bug Fixes**
+
+1. **Comparison Operator Bug** (Critical)
+   - **Issue**: Session timeout check used `>` instead of `>=`, so 60 > 60 returned FALSE
+   - **Fix**: Changed to `>=` so 60 >= 60 returns TRUE (session expires at exact timeout)
+   - **Files**: `dashboard.php` (line 38), `api/session_heartbeat.php` (line 43)
+
+2. **Initial Heartbeat Resetting Timer** (Critical)
+   - **Issue**: JavaScript sent heartbeat on page load, which reset the server-side timer
+   - **Fix**: Removed initial heartbeat - dashboard.php already sets last_activity on page load
+   - **Files**: `dashboard.js` (lines 6726-6727)
+
+---
+
+## [1.11.21] - 2025-11-25
+
+### Added - Server-Side Session Timeout Tracking
+
+**Status:** Production Release - Feature Enhancement
+
+**Overview**
+Enhanced auto-logout feature with server-side session tracking. Previously, the timeout only worked client-side (JavaScript). Now the server tracks activity and expires sessions on page refresh.
+
+**New Features**
+
+1. **Server-Side Session Check**
+   - PHP session stores `$_SESSION['last_activity']` timestamp
+   - `dashboard.php` checks session expiry on every page load
+   - Expired sessions are destroyed and user is redirected to login
+   - **Files**: `dashboard.php` (lines 1-52)
+
+2. **Session Heartbeat API**
+   - New endpoint for JavaScript to update server-side last_activity
+   - Called every 30 seconds when user is active
+   - **Files**: `api/session_heartbeat.php`
+
+3. **Session Expired Message**
+   - Login page shows "Your session has expired due to inactivity"
+   - Message appears when redirected from expired session
+   - **Files**: `index.html` (lines 731-737)
+
+---
+
+## [1.11.20] - 2025-11-25
+
+### Added - Auto-Logout / Session Timeout Feature
+
+**Status:** Production Release - New Feature
+
+**Overview**
+Added automatic logout feature that logs users out after a configurable period of inactivity. Super admin can configure the timeout duration.
+
+**New Features**
+
+1. **Configurable Timeout**
+   - Super admin can set timeout: Disabled, 1-60 minutes
+   - Default: 5 minutes
+   - Settings stored in `_app_settings` database table
+   - **Files**: `dashboard.php` (lines 529-555)
+
+2. **Activity Tracking**
+   - Tracks mouse movement, clicks, keyboard, scroll, touch
+   - Throttled detection (every 30 seconds) for performance
+   - **Files**: `dashboard.js` (lines 6527-6740)
+
+3. **Auto-Logout API**
+   - GET: Returns current timeout setting
+   - POST: Updates timeout (super admin only)
+   - **Files**: `api/auto_logout_settings.php`
+
+**Database Changes**
+- New table: `_app_settings`
+  - `id`: Primary key
+  - `setting_key`: VARCHAR(100) UNIQUE
+  - `setting_value`: TEXT
+  - `updated_at`: Timestamp
+
+---
+
+## [1.11.19] - 2025-11-25
+
+### Added - PWA Biometric Auto-Start
+
+**Status:** Production Release - Feature Enhancement
+
+**Overview**
+Enhanced biometric login to automatically start when opening the PWA app, without requiring user to click the login button.
+
+**New Features**
+
+1. **Auto-Start Biometric in PWA**
+   - When PWA opens, biometric prompt starts automatically
+   - No need to click "Login with Face ID" button
+   - Falls back to manual login if cancelled
+   - **Files**: `index.html` (lines 584-726)
+
+2. **Saved Username for Auto-Login**
+   - Username stored in localStorage when biometric is registered
+   - Pre-filled on login page for faster authentication
+   - **Files**: `dashboard.js` (lines 6231, 6315, 6469)
+
+---
+
+## [1.11.18] - 2025-11-25
+
+### Added - Face ID / Touch ID (Biometric) Login for PWA
+
+**Status:** Production Release - Biometric Authentication Feature
+
+**Overview**
+Added WebAuthn-based biometric authentication (Face ID/Touch ID) for PWA login. Users can now enable biometric login on their devices for faster, more secure authentication.
+
+**New Features**
+
+1. **Biometric Login on Login Page**
+   - Login page now shows "Login with Face ID / Touch ID" button when user has biometric credentials registered
+   - Button appears after entering username if credentials exist for that user
+   - Works in both PWA mode and standard browser (when platform authenticator is available)
+   - **Files**: `index.html` (lines 175-230, 403-613)
+
+2. **Biometric Settings in Dashboard**
+   - New "Face ID / Touch ID Login" section in Settings tab
+   - Shows list of registered devices with option to remove them
+   - Allows registering multiple devices per user
+   - **Files**: `dashboard.php` (lines 494-523), `dashboard.js` (lines 6102-6522)
+
+3. **Mobile Biometric Settings**
+   - Biometric option added to mobile settings page
+   - Dedicated modal for biometric management on mobile
+   - Same functionality as desktop settings
+   - **Files**: `dashboard.php` (lines 1800-1875)
+
+**API Endpoints**
+
+1. **WebAuthn Register** (`api/webauthn_register.php`)
+   - GET: Returns challenge and options for credential creation
+   - POST: Stores credential after successful registration
+
+2. **WebAuthn Authenticate** (`api/webauthn_authenticate.php`)
+   - GET: Returns challenge and allowed credentials for authentication
+   - POST: Verifies credential and logs in user
+
+3. **WebAuthn Manage** (`api/webauthn_manage.php`)
+   - GET: Lists all credentials for logged-in user
+   - DELETE: Removes a specific credential
+
+**Database Changes**
+- New table: `_webauthn_credentials`
+  - `id`: Primary key
+  - `user_id`: Foreign key to _users
+  - `credential_id`: WebAuthn credential identifier
+  - `public_key`: Stored public key for verification
+  - `counter`: Signature counter for replay protection
+  - `device_name`: Device identifier (iPhone, Mac, etc.)
+  - `created_at`: Registration timestamp
+  - `last_used`: Last authentication timestamp
+
+**Technical Details**
+- Uses Web Authentication API (WebAuthn) with platform authenticators
+- Supports Face ID (iOS), Touch ID (macOS/iOS), Windows Hello
+- Challenge-based authentication prevents replay attacks
+- Username stored in localStorage for auto-fill on login page
+- Service worker version updated to v1.11.18-biometric
+
+---
+
 ## [1.11.17] - 2025-11-25
 
 ### Fixed - Reseller Admin SMS & Account Renewal Permissions

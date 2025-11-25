@@ -1,3 +1,67 @@
+<?php
+session_start();
+include(__DIR__ . '/config.php');
+
+// Function to get auto-logout timeout
+function getAutoLogoutTimeout($pdo) {
+    try {
+        $stmt = $pdo->prepare('SELECT setting_value FROM _app_settings WHERE setting_key = ?');
+        $stmt->execute(['auto_logout_timeout']);
+        $result = $stmt->fetch();
+        return $result ? (int)$result['setting_value'] : 5;
+    } catch (Exception $e) {
+        return 5;
+    }
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
+    header('Location: index.html');
+    exit();
+}
+
+// Check for session timeout
+try {
+    $dsn = "mysql:host=$ub_db_host;dbname=$ub_main_db;charset=utf8";
+    $pdo = new PDO($dsn, $ub_db_username, $ub_db_password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    ]);
+
+    $timeout_minutes = getAutoLogoutTimeout($pdo);
+
+    if ($timeout_minutes > 0) {
+        $timeout_seconds = $timeout_minutes * 60;
+
+        if (isset($_SESSION['last_activity'])) {
+            $inactive_time = time() - $_SESSION['last_activity'];
+            // Use >= to ensure timeout at exactly the limit
+            if ($inactive_time >= $timeout_seconds) {
+                // Session expired - properly destroy session and clear cookie
+                $_SESSION = array();
+
+                // Clear the session cookie to prevent session ID reuse
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000,
+                        $params["path"], $params["domain"],
+                        $params["secure"], $params["httponly"]
+                    );
+                }
+
+                session_destroy();
+                header('Location: index.html?expired=1');
+                exit();
+            }
+        }
+
+        // Update last activity ONLY on page load (not heartbeat - that's handled separately)
+        $_SESSION['last_activity'] = time();
+    }
+} catch (Exception $e) {
+    // On error, just continue (don't block user)
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -47,7 +111,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.17</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.22</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -489,6 +553,69 @@
                         <p>Update your account password</p>
                     </div>
                     <button class="btn-primary" onclick="openModal('changePasswordModal')">Change Password</button>
+                </div>
+
+                <!-- Biometric Login Section -->
+                <div id="biometric-settings-section" class="settings-item" style="margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 10px;">🔐 Face ID / Touch ID Login</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Enable biometric authentication for faster, secure login on this device.</p>
+
+                    <div id="biometric-loading" style="padding: 12px; color: var(--text-secondary);">
+                        Checking biometric support...
+                    </div>
+
+                    <div id="biometric-not-supported" style="display:none; padding: 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 6px; color: #856404;">
+                        <strong>⚠️ Not Supported:</strong> Your device does not support biometric authentication. This feature requires Face ID (iOS), Touch ID (Mac/iOS), or Windows Hello.
+                    </div>
+
+                    <div id="biometric-content" style="display:none;">
+                        <div id="biometric-status" style="margin-bottom: 16px;">
+                            <div id="no-biometric-registered" style="padding: 12px; background: var(--bg-tertiary); border-radius: 6px;">
+                                <p style="margin: 0 0 12px 0; color: var(--text-secondary);">No biometric credentials registered for this device.</p>
+                                <button class="btn-primary" onclick="registerBiometric()" id="register-biometric-btn">
+                                    🔐 Enable Face ID / Touch ID
+                                </button>
+                            </div>
+                            <div id="biometric-registered" style="display:none;">
+                                <div style="padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; margin-bottom: 12px;">
+                                    <strong style="color: #10b981;">✓ Biometric Login Enabled</strong>
+                                    <p style="margin: 8px 0 0 0; color: var(--text-secondary); font-size: 13px;">You can now use Face ID / Touch ID to log in.</p>
+                                </div>
+                                <div id="biometric-credentials-list" style="margin-bottom: 12px;"></div>
+                                <button class="btn-secondary" onclick="registerBiometric()" style="margin-right: 8px;">
+                                    ➕ Add Another Device
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Logout Settings (Super Admin Only) -->
+                <div id="auto-logout-settings-section" class="settings-item" style="display:none; margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 10px;">⏱️ Auto-Logout Settings</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Configure automatic logout after a period of inactivity. Applies to all users (PWA and Web).</p>
+
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <label for="auto-logout-timeout" style="color: var(--text-primary); font-weight: 500;">Logout after inactivity:</label>
+                        <select id="auto-logout-timeout" style="padding: 10px 15px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 14px; min-width: 150px;">
+                            <option value="0">Disabled</option>
+                            <option value="1">1 minute</option>
+                            <option value="2">2 minutes</option>
+                            <option value="3">3 minutes</option>
+                            <option value="5" selected>5 minutes</option>
+                            <option value="10">10 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">60 minutes</option>
+                        </select>
+                        <button class="btn-primary" onclick="saveAutoLogoutSettings()" id="save-auto-logout-btn">
+                            💾 Save
+                        </button>
+                    </div>
+                    <div id="auto-logout-status" style="margin-top: 12px; display:none; padding: 10px; border-radius: 6px;"></div>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-top: 15px;">
+                        <strong>Note:</strong> Users will be automatically logged out after the specified period of no activity (no mouse movement, clicks, or keyboard input).
+                    </p>
                 </div>
 
                 <!-- Sync Accounts Section (Admin Only) -->
@@ -1766,6 +1893,16 @@
                     <span class="option-text">Change Password</span>
                     <span class="option-arrow">›</span>
                 </button>
+                <button class="settings-option-btn" id="mobile-biometric-btn" onclick="showMobileBiometricSettings()">
+                    <span class="option-icon">🔐</span>
+                    <span class="option-text">Face ID / Touch ID</span>
+                    <span class="option-arrow">›</span>
+                </button>
+                <button class="settings-option-btn" id="mobile-auto-logout-btn" onclick="showMobileAutoLogoutSettings()" style="display: none;">
+                    <span class="option-icon">⏱️</span>
+                    <span class="option-text">Auto-Logout Settings</span>
+                    <span class="option-arrow">›</span>
+                </button>
                 <button class="settings-option-btn settings-logout" onclick="logout()">
                     <span class="option-icon">🚪</span>
                     <span class="option-text">Logout</span>
@@ -1801,6 +1938,66 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeChangePassword()">Cancel</button>
                 <button class="btn-save" onclick="saveNewPassword()">Change Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Biometric Settings Modal (v1.11.18) -->
+    <div id="mobile-biometric-modal" class="change-password-modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeMobileBiometricSettings()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Face ID / Touch ID</h3>
+                <button class="modal-close-btn" onclick="closeMobileBiometricSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="mobile-biometric-not-supported" style="display:none; padding: 16px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px; color: #856404; text-align: center;">
+                    <p style="margin: 0;">Your device does not support biometric authentication.</p>
+                </div>
+                <div id="mobile-biometric-content">
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; text-align: center;">Enable biometric authentication for faster, secure login on this device.</p>
+                    <div id="mobile-no-biometric-registered">
+                        <button class="btn-save" onclick="registerBiometric()" style="width: 100%; padding: 16px; font-size: 16px;">
+                            🔐 Enable Face ID / Touch ID
+                        </button>
+                    </div>
+                    <div id="mobile-biometric-registered" style="display:none;">
+                        <div style="padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; margin-bottom: 16px; text-align: center;">
+                            <strong style="color: #10b981; font-size: 18px;">✓ Biometric Login Enabled</strong>
+                            <p style="margin: 8px 0 0 0; color: var(--text-secondary);">You can now use Face ID / Touch ID to log in.</p>
+                        </div>
+                        <div id="mobile-biometric-credentials-list" style="margin-bottom: 16px;"></div>
+                        <button class="btn-cancel" onclick="registerBiometric()" style="width: 100%; padding: 14px;">
+                            ➕ Add Another Device
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Auto-Logout Info Modal (v1.11.32 - Read-only) -->
+    <div id="mobile-auto-logout-modal" class="change-password-modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeMobileAutoLogoutSettings()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⏱️ Auto-Logout Status</h3>
+                <button class="modal-close-btn" onclick="closeMobileAutoLogoutSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">⏱️</div>
+                    <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 10px;">Current Setting:</div>
+                    <div id="mobile-auto-logout-display" style="font-size: 24px; font-weight: 600; color: var(--primary);">Loading...</div>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 20px; text-align: center;">
+                    Users will be automatically logged out after the specified period of no activity.
+                    <br><br>
+                    <strong>To change this setting, use the desktop version.</strong>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-save" onclick="closeMobileAutoLogoutSettings()" style="width: 100%;">OK</button>
             </div>
         </div>
     </div>

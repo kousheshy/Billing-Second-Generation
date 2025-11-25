@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.10.1!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.11.22!
 
 ---
 
@@ -81,7 +81,7 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.10.1
 
 8. **[VERSION_1.9.1_SUMMARY.md](VERSION_1.9.1_SUMMARY.md)** (10 KB) **NEW in v1.10.1**
 
-8. **[VERSION_1.10.1_BUG_FIXES.md](VERSION_1.10.1_BUG_FIXES.md)** (28 KB) **NEW in v1.10.1**
+8. **[VERSION_1.10.1_BUG_FIXES.md](VERSION_1.10.1_BUG_FIXES.md)** (28 KB)
    - Complete PWA bug fix documentation
    - Modal centering and positioning fixes
    - SMS template sync procedures
@@ -90,14 +90,34 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.10.1
    - Testing checklist
 
    **Read this** for v1.10.1 bug fixes!
-   - Complete technical summary of v1.10.1
-   - Detailed file changes with line numbers
-   - Deployment instructions
-   - Rollback procedures
-   - Testing checklist
-   - Performance metrics
 
-   **Use this** for upgrading to v1.10.1!
+9. **[WEBAUTHN_BIOMETRIC_LOGIN.md](WEBAUTHN_BIOMETRIC_LOGIN.md)** (8 KB) **NEW in v1.11.19**
+   - Face ID / Touch ID authentication setup
+   - WebAuthn API integration details
+   - PWA auto-login implementation
+   - Security considerations
+   - User flow diagrams
+   - Troubleshooting guide
+
+   **Read this** for biometric login features!
+
+10. **[AUTO_LOGOUT_SESSION_TIMEOUT.md](AUTO_LOGOUT_SESSION_TIMEOUT.md)** (10 KB) **NEW in v1.11.20**
+    - Configurable session timeout
+    - Server-side session validation
+    - Activity detection and heartbeat
+    - Settings UI documentation
+    - JavaScript implementation details
+    - Troubleshooting guide
+
+    **Read this** for auto-logout features!
+
+11. **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)** (15 KB) **UPDATED in v1.11.22**
+    - Complete database schema reference
+    - New tables: _webauthn_credentials, _app_settings
+    - Migration history and scripts
+    - Index and relationship documentation
+
+    **Reference this** for database structure!
 
 ---
 
@@ -204,10 +224,10 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.10.1
 
 | Attribute | Value |
 |-----------|-------|
-| Product Version | 1.9.1 |
-| Release Date | November 23, 2025 |
-| Documentation Version | 1.9.1 |
-| Last Updated | November 23, 2025 |
+| Product Version | 1.11.22 |
+| Release Date | November 25, 2025 |
+| Documentation Version | 1.11.22 |
+| Last Updated | November 25, 2025 |
 | Status | Production Ready ✅ |
 
 ---
@@ -260,7 +280,7 @@ All rights reserved. Unauthorized copying, modification, or distribution is proh
 ---
 
 **Maintained by:** ShowBox Development Team
-**Last Updated:** January 2025
+**Last Updated:** November 25, 2025
 **Documentation Coverage:** 100%
 
 ---

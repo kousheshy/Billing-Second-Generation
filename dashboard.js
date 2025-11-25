@@ -63,8 +63,17 @@ if ('serviceWorker' in navigator) {
             });
 
         // Handle service worker controller change
+        // Only reload if there was already a controller (actual update, not first load)
+        let hasController = !!navigator.serviceWorker.controller;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
+            if (hasController) {
+                // This is an actual update, reload
+                window.location.reload();
+            } else {
+                // First controller activation after page load, skip reload
+                hasController = true;
+                console.log('[PWA] Service Worker activated for first time, skipping reload');
+            }
         });
     });
 }
@@ -256,6 +265,16 @@ async function checkAuth() {
             // Show Stalker Portal settings section for super admin only (NOT reseller admin)
             document.getElementById('stalker-settings-section').style.display = 'block';
             loadStalkerSettings();
+
+            // Show Auto-Logout settings section for super admin only
+            document.getElementById('auto-logout-settings-section').style.display = 'block';
+            loadAutoLogoutSettings();
+
+            // Show Mobile Auto-Logout settings button for super admin (v1.11.26)
+            const mobileAutoLogoutBtn = document.getElementById('mobile-auto-logout-btn');
+            if (mobileAutoLogoutBtn) {
+                mobileAutoLogoutBtn.style.display = 'flex';
+            }
 
             // Hide Plans and Transactions tabs in bottom navigation (PWA) for super admin
             document.querySelectorAll('.bottom-nav-item').forEach(item => {
@@ -6101,4 +6120,932 @@ function toggleDualServerMode(enabled) {
 
 // ========================================
 // End of Stalker Portal Settings
+// ========================================
+
+// ========================================
+// WebAuthn / Biometric Authentication
+// ========================================
+
+/**
+ * Check if WebAuthn is supported by the browser
+ */
+function isWebAuthnSupported() {
+    return window.PublicKeyCredential !== undefined &&
+           typeof window.PublicKeyCredential === 'function';
+}
+
+/**
+ * Check if platform authenticator (Face ID/Touch ID) is available
+ */
+async function isPlatformAuthenticatorAvailable() {
+    if (!isWebAuthnSupported()) return false;
+    try {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch (e) {
+        console.error('[WebAuthn] Error checking platform authenticator:', e);
+        return false;
+    }
+}
+
+/**
+ * Base64URL decode helper
+ */
+function base64UrlDecode(base64url) {
+    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+/**
+ * Base64URL encode helper
+ */
+function base64UrlEncode(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+/**
+ * Initialize biometric settings section
+ */
+async function initBiometricSettings() {
+    const biometricSection = document.getElementById('biometric-settings-section');
+    const biometricLoading = document.getElementById('biometric-loading');
+    const biometricNotSupported = document.getElementById('biometric-not-supported');
+    const biometricContent = document.getElementById('biometric-content');
+
+    if (!biometricSection) return;
+
+    // Check if platform authenticator is available
+    const hasAuthenticator = await isPlatformAuthenticatorAvailable();
+
+    // Hide loading state
+    if (biometricLoading) {
+        biometricLoading.style.display = 'none';
+    }
+
+    if (hasAuthenticator) {
+        biometricContent.style.display = 'block';
+        biometricNotSupported.style.display = 'none';
+        // Load existing credentials
+        await loadBiometricCredentials();
+    } else {
+        biometricContent.style.display = 'none';
+        biometricNotSupported.style.display = 'block';
+    }
+
+    console.log('[WebAuthn] Biometric settings initialized. Authenticator available:', hasAuthenticator);
+}
+
+/**
+ * Load and display biometric credentials
+ */
+async function loadBiometricCredentials() {
+    try {
+        const response = await fetch('api/webauthn_manage.php');
+        const data = await response.json();
+
+        const noRegistered = document.getElementById('no-biometric-registered');
+        const registered = document.getElementById('biometric-registered');
+        const credentialsList = document.getElementById('biometric-credentials-list');
+
+        if (data.error === 0 && data.count > 0) {
+            noRegistered.style.display = 'none';
+            registered.style.display = 'block';
+
+            // Render credentials list
+            let listHtml = '<div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Registered devices:</div>';
+            data.credentials.forEach(cred => {
+                const createdDate = new Date(cred.created_at).toLocaleDateString();
+                const lastUsed = cred.last_used ? new Date(cred.last_used).toLocaleDateString() : 'Never';
+                listHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 8px;">
+                        <div>
+                            <strong>${cred.device_name || 'Unknown Device'}</strong>
+                            <div style="font-size: 12px; color: var(--text-secondary);">
+                                Added: ${createdDate} | Last used: ${lastUsed}
+                            </div>
+                        </div>
+                        <button onclick="removeBiometricCredential(${cred.id})" class="btn-danger" style="padding: 6px 12px; font-size: 12px;">
+                            Remove
+                        </button>
+                    </div>
+                `;
+            });
+            credentialsList.innerHTML = listHtml;
+
+            // Save username for biometric login
+            if (typeof currentUser !== 'undefined' && currentUser && currentUser.username) {
+                localStorage.setItem('biometric_username', currentUser.username);
+            }
+        } else {
+            noRegistered.style.display = 'block';
+            registered.style.display = 'none';
+            credentialsList.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('[WebAuthn] Error loading credentials:', error);
+    }
+}
+
+/**
+ * Register a new biometric credential
+ */
+async function registerBiometric() {
+    const registerBtn = document.getElementById('register-biometric-btn');
+    if (registerBtn) {
+        registerBtn.disabled = true;
+        registerBtn.textContent = 'Registering...';
+    }
+
+    try {
+        // Get registration options from server
+        const optionsResponse = await fetch('api/webauthn_register.php');
+        const options = await optionsResponse.json();
+
+        if (options.error !== 0) {
+            throw new Error(options.message || 'Failed to get registration options');
+        }
+
+        // Prepare credential creation options
+        const publicKeyCredentialCreationOptions = {
+            challenge: base64UrlDecode(options.challenge),
+            rp: options.rp,
+            user: {
+                id: base64UrlDecode(options.user.id),
+                name: options.user.name,
+                displayName: options.user.displayName
+            },
+            pubKeyCredParams: options.pubKeyCredParams,
+            authenticatorSelection: options.authenticatorSelection,
+            timeout: options.timeout,
+            attestation: options.attestation
+        };
+
+        // Create credential
+        const credential = await navigator.credentials.create({
+            publicKey: publicKeyCredentialCreationOptions
+        });
+
+        // Determine device name
+        let deviceName = 'Unknown Device';
+        const ua = navigator.userAgent;
+        if (/iPhone/.test(ua)) deviceName = 'iPhone';
+        else if (/iPad/.test(ua)) deviceName = 'iPad';
+        else if (/Mac/.test(ua)) deviceName = 'Mac';
+        else if (/Android/.test(ua)) deviceName = 'Android';
+        else if (/Windows/.test(ua)) deviceName = 'Windows';
+
+        // Send credential to server
+        const registerResponse = await fetch('api/webauthn_register.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                credential_id: base64UrlEncode(credential.rawId),
+                public_key: base64UrlEncode(credential.response.getPublicKey ? credential.response.getPublicKey() : credential.response.attestationObject),
+                attestation_object: base64UrlEncode(credential.response.attestationObject),
+                client_data_json: base64UrlEncode(credential.response.clientDataJSON),
+                device_name: deviceName
+            })
+        });
+
+        const result = await registerResponse.json();
+
+        if (result.error === 0) {
+            showAlert('Biometric login enabled successfully!', 'success');
+            // Reload credentials list
+            await loadBiometricCredentials();
+
+            // Save username for biometric login
+            if (typeof currentUser !== 'undefined' && currentUser && currentUser.username) {
+                localStorage.setItem('biometric_username', currentUser.username);
+            }
+        } else {
+            throw new Error(result.message || 'Registration failed');
+        }
+
+    } catch (error) {
+        console.error('[WebAuthn] Registration error:', error);
+        if (error.name === 'NotAllowedError') {
+            showAlert('Biometric registration was cancelled', 'error');
+        } else if (error.name === 'InvalidStateError') {
+            showAlert('This device is already registered', 'error');
+        } else {
+            showAlert('Biometric registration failed: ' + error.message, 'error');
+        }
+    } finally {
+        if (registerBtn) {
+            registerBtn.disabled = false;
+            registerBtn.textContent = '🔐 Enable Face ID / Touch ID';
+        }
+    }
+}
+
+/**
+ * Remove a biometric credential
+ */
+async function removeBiometricCredential(credentialId) {
+    if (!confirm('Are you sure you want to remove this biometric credential?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('api/webauthn_manage.php', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                credential_id: credentialId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.error === 0) {
+            showAlert('Biometric credential removed', 'success');
+            await loadBiometricCredentials();
+        } else {
+            showAlert(result.message || 'Failed to remove credential', 'error');
+        }
+    } catch (error) {
+        console.error('[WebAuthn] Error removing credential:', error);
+        showAlert('Failed to remove credential', 'error');
+    }
+}
+
+// Initialize biometric settings when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Delay initialization to ensure currentUser is loaded
+    setTimeout(initBiometricSettings, 1000);
+    // Also initialize mobile biometric button
+    setTimeout(initMobileBiometricButton, 1000);
+});
+
+/**
+ * Initialize mobile biometric button visibility
+ */
+async function initMobileBiometricButton() {
+    const mobileBiometricBtn = document.getElementById('mobile-biometric-btn');
+    if (!mobileBiometricBtn) return;
+
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  window.navigator.standalone === true ||
+                  document.body.classList.contains('pwa-mode');
+
+    const hasAuthenticator = await isPlatformAuthenticatorAvailable();
+
+    // Show button in PWA mode or when authenticator is available
+    if (isPWA || hasAuthenticator) {
+        mobileBiometricBtn.style.display = 'flex';
+    }
+
+    console.log('[WebAuthn] Mobile biometric button initialized. PWA:', isPWA, 'Authenticator:', hasAuthenticator);
+}
+
+/**
+ * Show mobile biometric settings modal
+ */
+async function showMobileBiometricSettings() {
+    const modal = document.getElementById('mobile-biometric-modal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+
+    const hasAuthenticator = await isPlatformAuthenticatorAvailable();
+    const notSupported = document.getElementById('mobile-biometric-not-supported');
+    const content = document.getElementById('mobile-biometric-content');
+
+    if (hasAuthenticator) {
+        notSupported.style.display = 'none';
+        content.style.display = 'block';
+        await loadMobileBiometricCredentials();
+    } else {
+        notSupported.style.display = 'block';
+        content.style.display = 'none';
+    }
+}
+
+/**
+ * Close mobile biometric settings modal
+ */
+function closeMobileBiometricSettings() {
+    const modal = document.getElementById('mobile-biometric-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Show mobile auto-logout info modal (Super Admin only) (v1.11.32 - Read-only)
+ */
+async function showMobileAutoLogoutSettings() {
+    const modal = document.getElementById('mobile-auto-logout-modal');
+    const display = document.getElementById('mobile-auto-logout-display');
+    if (!modal) return;
+
+    // Show loading
+    if (display) display.textContent = 'Loading...';
+    modal.style.display = 'flex';
+
+    // Load current setting (simple GET request)
+    try {
+        const response = await fetch('api/auto_logout_settings.php');
+        const result = await response.json();
+
+        if (result.error === 0 && display) {
+            const timeout = result.auto_logout_timeout;
+            if (timeout === 0) {
+                display.textContent = 'Disabled';
+                display.style.color = 'var(--text-secondary)';
+            } else {
+                display.textContent = timeout + (timeout === 1 ? ' minute' : ' minutes');
+                display.style.color = 'var(--primary)';
+            }
+        }
+    } catch (e) {
+        console.error('[AutoLogout] Error loading settings:', e);
+        if (display) {
+            display.textContent = 'Error loading';
+            display.style.color = 'var(--danger)';
+        }
+    }
+}
+
+/**
+ * Close mobile auto-logout settings modal
+ */
+function closeMobileAutoLogoutSettings() {
+    const modal = document.getElementById('mobile-auto-logout-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Save mobile auto-logout settings (v1.11.26)
+ */
+async function saveMobileAutoLogoutSettings() {
+    const dropdown = document.getElementById('mobile-auto-logout-timeout');
+    const statusDiv = document.getElementById('mobile-auto-logout-status');
+
+    if (!dropdown) return;
+
+    const timeoutValue = parseInt(dropdown.value);
+
+    // Show loading state
+    statusDiv.innerHTML = '<span style="color: var(--text-secondary);">Saving...</span>';
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'transparent';
+
+    try {
+        const response = await fetch(window.location.origin + '/api/auto_logout_settings.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ timeout: timeoutValue })
+        });
+
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+
+        const result = await response.json();
+
+        if (result.error === 0) {
+            // Update desktop dropdown if exists
+            const desktopDropdown = document.getElementById('auto-logout-timeout');
+            if (desktopDropdown) {
+                desktopDropdown.value = timeoutValue;
+            }
+
+            // Show success message
+            statusDiv.innerHTML = '<span style="color: #10b981;">✓ Settings saved successfully!</span>';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+
+            // Update the global timeout and restart the timer
+            autoLogoutTimeoutMinutes = timeoutValue;
+            initAutoLogout();
+
+            // Close modal after a brief delay
+            setTimeout(() => {
+                closeMobileAutoLogoutSettings();
+            }, 1500);
+        } else {
+            statusDiv.innerHTML = '<span style="color: #ef4444;">✗ ' + (result.message || 'Failed to save') + '</span>';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+        }
+    } catch (e) {
+        console.error('[AutoLogout] Error saving settings:', e);
+        statusDiv.innerHTML = '<span style="color: #ef4444;">✗ Network error</span>';
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+    }
+}
+
+/**
+ * Load biometric credentials for mobile modal
+ */
+async function loadMobileBiometricCredentials() {
+    try {
+        const response = await fetch('api/webauthn_manage.php');
+        const data = await response.json();
+
+        const noRegistered = document.getElementById('mobile-no-biometric-registered');
+        const registered = document.getElementById('mobile-biometric-registered');
+        const credentialsList = document.getElementById('mobile-biometric-credentials-list');
+
+        if (data.error === 0 && data.count > 0) {
+            noRegistered.style.display = 'none';
+            registered.style.display = 'block';
+
+            // Render credentials list
+            let listHtml = '';
+            data.credentials.forEach(cred => {
+                const createdDate = new Date(cred.created_at).toLocaleDateString();
+                listHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 8px;">
+                        <div>
+                            <strong>${cred.device_name || 'Unknown Device'}</strong>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Added: ${createdDate}</div>
+                        </div>
+                        <button onclick="removeBiometricCredentialMobile(${cred.id})" style="padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 12px;">
+                            Remove
+                        </button>
+                    </div>
+                `;
+            });
+            credentialsList.innerHTML = listHtml;
+
+            // Save username for biometric login
+            if (typeof currentUser !== 'undefined' && currentUser && currentUser.username) {
+                localStorage.setItem('biometric_username', currentUser.username);
+            }
+        } else {
+            noRegistered.style.display = 'block';
+            registered.style.display = 'none';
+            credentialsList.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('[WebAuthn] Error loading mobile credentials:', error);
+    }
+}
+
+/**
+ * Remove biometric credential from mobile modal
+ */
+async function removeBiometricCredentialMobile(credentialId) {
+    if (!confirm('Are you sure you want to remove this biometric credential?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('api/webauthn_manage.php', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                credential_id: credentialId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.error === 0) {
+            showAlert('Biometric credential removed', 'success');
+            await loadMobileBiometricCredentials();
+            // Also reload desktop credentials if visible
+            if (document.getElementById('biometric-credentials-list')) {
+                await loadBiometricCredentials();
+            }
+        } else {
+            showAlert(result.message || 'Failed to remove credential', 'error');
+        }
+    } catch (error) {
+        console.error('[WebAuthn] Error removing credential:', error);
+        showAlert('Failed to remove credential', 'error');
+    }
+}
+
+// ========================================
+// End of WebAuthn / Biometric Authentication
+// ========================================
+
+
+// ========================================
+// Auto-Logout / Session Timeout
+// ========================================
+
+let autoLogoutCheckInterval = null; // Interval that checks timeout every 10 seconds
+let autoLogoutTimeoutMinutes = 5; // Default 5 minutes
+let heartbeatInterval = null;
+let lastServerPing = 0;
+
+// Load auto-logout settings
+async function loadAutoLogoutSettings() {
+    try {
+        const response = await fetch('api/auto_logout_settings.php');
+        const result = await response.json();
+
+        if (result.error === 0) {
+            autoLogoutTimeoutMinutes = result.auto_logout_timeout;
+
+            // Update dropdown if it exists (for super admin)
+            const dropdown = document.getElementById('auto-logout-timeout');
+            if (dropdown) {
+                dropdown.value = autoLogoutTimeoutMinutes;
+            }
+
+            console.log('[AutoLogout] Loaded settings: timeout =', autoLogoutTimeoutMinutes, 'minutes');
+        }
+    } catch (e) {
+        console.error('[AutoLogout] Error loading settings:', e);
+    }
+}
+
+// Save auto-logout settings (super admin only)
+async function saveAutoLogoutSettings() {
+    const dropdown = document.getElementById('auto-logout-timeout');
+    const btn = document.getElementById('save-auto-logout-btn');
+    const statusDiv = document.getElementById('auto-logout-status');
+
+    if (!dropdown) return;
+
+    const timeout = parseInt(dropdown.value);
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+        const response = await fetch('api/auto_logout_settings.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ timeout: timeout })
+        });
+
+        const result = await response.json();
+
+        if (result.error === 0) {
+            autoLogoutTimeoutMinutes = timeout;
+
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            statusDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            statusDiv.style.color = '#10b981';
+            statusDiv.innerHTML = '✓ ' + result.message;
+
+            // Restart the auto-logout system with new settings
+            initAutoLogout();
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        } else {
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+            statusDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            statusDiv.style.color = '#ef4444';
+            statusDiv.innerHTML = '✗ ' + (result.message || 'Failed to save settings');
+        }
+    } catch (e) {
+        console.error('[AutoLogout] Error saving settings:', e);
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+        statusDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        statusDiv.style.color = '#ef4444';
+        statusDiv.innerHTML = '✗ Error: ' + e.message;
+    }
+
+    btn.disabled = false;
+    btn.textContent = '💾 Save';
+}
+
+// Send heartbeat to server (updates last_activity in session)
+async function sendHeartbeat() {
+    try {
+        const response = await fetch('api/session_heartbeat.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+
+        if (result.expired) {
+            // Session expired on server side
+            console.log('[AutoLogout] Server reports session expired');
+            performAutoLogout();
+        }
+    } catch (e) {
+        console.error('[AutoLogout] Heartbeat error:', e);
+    }
+}
+
+// Track last activity time for iOS-compatible timeout checking (v1.11.35)
+// Key insight: iOS can suspend ALL JavaScript (including Web Workers) when idle
+// Solution: Store deadline in localStorage and check on ANY event
+let lastActivityTime = Date.now();
+let autoLogoutWorker = null;
+let rafId = null; // requestAnimationFrame ID
+
+// LocalStorage key for deadline tracking
+const LOGOUT_DEADLINE_KEY = 'autoLogoutDeadline';
+
+// Reset auto-logout timer on user activity
+function resetAutoLogoutTimer() {
+    if (autoLogoutTimeoutMinutes <= 0) return; // Disabled
+
+    // Update last activity time
+    lastActivityTime = Date.now();
+
+    // Store new deadline in localStorage (v1.11.35)
+    // This persists even if JavaScript is suspended
+    const newDeadline = lastActivityTime + (autoLogoutTimeoutMinutes * 60 * 1000);
+    try {
+        localStorage.setItem(LOGOUT_DEADLINE_KEY, newDeadline.toString());
+    } catch (e) {
+        console.warn('[AutoLogout] Could not save deadline to localStorage');
+    }
+}
+
+// Create inline Web Worker for reliable timing on iOS PWA
+function createAutoLogoutWorker() {
+    const workerCode = `
+        let interval = null;
+        self.onmessage = function(e) {
+            if (e.data === 'start') {
+                if (interval) clearInterval(interval);
+                // Send tick every 5 seconds
+                interval = setInterval(() => {
+                    self.postMessage('tick');
+                }, 5000);
+            } else if (e.data === 'stop') {
+                if (interval) clearInterval(interval);
+                interval = null;
+            }
+        };
+    `;
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    return new Worker(URL.createObjectURL(blob));
+}
+
+// Start the Web Worker-based timeout checker
+function startAutoLogoutWorker() {
+    if (autoLogoutWorker) return;
+
+    try {
+        autoLogoutWorker = createAutoLogoutWorker();
+        autoLogoutWorker.onmessage = function(e) {
+            if (e.data === 'tick') {
+                checkAutoLogoutTimeout();
+            }
+        };
+        autoLogoutWorker.postMessage('start');
+        console.log('[AutoLogout] Started Web Worker timer');
+    } catch (err) {
+        console.error('[AutoLogout] Web Worker failed:', err);
+    }
+}
+
+// Start requestAnimationFrame loop as additional fallback (v1.11.35)
+// RAF continues running even when iOS throttles setInterval
+function startRAFLoop() {
+    let lastRAFCheck = Date.now();
+
+    function rafTick() {
+        const now = Date.now();
+        // Only check every 5 seconds to reduce overhead
+        if (now - lastRAFCheck >= 5000) {
+            lastRAFCheck = now;
+            checkAutoLogoutTimeout();
+        }
+        rafId = requestAnimationFrame(rafTick);
+    }
+
+    rafId = requestAnimationFrame(rafTick);
+    console.log('[AutoLogout] Started RAF loop');
+}
+
+// Stop the Web Worker
+function stopAutoLogoutWorker() {
+    if (autoLogoutWorker) {
+        autoLogoutWorker.postMessage('stop');
+        autoLogoutWorker.terminate();
+        autoLogoutWorker = null;
+    }
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+}
+
+// Check if timeout exceeded (v1.11.35)
+// Uses localStorage deadline for accurate detection even after JS suspension
+function checkAutoLogoutTimeout() {
+    if (autoLogoutTimeoutMinutes <= 0) return;
+
+    const now = Date.now();
+
+    // Check against localStorage deadline (most reliable)
+    try {
+        const storedDeadline = localStorage.getItem(LOGOUT_DEADLINE_KEY);
+        if (storedDeadline) {
+            const deadline = parseInt(storedDeadline, 10);
+            if (now >= deadline) {
+                console.log('[AutoLogout] Deadline exceeded (localStorage):', now, '>=', deadline);
+                performAutoLogout();
+                return;
+            }
+        }
+    } catch (e) {
+        // Fallback to memory-based check
+    }
+
+    // Fallback: check against in-memory lastActivityTime
+    const elapsed = now - lastActivityTime;
+    const timeoutMs = autoLogoutTimeoutMinutes * 60 * 1000;
+
+    if (elapsed >= timeoutMs) {
+        console.log('[AutoLogout] Timeout exceeded (memory):', elapsed, 'ms >=', timeoutMs, 'ms');
+        performAutoLogout();
+    }
+}
+
+// Perform the auto-logout
+function performAutoLogout() {
+    console.log('[AutoLogout] Session timeout - logging out');
+
+    // Stop Web Worker
+    stopAutoLogoutWorker();
+
+    // Clear intervals
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+    }
+    if (autoLogoutCheckInterval) {
+        clearInterval(autoLogoutCheckInterval);
+    }
+
+    // Clear any stored data
+    sessionStorage.removeItem('freshLogin');
+
+    // Clear localStorage deadline (v1.11.35)
+    try {
+        localStorage.removeItem(LOGOUT_DEADLINE_KEY);
+    } catch (e) {
+        // Ignore errors
+    }
+
+    // Redirect to login with expired flag
+    window.location.href = 'index.html?expired=1';
+}
+
+// Initialize auto-logout system
+async function initAutoLogout() {
+    // Load settings first
+    await loadAutoLogoutSettings();
+
+    // Clear any existing intervals
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+    if (autoLogoutCheckInterval) {
+        clearInterval(autoLogoutCheckInterval);
+        autoLogoutCheckInterval = null;
+    }
+
+    if (autoLogoutTimeoutMinutes <= 0) {
+        console.log('[AutoLogout] Auto-logout is disabled');
+        return;
+    }
+
+    console.log('[AutoLogout] Initializing with timeout:', autoLogoutTimeoutMinutes, 'minutes');
+
+    // Initialize last activity time
+    lastActivityTime = Date.now();
+
+    // Activity events to track
+    const activityEvents = [
+        'mousedown',
+        'mousemove',
+        'keydown',
+        'scroll',
+        'touchstart',
+        'click',
+        'wheel'
+    ];
+
+    // Throttle activity detection - ping server every 30 seconds on activity
+    let lastServerPingTime = Date.now();
+    const throttleMs = 30000; // Only ping server every 30 seconds
+
+    const handleActivity = () => {
+        const now = Date.now();
+        // Always reset the local timer on any activity
+        resetAutoLogoutTimer();
+
+        // Only ping server every 30 seconds
+        if (now - lastServerPingTime > throttleMs) {
+            lastServerPingTime = now;
+            sendHeartbeat(); // Ping server to update last_activity
+        }
+    };
+
+    // Add event listeners
+    activityEvents.forEach(event => {
+        document.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    // Set initial deadline in localStorage (v1.11.35)
+    const initialDeadline = lastActivityTime + (autoLogoutTimeoutMinutes * 60 * 1000);
+    try {
+        localStorage.setItem(LOGOUT_DEADLINE_KEY, initialDeadline.toString());
+    } catch (e) {
+        console.warn('[AutoLogout] Could not save initial deadline to localStorage');
+    }
+
+    // Start multiple timer mechanisms for iOS reliability (v1.11.35)
+    // 1. Web Worker (most reliable if not throttled)
+    startAutoLogoutWorker();
+    // 2. RAF loop (continues when setInterval throttled)
+    startRAFLoop();
+    // 3. setInterval as final fallback
+    autoLogoutCheckInterval = setInterval(checkAutoLogoutTimeout, 5000);
+
+    // NOTE: Do NOT send heartbeat on page load - dashboard.php already sets last_activity
+    // Heartbeat is only sent when user does activity (mouse, keyboard, etc.)
+
+    console.log('[AutoLogout] System initialized - Multi-timer tracking active (v1.11.35)');
+}
+
+// Start auto-logout when dashboard loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Small delay to let other initialization complete
+    setTimeout(initAutoLogout, 1000);
+});
+
+// Handle PWA visibility change - check session when app returns from background (v1.11.35)
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+        console.log('[AutoLogout] App became visible - checking session');
+
+        // First: Check localStorage deadline immediately (fast, works offline)
+        // This is critical for iOS PWA where JS was suspended
+        if (autoLogoutTimeoutMinutes > 0) {
+            try {
+                const storedDeadline = localStorage.getItem(LOGOUT_DEADLINE_KEY);
+                if (storedDeadline) {
+                    const deadline = parseInt(storedDeadline, 10);
+                    const now = Date.now();
+                    if (now >= deadline) {
+                        console.log('[AutoLogout] Deadline exceeded on visibility change:', now, '>=', deadline);
+                        performAutoLogout();
+                        return; // Don't continue to server check
+                    }
+                }
+            } catch (e) {
+                // Continue to server check
+            }
+        }
+
+        // Second: Check if session is still valid on server
+        try {
+            const response = await fetch('api/session_heartbeat.php', {
+                method: 'GET'
+            });
+            const result = await response.json();
+
+            if (result.expired) {
+                console.log('[AutoLogout] Session expired while in background');
+                performAutoLogout();
+            } else {
+                console.log('[AutoLogout] Session still valid');
+                // Reset the client-side timer
+                resetAutoLogoutTimer();
+            }
+        } catch (e) {
+            console.error('[AutoLogout] Error checking session:', e);
+        }
+    }
+});
+
+// ========================================
+// End of Auto-Logout / Session Timeout
 // ========================================

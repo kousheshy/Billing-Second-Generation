@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.11.17-plan-fix';
+const CACHE_NAME = 'showbox-billing-v1.11.35';
 const urlsToCache = [
   '/dashboard.php',
   '/index.html',
@@ -49,8 +49,13 @@ self.addEventListener('fetch', event => {
   // Skip caching for PHP files (including dashboard.php with dynamic cache busting)
   // Always fetch PHP files from network to get fresh content
   if (url.pathname.endsWith('.php')) {
+    // For API requests, pass through directly without service worker interference
+    // This ensures credentials (cookies) are properly sent
+    if (url.pathname.includes('/api/')) {
+      return; // Let the browser handle API requests directly
+    }
     event.respondWith(
-      fetch(request)
+      fetch(request, { credentials: 'same-origin' })
         .catch(() => {
           // For dashboard.php, try to return cached version if offline
           if (url.pathname.includes('dashboard.php')) {

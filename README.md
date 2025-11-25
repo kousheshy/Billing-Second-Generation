@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.17-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.22-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -233,6 +233,37 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - iOS viewport height compensation for Safari address bar
   - Haptic feedback on touch interactions
   - Zero desktop impact - all optimizations mobile-only
+
+### Biometric Login (WebAuthn) (v1.11.19)
+- **Face ID / Touch ID Support**: Login with biometric authentication
+- **Windows Hello**: Support for Windows biometric on desktop
+- **PWA Auto-Login**: Biometric authentication starts automatically in PWA mode
+- **Multi-Device Registration**: Register biometrics on multiple devices
+- **Credential Management**: View and delete registered credentials in Settings
+- **Challenge-Based Security**: Secure challenge-response authentication
+- **Platform Authenticators**: Uses device's built-in biometric hardware only
+- **HTTPS Required**: Secure context mandatory for WebAuthn
+- **Credential Persistence**: Username saved in localStorage for auto-fill
+- **New API Endpoints**:
+  - `webauthn_register.php` - Register biometric credentials
+  - `webauthn_authenticate.php` - Authenticate with biometric
+  - `webauthn_manage.php` - Manage registered credentials
+- **Database Table**: New `_webauthn_credentials` table for storing credentials
+- **Browser Support**: Safari (iOS/Mac), Chrome, Firefox, Edge
+
+### Auto-Logout Session Timeout (v1.11.20)
+- **Configurable Timeout**: Set inactivity timeout (0-60 minutes, default 5)
+- **Server-Side Validation**: PHP session tracking prevents bypass via page refresh
+- **Activity Detection**: Mouse, keyboard, touch, scroll, click, wheel events tracked
+- **Throttled Heartbeat**: Server heartbeat sent every 30 seconds on activity
+- **Super Admin Only**: Only super admin can change timeout setting
+- **Disable Option**: Set to 0 to completely disable auto-logout
+- **Session Expired Message**: Clear notification on login page after timeout
+- **New API Endpoints**:
+  - `auto_logout_settings.php` - Get/set timeout configuration
+  - `session_heartbeat.php` - Activity tracking and session validation
+- **Database Table**: New `_app_settings` table for global settings
+- **Settings UI**: Auto-logout configuration in Settings tab
 
 ### Observer Mode (v1.6.3, Enhanced v1.6.4, v1.7.0)
 - **Read-Only Access**: View all data without ability to modify
@@ -613,13 +644,44 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.6-beta
-**Last Updated:** November 2025
+**Version:** 1.11.22
+**Last Updated:** November 25, 2025
 **Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.22** (Nov 2025) - Auto-Logout Timeout Precision Fix
+  - **Timeout Fix**: Changed comparison from `>` to `>=` for exact timeout at limit
+  - **Session Heartbeat**: Removed initial heartbeat on page load to prevent timer reset
+  - **Documentation**: Complete documentation update for all features
+
+- **v1.11.21** (Nov 2025) - Server-Side Session Timeout
+  - **PHP Session Check**: Added server-side timeout validation on page load
+  - **Session Expired Message**: Notification on login page after timeout
+  - **Session Heartbeat API**: New endpoint for activity tracking
+
+- **v1.11.20** (Nov 2025) - Auto-Logout Feature
+  - **Configurable Timeout**: Set 0-60 minutes inactivity timeout (default: 5)
+  - **Activity Detection**: Mouse, keyboard, touch, scroll events tracked
+  - **Throttled Heartbeat**: Server ping every 30 seconds on activity
+  - **Super Admin Only**: Only super admin can change timeout setting
+  - **Settings UI**: Auto-logout configuration in Settings tab
+  - **New Tables**: `_app_settings` for global settings
+
+- **v1.11.19** (Nov 2025) - PWA Auto-Start Biometric Authentication
+  - **PWA Auto-Login**: Biometric authentication starts automatically in PWA mode
+  - **No Click Required**: Face ID/Touch ID prompt appears immediately
+  - **Standalone Detection**: Uses display-mode: standalone media query
+  - **Graceful Fallback**: Falls back to password if biometric fails
+
+- **v1.11.18** (Nov 2025) - Face ID / Touch ID (Biometric) Login for PWA
+  - **WebAuthn Integration**: Added biometric authentication using Web Authentication API
+  - **Login Page Enhancement**: Face ID/Touch ID button appears when credentials registered
+  - **Settings UI**: Biometric settings section in both desktop and mobile Settings
+  - **API Endpoints**: webauthn_register.php, webauthn_authenticate.php, webauthn_manage.php
+  - **Device Support**: Face ID (iOS), Touch ID (macOS/iOS), Windows Hello
 
 - **v1.11.17** (Nov 2025) - Critical Account Creation Bug Fix
   - **PHP Loose Comparison Fix**: Fixed accounts being created as "unlimited" instead of using selected plan
@@ -1008,4 +1070,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.11.12**
+**ShowBox Billing System v1.11.22**

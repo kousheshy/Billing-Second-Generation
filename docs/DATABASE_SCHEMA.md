@@ -2,8 +2,8 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.7.2
-**Last Updated:** November 2025
+**Version:** 1.11.22
+**Last Updated:** November 25, 2025
 **Database:** MySQL 5.7+
 **Character Set:** UTF8MB4
 **Collation:** utf8mb4_unicode_ci
@@ -23,7 +23,7 @@ Complete database schema documentation for the ShowBox Billing Panel.
 
 ## Overview
 
-The ShowBox Billing Panel uses a MySQL relational database with 5 core tables:
+The ShowBox Billing Panel uses a MySQL relational database with 9 core tables:
 
 | Table | Purpose | Records (Typical) |
 |-------|---------|-------------------|
@@ -32,6 +32,10 @@ The ShowBox Billing Panel uses a MySQL relational database with 5 core tables:
 | `_plans` | Subscription plans | 10-50 |
 | `_transactions` | Financial transactions | 1,000-100,000 |
 | `_currencies` | Currency definitions | 4-10 |
+| `_webauthn_credentials` | Biometric login credentials (v1.11.19) | 10-500 |
+| `_app_settings` | Global application settings (v1.11.20) | 1-10 |
+| `_expiry_reminders` | Sent reminder tracking (v1.7.8) | 1,000-50,000 |
+| `_reminder_settings` | User reminder preferences (v1.7.8) | 10-100 |
 
 **Database Name:** `showboxt_panel`
 **Engine:** InnoDB
@@ -390,6 +394,187 @@ INSERT INTO `_currencies` VALUES
 
 ---
 
+### 6. _webauthn_credentials
+
+**Purpose:** Store WebAuthn biometric credentials for passwordless login
+
+**Version:** Added in v1.11.19
+
+**Schema:**
+```sql
+CREATE TABLE IF NOT EXISTS `_webauthn_credentials` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
+  `credential_id` TEXT NOT NULL COMMENT 'Base64 encoded credential ID',
+  `public_key` TEXT NOT NULL COMMENT 'Base64 encoded public key',
+  `counter` INT(11) DEFAULT 0 COMMENT 'Signature counter for replay protection',
+  `device_name` VARCHAR(255) DEFAULT NULL COMMENT 'User-friendly device name',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `last_used` TIMESTAMP NULL COMMENT 'Last successful authentication',
+  PRIMARY KEY (`id`),
+  INDEX `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Fields:**
+
+| Field | Type | Null | Default | Description |
+|-------|------|------|---------|-------------|
+| `id` | INT(11) | NO | AUTO | Primary key |
+| `user_id` | INT(11) | NO | - | FK to _users.id |
+| `credential_id` | TEXT | NO | - | Base64 WebAuthn credential ID |
+| `public_key` | TEXT | NO | - | Base64 public key for verification |
+| `counter` | INT(11) | YES | 0 | Signature counter (anti-replay) |
+| `device_name` | VARCHAR(255) | YES | NULL | Device name (e.g., "iPhone 15 Pro") |
+| `created_at` | TIMESTAMP | YES | CURRENT | When credential was registered |
+| `last_used` | TIMESTAMP | YES | NULL | Last successful login |
+
+**Usage:**
+- One user can have multiple credentials (multi-device support)
+- Credential ID is unique per device
+- Counter increments with each authentication to prevent replay attacks
+- Device name helps users identify which credentials to manage
+
+**Example Record:**
+```sql
+INSERT INTO `_webauthn_credentials` VALUES (
+  1,
+  1, -- user_id (admin)
+  'base64-encoded-credential-id...',
+  'base64-encoded-public-key...',
+  5, -- counter
+  'iPhone 15 Pro',
+  NOW(),
+  NOW()
+);
+```
+
+---
+
+### 7. _app_settings
+
+**Purpose:** Store global application settings (key-value pairs)
+
+**Version:** Added in v1.11.20
+
+**Schema:**
+```sql
+CREATE TABLE IF NOT EXISTS `_app_settings` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `setting_key` VARCHAR(100) NOT NULL COMMENT 'Unique setting identifier',
+  `setting_value` TEXT COMMENT 'Setting value (can be JSON)',
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `setting_key` (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Fields:**
+
+| Field | Type | Null | Default | Description |
+|-------|------|------|---------|-------------|
+| `id` | INT(11) | NO | AUTO | Primary key |
+| `setting_key` | VARCHAR(100) | NO | - | Unique setting name |
+| `setting_value` | TEXT | YES | NULL | Setting value |
+| `updated_at` | TIMESTAMP | YES | CURRENT | Last update time |
+
+**Current Settings:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `auto_logout_timeout` | 5 | Minutes of inactivity before auto-logout (0 = disabled) |
+
+**Default Record:**
+```sql
+INSERT INTO `_app_settings` (setting_key, setting_value) VALUES
+('auto_logout_timeout', '5');
+```
+
+**Usage:**
+- Used for application-wide settings
+- Super admin can modify via Settings tab
+- Supports any key-value configuration
+
+---
+
+### 8. _expiry_reminders
+
+**Purpose:** Track sent expiry reminders to prevent duplicates
+
+**Version:** Added in v1.7.8
+
+**Schema:**
+```sql
+CREATE TABLE IF NOT EXISTS `_expiry_reminders` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `account_id` INT(11) DEFAULT NULL COMMENT 'FK to _accounts.id (nullable for MAC-based tracking)',
+  `mac` VARCHAR(17) NOT NULL COMMENT 'MAC address for deduplication',
+  `expiry_date` DATE NOT NULL COMMENT 'Account expiry date',
+  `reminder_date` DATE NOT NULL COMMENT 'When reminder was sent',
+  `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `sent_by` INT(11) NOT NULL COMMENT 'FK to _users.id',
+  `message` TEXT COMMENT 'Message that was sent',
+  `status` ENUM('sent', 'failed', 'skipped') DEFAULT 'sent',
+  `error_message` TEXT COMMENT 'Error details if failed',
+  PRIMARY KEY (`id`),
+  INDEX `idx_mac_expiry` (`mac`, `expiry_date`),
+  INDEX `idx_reminder_date` (`reminder_date`),
+  INDEX `idx_sent_by` (`sent_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Fields:**
+
+| Field | Type | Null | Default | Description |
+|-------|------|------|---------|-------------|
+| `id` | INT(11) | NO | AUTO | Primary key |
+| `account_id` | INT(11) | YES | NULL | FK to _accounts.id |
+| `mac` | VARCHAR(17) | NO | - | MAC address (dedup key) |
+| `expiry_date` | DATE | NO | - | When account expires |
+| `reminder_date` | DATE | NO | - | When reminder was sent |
+| `sent_at` | TIMESTAMP | YES | CURRENT | Exact timestamp |
+| `sent_by` | INT(11) | NO | - | Who sent it |
+| `message` | TEXT | YES | NULL | Message content |
+| `status` | ENUM | YES | sent | sent/failed/skipped |
+| `error_message` | TEXT | YES | NULL | Error details |
+
+---
+
+### 9. _reminder_settings
+
+**Purpose:** Store user-specific reminder preferences
+
+**Version:** Added in v1.7.8
+
+**Schema:**
+```sql
+CREATE TABLE IF NOT EXISTS `_reminder_settings` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
+  `days_before_expiry` INT(11) DEFAULT 7,
+  `message_template` TEXT,
+  `auto_send_enabled` TINYINT(1) DEFAULT 0,
+  `last_sweep_at` TIMESTAMP NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Fields:**
+
+| Field | Type | Null | Default | Description |
+|-------|------|------|---------|-------------|
+| `id` | INT(11) | NO | AUTO | Primary key |
+| `user_id` | INT(11) | NO | - | FK to _users.id |
+| `days_before_expiry` | INT(11) | YES | 7 | Days before to send reminder |
+| `message_template` | TEXT | YES | NULL | Custom message template |
+| `auto_send_enabled` | TINYINT(1) | YES | 0 | Enable auto-send via cron |
+| `last_sweep_at` | TIMESTAMP | YES | NULL | Last auto-send run |
+| `updated_at` | TIMESTAMP | YES | CURRENT | Last settings update |
+
+---
+
 ## Relationships
 
 ### Foreign Keys
@@ -468,6 +653,98 @@ CREATE INDEX idx_plans_currency ON _plans(currency);
 ---
 
 ## Migration History
+
+### v1.11.22 - Auto-Logout Fix (November 2025)
+
+**Changes:** No schema changes (bug fixes only)
+
+**Enhancement:** Fixed timeout comparison operator (`>=` instead of `>`)
+
+---
+
+### v1.11.20 - Auto-Logout Feature (November 2025)
+
+**Changes:**
+```sql
+CREATE TABLE IF NOT EXISTS `_app_settings` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `setting_key` VARCHAR(100) UNIQUE NOT NULL,
+  `setting_value` TEXT,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO _app_settings (setting_key, setting_value) VALUES ('auto_logout_timeout', '5');
+```
+
+**Rollback:**
+```sql
+DROP TABLE IF EXISTS _app_settings;
+```
+
+---
+
+### v1.11.19 - WebAuthn Biometric Login (November 2025)
+
+**Changes:**
+```sql
+CREATE TABLE IF NOT EXISTS `_webauthn_credentials` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `credential_id` TEXT NOT NULL,
+  `public_key` TEXT NOT NULL,
+  `counter` INT DEFAULT 0,
+  `device_name` VARCHAR(255),
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `last_used` TIMESTAMP NULL,
+  INDEX (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Rollback:**
+```sql
+DROP TABLE IF EXISTS _webauthn_credentials;
+```
+
+---
+
+### v1.7.8 - Expiry Reminders (November 2025)
+
+**Changes:**
+```sql
+CREATE TABLE IF NOT EXISTS `_expiry_reminders` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account_id` INT DEFAULT NULL,
+  `mac` VARCHAR(17) NOT NULL,
+  `expiry_date` DATE NOT NULL,
+  `reminder_date` DATE NOT NULL,
+  `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `sent_by` INT NOT NULL,
+  `message` TEXT,
+  `status` ENUM('sent', 'failed', 'skipped') DEFAULT 'sent',
+  `error_message` TEXT,
+  INDEX (`mac`, `expiry_date`),
+  INDEX (`reminder_date`),
+  INDEX (`sent_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `_reminder_settings` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL UNIQUE,
+  `days_before_expiry` INT DEFAULT 7,
+  `message_template` TEXT,
+  `auto_send_enabled` TINYINT(1) DEFAULT 0,
+  `last_sweep_at` TIMESTAMP NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Rollback:**
+```sql
+DROP TABLE IF EXISTS _expiry_reminders;
+DROP TABLE IF EXISTS _reminder_settings;
+```
+
+---
 
 ### v1.7.1 - Phone Number Support (November 2025)
 
@@ -603,7 +880,7 @@ For database support:
 
 ---
 
-**Document Version:** 1.7.2
-**Last Updated:** November 2025
+**Document Version:** 1.11.22
+**Last Updated:** November 25, 2025
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi

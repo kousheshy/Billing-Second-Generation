@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.11.17
+**Version:** 1.11.22
 **Last Updated:** November 25, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -11,15 +11,17 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 ## Table of Contents
 
 1. [Authentication](#authentication)
-2. [Account Management](#account-management)
-3. [Reseller Management](#reseller-management)
-4. [Plan Management](#plan-management)
-5. [Transaction Management](#transaction-management)
-6. [User Management](#user-management)
-7. [Stalker Portal Integration](#stalker-portal-integration)
-8. [STB Device Control](#stb-device-control)
-9. [Theme Management](#theme-management)
-10. [Error Codes](#error-codes)
+2. [WebAuthn / Biometric Authentication](#webauthn--biometric-authentication)
+3. [Session Management](#session-management)
+4. [Account Management](#account-management)
+5. [Reseller Management](#reseller-management)
+6. [Plan Management](#plan-management)
+7. [Transaction Management](#transaction-management)
+8. [User Management](#user-management)
+9. [Stalker Portal Integration](#stalker-portal-integration)
+10. [STB Device Control](#stb-device-control)
+11. [Theme Management](#theme-management)
+12. [Error Codes](#error-codes)
 
 ---
 
@@ -97,6 +99,349 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 **Description:** Destroy user session and logout.
 
 **Response:** Redirects to `/index.html`
+
+---
+
+## WebAuthn / Biometric Authentication
+
+WebAuthn (Web Authentication API) enables passwordless login using biometric authentication such as Face ID, Touch ID, or Windows Hello.
+
+**Version:** Added in v1.11.19
+
+### Register Biometric Credential
+
+#### Get Registration Challenge
+**Endpoint:** `GET /api/webauthn_register.php`
+
+**Description:** Get a challenge and registration options for biometric credential registration.
+
+**Permissions:** Requires active session (logged-in user)
+
+**Response:**
+```json
+{
+  "error": 0,
+  "challenge": "base64-encoded-32-byte-challenge",
+  "rp": {
+    "name": "ShowBox Billing",
+    "id": "billing.apamehnet.com"
+  },
+  "user": {
+    "id": "base64-encoded-user-id",
+    "name": "admin",
+    "displayName": "Administrator"
+  },
+  "pubKeyCredParams": [
+    { "type": "public-key", "alg": -7 },
+    { "type": "public-key", "alg": -257 }
+  ],
+  "authenticatorSelection": {
+    "authenticatorAttachment": "platform",
+    "userVerification": "required",
+    "residentKey": "preferred"
+  },
+  "timeout": 60000,
+  "attestation": "none"
+}
+```
+
+#### Store Credential
+**Endpoint:** `POST /api/webauthn_register.php`
+
+**Description:** Store a registered biometric credential after successful registration.
+
+**Request Body:**
+```json
+{
+  "credential_id": "base64-encoded-credential-id",
+  "public_key": "base64-encoded-public-key",
+  "device_name": "iPhone 15 Pro"
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Biometric registered successfully"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "message": "This biometric is already registered"
+}
+```
+
+---
+
+### Authenticate with Biometric
+
+#### Check Biometric Availability & Get Challenge
+**Endpoint:** `GET /api/webauthn_authenticate.php?username=<username>`
+
+**Description:** Check if a user has registered biometric credentials and get an authentication challenge.
+
+**Query Parameters:**
+- `username` (required): The username to check for biometric credentials
+
+**Response (Biometric Available):**
+```json
+{
+  "error": 0,
+  "biometric_available": true,
+  "challenge": "base64-encoded-32-byte-challenge",
+  "rpId": "billing.apamehnet.com",
+  "allowCredentials": [
+    {
+      "type": "public-key",
+      "id": "base64-encoded-credential-id",
+      "transports": ["internal"]
+    }
+  ],
+  "timeout": 60000,
+  "userVerification": "required"
+}
+```
+
+**Response (No Biometric):**
+```json
+{
+  "error": 0,
+  "biometric_available": false,
+  "message": "No biometric credentials found for this user"
+}
+```
+
+#### Verify Biometric Authentication
+**Endpoint:** `POST /api/webauthn_authenticate.php`
+
+**Description:** Verify biometric authentication and create user session.
+
+**Request Body:**
+```json
+{
+  "credential_id": "base64-encoded-credential-id",
+  "authenticator_data": "base64-encoded-authenticator-data",
+  "client_data_json": "base64-encoded-client-data",
+  "signature": "base64-encoded-signature",
+  "counter": 1
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Authentication successful"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "message": "Invalid credentials"
+}
+```
+
+---
+
+### Manage Biometric Credentials
+
+#### List Credentials
+**Endpoint:** `GET /api/webauthn_manage.php`
+
+**Description:** List all registered biometric credentials for the logged-in user.
+
+**Permissions:** Requires active session
+
+**Response:**
+```json
+{
+  "error": 0,
+  "credentials": [
+    {
+      "id": 1,
+      "device_name": "iPhone 15 Pro",
+      "created_at": "2025-11-25 10:30:00",
+      "last_used": "2025-11-25 14:20:00"
+    },
+    {
+      "id": 2,
+      "device_name": "MacBook Pro",
+      "created_at": "2025-11-24 09:00:00",
+      "last_used": null
+    }
+  ],
+  "count": 2
+}
+```
+
+#### Delete Credential
+**Endpoint:** `DELETE /api/webauthn_manage.php`
+
+**Description:** Remove a specific biometric credential.
+
+**Permissions:** Requires active session (can only delete own credentials)
+
+**Request Body:**
+```json
+{
+  "credential_id": 1
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Biometric credential removed successfully"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "message": "Credential not found or does not belong to you"
+}
+```
+
+---
+
+## Session Management
+
+Session management endpoints for auto-logout functionality and session heartbeat.
+
+**Version:** Added in v1.11.20
+
+### Auto-Logout Settings
+
+#### Get Auto-Logout Timeout
+**Endpoint:** `GET /api/auto_logout_settings.php`
+
+**Description:** Get the current auto-logout timeout setting.
+
+**Permissions:** Public (needed for logout timer on login page)
+
+**Response:**
+```json
+{
+  "error": 0,
+  "auto_logout_timeout": 5,
+  "timeout_seconds": 300
+}
+```
+
+#### Update Auto-Logout Timeout
+**Endpoint:** `POST /api/auto_logout_settings.php`
+
+**Description:** Update the auto-logout timeout setting.
+
+**Permissions:** Super admin only
+
+**Request Body:**
+```json
+{
+  "timeout": 10
+}
+```
+
+**Validation:**
+- `timeout`: Must be between 0-60 minutes (0 = disabled)
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Auto-logout set to 10 minutes",
+  "auto_logout_timeout": 10,
+  "timeout_seconds": 600
+}
+```
+
+**Response (Disabled):**
+```json
+{
+  "error": 0,
+  "message": "Auto-logout disabled",
+  "auto_logout_timeout": 0,
+  "timeout_seconds": 0
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "message": "Only super admin can change this setting"
+}
+```
+
+---
+
+### Session Heartbeat
+
+#### Check Session Status
+**Endpoint:** `GET /api/session_heartbeat.php`
+
+**Description:** Check if the current session is still valid and update last activity timestamp.
+
+**Permissions:** Requires active session
+
+**Response (Valid Session):**
+```json
+{
+  "error": 0,
+  "expired": false,
+  "timeout_minutes": 5,
+  "time_remaining_seconds": 290,
+  "last_activity": 1732547600
+}
+```
+
+**Response (Expired Session):**
+```json
+{
+  "error": 0,
+  "expired": true,
+  "message": "Session expired due to inactivity"
+}
+```
+
+**Response (Not Logged In):**
+```json
+{
+  "error": 1,
+  "expired": true,
+  "message": "Not logged in"
+}
+```
+
+#### Send Heartbeat Ping
+**Endpoint:** `POST /api/session_heartbeat.php`
+
+**Description:** Update the last activity timestamp to keep the session alive.
+
+**Permissions:** Requires active session
+
+**Response:**
+```json
+{
+  "error": 0,
+  "expired": false,
+  "message": "Activity recorded",
+  "last_activity": 1732547800
+}
+```
+
+**Behavior:**
+- Called automatically by JavaScript on user activity (throttled to every 30 seconds)
+- Updates `$_SESSION['last_activity']` server-side
+- Returns `expired: true` if session has timed out
 
 ---
 
@@ -1503,6 +1848,30 @@ GET /get_reminder_history.php?date=2025-11-22
 
 ## Changelog
 
+### Version 1.11.22 (November 2025)
+- **Auto-Logout Timeout Fix**: Fixed timeout comparison (`>=` instead of `>`)
+- **Session Heartbeat Improvement**: Removed initial heartbeat on page load to prevent timer reset
+- **Documentation**: Complete documentation update for all features
+
+### Version 1.11.21 (November 2025)
+- **Server-Side Session Timeout**: Added PHP session timeout check on page load
+- **Session Expired Message**: Added "session expired" notification on login page
+- **Session Heartbeat API**: New endpoint for session activity tracking
+
+### Version 1.11.20 (November 2025)
+- **Auto-Logout Feature**: Automatic session timeout after inactivity
+- **Auto-Logout Settings API**: New endpoint for configuring timeout
+- **App Settings Table**: New `_app_settings` table for global settings
+- **Activity Tracking**: JavaScript activity detection with throttled heartbeat
+
+### Version 1.11.19 (November 2025)
+- **WebAuthn Biometric Login**: Face ID / Touch ID / Windows Hello support
+- **PWA Auto-Login**: Biometric authentication auto-starts in PWA mode
+- **WebAuthn Register API**: New endpoint for credential registration
+- **WebAuthn Authenticate API**: New endpoint for biometric login
+- **WebAuthn Manage API**: New endpoint for credential management
+- **Biometric Credentials Table**: New `_webauthn_credentials` database table
+
 ### Version 1.7.8 (November 2025)
 - **Added Expiry Reminder System** (Churn Prevention)
 - **New Messaging Tab**: Dedicated tab for all messaging features
@@ -1558,6 +1927,6 @@ For API support:
 
 ---
 
-**Document Version:** 1.7.2
-**Last Updated:** November 2025
+**Document Version:** 1.11.22
+**Last Updated:** November 25, 2025
 **Maintained by:** ShowBox Development Team
