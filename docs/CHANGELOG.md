@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.17] - 2025-11-25
+
+### Fixed - Reseller Admin SMS & Account Renewal Permissions
+
+**Status:** Production Release - Reseller Admin Enhancements
+
+**Overview**
+Fixed SMS settings, history, and statistics visibility for reseller admins. Also fixed reseller admin account renewal to skip balance checking.
+
+**Bug Fixes**
+
+1. **SMS Settings Not Loading for Reseller Admin** (Critical Fix)
+   - **Issue**: API Token field was empty for reseller admin even though admin had settings configured
+   - **Root Cause**: Reseller admins had records in `_sms_settings` with NULL values, so the `!$settings` check didn't trigger fallback
+   - **Fix**: Changed condition to also check for empty api_token: `(!$settings || empty($settings['api_token']))`
+   - **Files**: `api/get_sms_settings.php` (lines 57-66)
+
+2. **SMS Statistics Not Visible for Reseller Admin** (Feature Enhancement)
+   - **Issue**: SMS statistics (Total Sent, Successful, Failed, Pending) only showed data for super admin
+   - **Fix**: Added reseller admin check to show all SMS statistics like super admin
+   - **Files**: `api/get_sms_settings.php` (lines 80-99)
+
+3. **SMS History Not Visible for Reseller Admin** (Feature Enhancement)
+   - **Issue**: SMS History table showed "No SMS messages found" for reseller admin
+   - **Root Cause**: `get_sms_logs.php` only checked for `super_user`, not `is_reseller_admin`
+   - **Fix**: Added `is_reseller_admin` check to skip user filtering
+   - **Files**: `api/get_sms_logs.php` (lines 35-50, 66-70)
+
+4. **Reseller Admin Cannot Renew Accounts** (Permission Fix)
+   - **Issue**: Reseller admin got "Insufficient balance" error when trying to renew accounts
+   - **Root Cause**: Balance check in `edit_account.php` only excluded super_user, not reseller_admin
+   - **Fix**: Added `!$is_reseller_admin` to balance check condition
+   - **Files**: `api/edit_account.php` (lines 121-123)
+   - **Code Changes**:
+     ```php
+     // Before:
+     if($user_info['super_user'] != 1) {
+
+     // After:
+     if($user_info['super_user'] != 1 && !$is_reseller_admin) {
+     ```
+
+**Technical Details**
+- Reseller admins now inherit admin's SMS settings (api_token, sender_number, templates)
+- Reseller admins see all SMS logs and statistics (same view as super admin)
+- Reseller admins can add and renew accounts without balance deduction
+
+---
+
 ## [1.11.16] - 2025-11-25
 
 ### Fixed - Critical Account Creation Bug & Reseller Admin View Toggle
