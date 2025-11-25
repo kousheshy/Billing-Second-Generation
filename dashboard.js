@@ -1042,13 +1042,17 @@ function openModalCore(modalId) {
         }, 10);
 
         // Check if user is reseller without admin permission
-        const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : true;
+        // IMPORTANT: Super admin (super_user == 1) ALWAYS sees dropdown, never cards
+        const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : false;
         const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
         const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
-        // Check view mode for reseller admins
+        // Check view mode for reseller admins (only applies to reseller admins, NOT super admins)
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+        // Super admin ALWAYS uses dropdown - never show cards for super admin
+        const shouldShowCards = !isSuperUser && (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode);
 
         // Debug logging
         console.log('[Add Account Modal] User detection:', {
@@ -1059,11 +1063,11 @@ function openModalCore(modalId) {
             isResellerWithoutAdmin: isResellerWithoutAdmin,
             viewAllAccounts: viewAllAccounts,
             isResellerAdminInMyAccountsMode: isResellerAdminInMyAccountsMode,
-            willShowCards: (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode),
-            willShowDropdown: !(isResellerWithoutAdmin || isResellerAdminInMyAccountsMode)
+            shouldShowCards: shouldShowCards,
+            willShowDropdown: !shouldShowCards
         });
 
-        if (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode) {
+        if (shouldShowCards) {
             // Disable username and password fields (permanent restriction for resellers)
             // But allow reseller admins to edit username/password
             if (isResellerWithoutAdmin) {
@@ -2889,8 +2893,8 @@ async function editAccountCore(username) {
         }
 
         // Check if user is reseller without admin permission
-        // If currentUser is not loaded, assume admin to show all fields
-        const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : true;
+        // IMPORTANT: Super admin (super_user == 1) ALWAYS sees dropdown, never cards
+        const isSuperUser = currentUser ? (currentUser.super_user == 1 || currentUser.super_user === '1') : false;
         const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
         const isResellerWithoutAdmin = !isSuperUser && !isResellerAdmin;
 
@@ -2929,9 +2933,12 @@ async function editAccountCore(username) {
             document.getElementById('edit-phone').readOnly = false;
         }
 
-        // Check view mode for reseller admins
+        // Check view mode for reseller admins (only applies to reseller admins, NOT super admins)
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
+
+        // Super admin ALWAYS uses dropdown - never show cards for super admin
+        const shouldShowCards = !isSuperUser && (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode);
 
         // Debug logging
         console.log('[Edit Account Modal] User detection:', {
@@ -2942,12 +2949,12 @@ async function editAccountCore(username) {
             isResellerWithoutAdmin: isResellerWithoutAdmin,
             viewAllAccounts: viewAllAccounts,
             isResellerAdminInMyAccountsMode: isResellerAdminInMyAccountsMode,
-            willShowCards: (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode),
-            willShowDropdown: !(isResellerWithoutAdmin || isResellerAdminInMyAccountsMode)
+            shouldShowCards: shouldShowCards,
+            willShowDropdown: !shouldShowCards
         });
 
         // Handle reseller without admin permission OR reseller admin in "My Accounts" mode
-        if (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode) {
+        if (shouldShowCards) {
             // Make username and password fields read-only for regular resellers only
             if (isResellerWithoutAdmin) {
                 document.getElementById('edit-username').readOnly = true;
