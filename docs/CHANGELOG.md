@@ -7,6 +7,160 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.46] - 2025-11-25
+
+### Fixed - Push Notification VAPID Subject & Display Name
+
+**Status:** Production Release - Bug Fix
+
+**Overview**
+Fixed push notifications not working on iOS due to invalid VAPID subject, and changed notifications to show account holder's full name instead of username.
+
+**Bug Fixes**
+
+1. **VAPID Subject Invalid** (Critical)
+   - **Issue**: Apple push service rejected `mailto:admin@showbox.local` with `BadJwtToken` error
+   - **Fix**: Changed VAPID_SUBJECT to `https://billing.apamehnet.com`
+   - **Files**: `api/push_helper.php` (line 17)
+
+2. **Notification Shows Username Instead of Name**
+   - **Issue**: Notifications showed account username (e.g., "user123") instead of full name
+   - **Fix**: Changed to show account holder's full name with fallback to username
+   - **Files**: `api/add_account.php` (line 684), `api/edit_account.php` (lines 335-336)
+
+3. **PHP Error Breaking JSON Response**
+   - **Issue**: `display_errors=1` in edit_account.php caused HTML output breaking JSON
+   - **Fix**: Disabled display_errors, enabled log_errors instead
+   - **Files**: `api/edit_account.php` (lines 4-5)
+
+---
+
+## [1.11.45] - 2025-11-25
+
+### Fixed - Web Push Library Integration
+
+**Status:** Production Release - Feature Fix
+
+**Overview**
+Replaced custom Web Push implementation with proper minishlink/web-push library.
+
+**Changes**
+
+1. **Installed Web Push Library**
+   - Installed `minishlink/web-push` via Composer
+   - Library handles VAPID authentication and payload encryption correctly
+   - **Command**: `composer require minishlink/web-push`
+
+2. **Regenerated VAPID Keys**
+   - Generated fresh cryptographically valid VAPID key pair
+   - Public Key: `BI8Gdm9PK3LeO2mvhV9yt5NzIBFhSrlKRbfHbaDFfvMqJGmI0T0R-huUK7yeo6aPoasqBnu7SLjNUjqb4J_j5L0`
+   - **Files**: `api/push_helper.php`, `api/get_vapid_key.php`
+
+3. **Rewrote Push Helper**
+   - Complete rewrite using library's WebPush and Subscription classes
+   - Proper error handling and logging
+   - **Files**: `api/push_helper.php`
+
+---
+
+## [1.11.44] - 2025-11-25
+
+### Fixed - Super Admin Add Account & Push Subscribe
+
+**Status:** Production Release - Bug Fix
+
+**Overview**
+Fixed super admin getting "Please select a plan" error and push subscription failing.
+
+**Bug Fixes**
+
+1. **Super Admin Card Selection Bug** (Critical)
+   - **Issue**: `submitAddAccount` didn't check `!isSuperUser`, forcing card selection for admins
+   - **Fix**: Added `!isSuperUser &&` to `useCardSelection` check
+   - **Files**: `dashboard.js` (lines 2381-2382, 3198-3199)
+
+2. **Push Subscribe Session Variable** (Critical)
+   - **Issue**: `push_subscribe.php` used `$_SESSION['userid']` but login sets `$_SESSION['user_id']`
+   - **Fix**: Changed to correct variable name `$_SESSION['user_id']`
+   - **Files**: `api/push_subscribe.php` (line 28)
+
+---
+
+## [1.11.43] - 2025-11-25
+
+### Added - Mobile Push Notification UI
+
+**Status:** Production Release - Feature Enhancement
+
+**Overview**
+Added push notification settings to mobile PWA interface (previously only visible on desktop).
+
+**New Features**
+
+1. **Mobile Push Button**
+   - Added push notification button to mobile settings page
+   - Only visible for super admin and reseller admin
+   - **Files**: `dashboard.php` (lines 1931-1935)
+
+2. **Mobile Push Modal**
+   - Full-screen modal for push notification settings on mobile
+   - Shows subscription status, enable/disable buttons
+   - **Files**: `dashboard.php` (lines 2035-2065)
+
+3. **JavaScript Functions**
+   - Added `showMobilePushSettings()` and `closeMobilePushSettings()`
+   - Moved global variables to top of file to fix temporal dead zone error
+   - **Files**: `dashboard.js` (lines 141-142, 6498-6574)
+
+**Bug Fixes**
+
+1. **Variable Not Initialized Error**
+   - **Issue**: `pushSubscription` and `vapidPublicKey` declared after use
+   - **Fix**: Moved declarations to top of file (line 141-142)
+   - **Files**: `dashboard.js`
+
+---
+
+## [1.11.41] - 2025-11-25
+
+### Added - Push Notifications for Admin Alerts
+
+**Status:** Production Release - New Feature
+
+**Overview**
+Implemented Web Push notifications to alert administrators when resellers create or renew accounts.
+
+**New Features**
+
+1. **Push Notification System**
+   - Real-time alerts for new account creation
+   - Real-time alerts for account renewal
+   - Works on iOS PWA (16.4+), Android, and desktop browsers
+   - **Files**: `api/push_helper.php`, `api/push_subscribe.php`, `api/get_vapid_key.php`
+
+2. **Database Table**
+   - New `_push_subscriptions` table for storing browser subscriptions
+   - **Files**: `scripts/migration_add_push_subscriptions.sql`
+
+3. **Service Worker Push Handler**
+   - Added `push` event listener for displaying notifications
+   - Added `notificationclick` for handling user taps
+   - **Files**: `service-worker.js` (lines 164-242)
+
+4. **Settings UI**
+   - Push notification section in Settings tab
+   - Enable/disable button with status display
+   - **Files**: `dashboard.php`, `dashboard.js`
+
+**Notification Content**
+- **New Account**: "{Reseller} created account: {Name} ({Plan})"
+- **Renewal**: "{Reseller} renewed: {Name} ({Plan}) until {Date}"
+
+**Documentation**
+- See `docs/PUSH_NOTIFICATIONS.md` for complete documentation
+
+---
+
 ## [1.11.22] - 2025-11-25
 
 ### Fixed - Auto-Logout Session Timeout Bug Fix

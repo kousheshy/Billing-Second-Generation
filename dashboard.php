@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.22</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.46</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -615,6 +615,26 @@ try {
                     <div id="auto-logout-status" style="margin-top: 12px; display:none; padding: 10px; border-radius: 6px;"></div>
                     <p style="color: var(--text-secondary); font-size: 12px; margin-top: 15px;">
                         <strong>Note:</strong> Users will be automatically logged out after the specified period of no activity (no mouse movement, clicks, or keyboard input).
+                    </p>
+                </div>
+
+                <!-- Push Notification Settings (Admin & Reseller Admin Only) -->
+                <div id="push-notification-section" class="settings-item" style="margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 10px;">Push Notifications</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Receive notifications when resellers add or renew accounts.</p>
+
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <div id="push-status" style="display: flex; align-items: center; gap: 10px;">
+                            <span id="push-status-icon">...</span>
+                            <span id="push-status-text">Checking...</span>
+                        </div>
+                        <button id="push-subscribe-btn" class="btn-primary" onclick="togglePushNotifications()" style="display:none;">
+                            Enable Notifications
+                        </button>
+                    </div>
+                    <div id="push-notification-status" style="margin-top: 12px; display:none; padding: 10px; border-radius: 6px;"></div>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-top: 15px;">
+                        <strong>Note:</strong> On iOS, you must install this app to Home Screen first (Share > Add to Home Screen), then enable notifications.
                     </p>
                 </div>
 
@@ -1903,6 +1923,11 @@ try {
                     <span class="option-text">Auto-Logout Settings</span>
                     <span class="option-arrow">›</span>
                 </button>
+                <button class="settings-option-btn" id="mobile-push-btn" onclick="showMobilePushSettings()" style="display: none;">
+                    <span class="option-icon">🔔</span>
+                    <span class="option-text">Push Notifications</span>
+                    <span class="option-arrow">›</span>
+                </button>
                 <button class="settings-option-btn settings-logout" onclick="logout()">
                     <span class="option-icon">🚪</span>
                     <span class="option-text">Logout</span>
@@ -1998,6 +2023,38 @@ try {
             </div>
             <div class="modal-footer">
                 <button class="btn-save" onclick="closeMobileAutoLogoutSettings()" style="width: 100%;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Push Notification Modal (v1.11.43) -->
+    <div id="mobile-push-modal" class="change-password-modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeMobilePushSettings()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Push Notifications</h3>
+                <button class="modal-close-btn" onclick="closeMobilePushSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 20px; text-align: center;">
+                    Receive notifications when resellers add or renew accounts.
+                </p>
+                <div id="mobile-push-status" style="text-align: center; margin-bottom: 20px;">
+                    <span id="mobile-push-status-icon" style="font-size: 48px;">🔔</span>
+                    <p id="mobile-push-status-text" style="margin-top: 10px; color: var(--text-secondary);">Checking...</p>
+                </div>
+                <div id="mobile-push-buttons">
+                    <button id="mobile-push-enable-btn" class="btn-save" onclick="togglePushNotifications()" style="width: 100%; padding: 16px; font-size: 16px; display: none;">
+                        🔔 Enable Notifications
+                    </button>
+                    <button id="mobile-push-disable-btn" class="btn-cancel" onclick="togglePushNotifications()" style="width: 100%; padding: 16px; font-size: 16px; display: none;">
+                        🔕 Disable Notifications
+                    </button>
+                </div>
+                <div id="mobile-push-result" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none;"></div>
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 20px; text-align: center;">
+                    <strong>Note:</strong> On iOS, you must install this app to Home Screen first, then enable notifications.
+                </p>
             </div>
         </div>
     </div>

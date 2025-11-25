@@ -32,11 +32,16 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
 
         if($count > 0)
         {
+            $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
             // Regenerate session ID to prevent session fixation attacks
             session_regenerate_id(true);
 
             $_SESSION['login'] = 1;
             $_SESSION['username'] = $username;
+            $_SESSION['user_id'] = $user_data['id'];
+            $_SESSION['super_user'] = $user_data['super_user'];
+            $_SESSION['permissions'] = $user_data['permissions'] ?? '';
             $_SESSION['last_activity'] = time(); // Set activity timestamp for auto-logout
 
             $response['error'] = 0;

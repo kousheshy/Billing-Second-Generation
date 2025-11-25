@@ -1,8 +1,8 @@
 <?php
 
 session_start();
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
 include(__DIR__ . '/../config.php');
@@ -323,6 +323,20 @@ try {
         } catch (Exception $e) {
             // Silently fail - don't disrupt account update
             error_log("Renewal SMS failed: " . $e->getMessage());
+        }
+    }
+
+    // Send push notification to admins for renewal (v1.11.41)
+    // Only notify when a reseller (not super admin) renews an account
+    if($plan_id != 0 && $user_info['super_user'] != 1) {
+        try {
+            include_once(__DIR__ . '/push_helper.php');
+            $plan_name = isset($plan) && $plan ? $plan['name'] : 'Plan #' . $plan_id;
+            $account_display_name = $name ?: ($account['full_name'] ?? $original_username);
+            notifyAccountRenewal($pdo, $user_info['name'], $account_display_name, $plan_name, $new_expiration_date);
+        } catch (Exception $e) {
+            // Silently fail - don't disrupt account update
+            error_log("Push notification failed: " . $e->getMessage());
         }
     }
 

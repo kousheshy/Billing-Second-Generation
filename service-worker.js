@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.11.35';
+const CACHE_NAME = 'showbox-billing-v1.11.46';
 const urlsToCache = [
   '/dashboard.php',
   '/index.html',
@@ -161,23 +161,81 @@ self.addEventListener('message', event => {
   }
 });
 
+// Handle push notifications (v1.11.41)
+self.addEventListener('push', event => {
+  console.log('[Service Worker] Push received');
+
+  let data = {
+    title: 'ShowBox Notification',
+    body: 'You have a new notification',
+    icon: '/assets/icons/icon-192x192.png',
+    badge: '/assets/icons/icon-72x72.png',
+    data: {}
+  };
+
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() };
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/assets/icons/icon-192x192.png',
+    badge: data.badge || '/assets/icons/icon-72x72.png',
+    tag: data.type || 'showbox-notification',
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
+    data: data.data || {},
+    actions: [
+      { action: 'view', title: 'View' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
 // Handle notification click
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+
+  const action = event.action;
+  const data = event.notification.data || {};
+
+  if (action === 'dismiss') {
+    return;
+  }
+
+  // Determine URL to open
+  let urlToOpen = '/dashboard.php';
+  if (data.url) {
+    urlToOpen = data.url;
+  } else if (data.type === 'new_account' || data.type === 'renewal') {
+    urlToOpen = '/dashboard.php?tab=accounts';
+  }
 
   // Open or focus the dashboard
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(clientList => {
-        // If dashboard is already open, focus it
+        // If dashboard is already open, focus it and navigate
         for (let client of clientList) {
-          if (client.url.includes('dashboard.php') && 'focus' in client) {
-            return client.focus();
+          if (client.url.includes('dashboard') && 'focus' in client) {
+            client.focus();
+            if (client.navigate && urlToOpen !== client.url) {
+              return client.navigate(urlToOpen);
+            }
+            return;
           }
         }
         // Otherwise, open a new window
         if (clients.openWindow) {
-          return clients.openWindow('/dashboard.php');
+          return clients.openWindow(urlToOpen);
         }
       })
   );

@@ -99,8 +99,7 @@ try {
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Check session validity (used on page load)
-        // Update last activity since user is actively loading a page
-        $_SESSION['last_activity'] = time();
+        // This is a read-only check and should not update the activity time.
 
         $time_remaining = 0;
         if ($timeout_minutes > 0 && isset($_SESSION['last_activity'])) {

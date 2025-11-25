@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.11.22
+**Version:** 1.11.46
 **Last Updated:** November 25, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -21,7 +21,8 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 9. [Stalker Portal Integration](#stalker-portal-integration)
 10. [STB Device Control](#stb-device-control)
 11. [Theme Management](#theme-management)
-12. [Error Codes](#error-codes)
+12. [Push Notifications](#push-notifications)
+13. [Error Codes](#error-codes)
 
 ---
 
@@ -1463,6 +1464,111 @@ The `permissions` field is a pipe-delimited string with 7 fields:
 - When admin changes reseller theme in Edit Reseller form, propagation happens automatically
 - No need to call this endpoint separately for normal workflow
 - This endpoint remains available for manual/bulk operations
+
+---
+
+## Push Notifications
+
+### Get VAPID Public Key
+**Endpoint:** `GET /api/get_vapid_key.php`
+
+**Description:** Returns the VAPID public key needed for push notification subscription.
+
+**Response:**
+```json
+{
+  "error": 0,
+  "publicKey": "BI8Gdm9PK3LeO2mvhV9yt5NzIBFhSrlKRbfHbaDFfvMqJGmI0T0R-huUK7yeo6aPoasqBnu7SLjNUjqb4J_j5L0"
+}
+```
+
+---
+
+### Check Subscription Status
+**Endpoint:** `GET /api/push_subscribe.php`
+
+**Description:** Check if the current user has push notification subscriptions.
+
+**Headers:** Requires active session cookie.
+
+**Response:**
+```json
+{
+  "error": 0,
+  "subscribed": true,
+  "count": 1
+}
+```
+
+---
+
+### Subscribe to Push Notifications
+**Endpoint:** `POST /api/push_subscribe.php`
+
+**Description:** Subscribe to push notifications. Creates or updates a subscription.
+
+**Headers:** Requires active session cookie.
+
+**Request Body:**
+```json
+{
+  "endpoint": "https://web.push.apple.com/...",
+  "keys": {
+    "p256dh": "BCUMMfFN9hJhT-OHBzsECLWdkHhhL9...",
+    "auth": "Bq6Z4f648pjawdPm6QoQ"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Subscribed to notifications"
+}
+```
+
+---
+
+### Unsubscribe from Push Notifications
+**Endpoint:** `DELETE /api/push_subscribe.php`
+
+**Description:** Unsubscribe from push notifications.
+
+**Headers:** Requires active session cookie.
+
+**Request Body (optional):**
+```json
+{
+  "endpoint": "https://web.push.apple.com/..."
+}
+```
+
+If no endpoint is provided, all subscriptions for the user are removed.
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Unsubscribed from notifications"
+}
+```
+
+---
+
+### Push Notification Triggers
+
+Push notifications are automatically sent to admins and reseller admins when:
+
+1. **New Account Created** (by reseller)
+   - Triggered in: `api/add_account.php`
+   - Notification: "{Reseller} created account: {FullName} ({Plan})"
+
+2. **Account Renewed** (by reseller)
+   - Triggered in: `api/edit_account.php`
+   - Notification: "{Reseller} renewed: {FullName} ({Plan}) until {Date}"
+
+**Note:** Notifications are only sent when a reseller (not super admin) performs the action.
 
 ---
 

@@ -137,6 +137,10 @@ window.addEventListener('beforeinstallprompt', (e) => {
 // Global variable to store user info
 let currentUser = null;
 
+// Push notification variables (v1.11.43)
+let pushSubscription = null;
+let vapidPublicKey = null;
+
 // Pagination state
 let accountsPagination = {
     currentPage: 1,
@@ -276,6 +280,12 @@ async function checkAuth() {
                 mobileAutoLogoutBtn.style.display = 'flex';
             }
 
+            // Show Mobile Push Notifications button for super admin (v1.11.43)
+            const mobilePushBtn = document.getElementById('mobile-push-btn');
+            if (mobilePushBtn) {
+                mobilePushBtn.style.display = 'flex';
+            }
+
             // Hide Plans and Transactions tabs in bottom navigation (PWA) for super admin
             document.querySelectorAll('.bottom-nav-item').forEach(item => {
                 const tabName = item.getAttribute('data-tab');
@@ -304,6 +314,12 @@ async function checkAuth() {
 
             // Update account count based on initial preference
             updateAccountCount(viewAllAccounts);
+
+            // Show Mobile Push Notifications button for reseller admin (v1.11.43)
+            const mobilePushBtnRA = document.getElementById('mobile-push-btn');
+            if (mobilePushBtnRA) {
+                mobilePushBtnRA.style.display = 'flex';
+            }
 
             // Hide Plans and Transactions tabs in bottom navigation (PWA) for reseller admin
             document.querySelectorAll('.bottom-nav-item').forEach(item => {
@@ -2362,7 +2378,8 @@ async function addAccount(e) {
     const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
 
     // Determine if we should use card selection (reseller path) or dropdown (admin path)
-    const useCardSelection = isResellerWithoutAdmin || isResellerAdminInMyAccountsMode;
+    // MUST check !isSuperUser - super admin always uses dropdown, never cards (v1.11.44)
+    const useCardSelection = !isSuperUser && (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode);
 
     console.log('[submitAddAccount] User type check:', { isSuperUser, isResellerAdmin, isResellerWithoutAdmin, viewAllAccounts, isResellerAdminInMyAccountsMode, useCardSelection });
 
@@ -3178,7 +3195,8 @@ async function submitEditAccount(e) {
     const isResellerAdminInMyAccountsMode = isResellerAdmin && !viewAllAccounts;
 
     // Determine if we should use card selection (reseller path) or dropdown (admin path)
-    const useCardSelection = isResellerWithoutAdmin || isResellerAdminInMyAccountsMode;
+    // MUST check !isSuperUser - super admin always uses dropdown, never cards (v1.11.44)
+    const useCardSelection = !isSuperUser && (isResellerWithoutAdmin || isResellerAdminInMyAccountsMode);
 
     console.log('[submitEditAccount] User type check:', { isSuperUser, isResellerAdmin, isResellerWithoutAdmin, viewAllAccounts, isResellerAdminInMyAccountsMode, useCardSelection });
 
@@ -6496,6 +6514,82 @@ function closeMobileAutoLogoutSettings() {
 }
 
 /**
+ * Show mobile push notification settings modal (v1.11.43)
+ */
+async function showMobilePushSettings() {
+    const modal = document.getElementById('mobile-push-modal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+
+    const statusIcon = document.getElementById('mobile-push-status-icon');
+    const statusText = document.getElementById('mobile-push-status-text');
+    const enableBtn = document.getElementById('mobile-push-enable-btn');
+    const disableBtn = document.getElementById('mobile-push-disable-btn');
+
+    // Check if push notifications are supported
+    if (!('PushManager' in window)) {
+        statusIcon.textContent = '❌';
+        statusText.textContent = 'Push notifications not supported in this browser';
+        return;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+        statusIcon.textContent = '❌';
+        statusText.textContent = 'Service Worker not supported';
+        return;
+    }
+
+    try {
+        // Get VAPID public key if not already loaded
+        if (!vapidPublicKey) {
+            const keyResponse = await fetch('api/get_vapid_key.php');
+            const keyData = await keyResponse.json();
+            vapidPublicKey = keyData.publicKey;
+        }
+
+        // Check current subscription status
+        const registration = await navigator.serviceWorker.ready;
+        pushSubscription = await registration.pushManager.getSubscription();
+
+        if (pushSubscription) {
+            statusIcon.textContent = '✅';
+            statusText.textContent = 'Notifications enabled';
+            enableBtn.style.display = 'none';
+            disableBtn.style.display = 'block';
+        } else {
+            const permission = Notification.permission;
+            if (permission === 'denied') {
+                statusIcon.textContent = '🚫';
+                statusText.textContent = 'Notifications blocked - check browser settings';
+                enableBtn.style.display = 'none';
+                disableBtn.style.display = 'none';
+            } else {
+                statusIcon.textContent = '🔔';
+                statusText.textContent = 'Notifications not enabled';
+                enableBtn.style.display = 'block';
+                disableBtn.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        console.error('[Push] Mobile init error:', e);
+        statusIcon.textContent = '❌';
+        // Show actual error message for debugging
+        statusText.textContent = e.message || 'Error checking notification status';
+    }
+}
+
+/**
+ * Close mobile push notification settings modal (v1.11.43)
+ */
+function closeMobilePushSettings() {
+    const modal = document.getElementById('mobile-push-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
  * Save mobile auto-logout settings (v1.11.26)
  */
 async function saveMobileAutoLogoutSettings() {
@@ -6652,6 +6746,20 @@ async function removeBiometricCredentialMobile(credentialId) {
 // Auto-Logout / Session Timeout
 // ========================================
 
+// IMMEDIATE deadline check on script load (v1.11.36)
+// This runs synchronously before any async operations or event handlers
+// Critical for iOS PWA where app may have been terminated
+(function immediateDeadlineCheck() {
+    try {
+        const deadline = localStorage.getItem('autoLogoutDeadline');
+        if (deadline && Date.now() >= parseInt(deadline, 10)) {
+            console.log('[AutoLogout] IMMEDIATE: Deadline exceeded on script load');
+            localStorage.removeItem('autoLogoutDeadline');
+            window.location.href = 'index.html?expired=1';
+        }
+    } catch (e) {}
+})();
+
 let autoLogoutCheckInterval = null; // Interval that checks timeout every 10 seconds
 let autoLogoutTimeoutMinutes = 5; // Default 5 minutes
 let heartbeatInterval = null;
@@ -6757,295 +6865,356 @@ async function sendHeartbeat() {
     }
 }
 
-// Track last activity time for iOS-compatible timeout checking (v1.11.35)
-// Key insight: iOS can suspend ALL JavaScript (including Web Workers) when idle
-// Solution: Store deadline in localStorage and check on ANY event
-let lastActivityTime = Date.now();
-let autoLogoutWorker = null;
-let rafId = null; // requestAnimationFrame ID
+// ========================================
+// iOS PWA Auto-Logout System (v1.11.40)
+// ========================================
+// PROBLEM: localStorage is UNRELIABLE on iOS PWA - it gets cleared!
+// https://developer.apple.com/forums/thread/125041
+//
+// SOLUTION: Use SERVER-SIDE session verification only.
+// The PHP session (via cookies) is reliable. We just need to check
+// with the server when the app wakes up.
 
-// LocalStorage key for deadline tracking
-const LOGOUT_DEADLINE_KEY = 'autoLogoutDeadline';
-
-// Reset auto-logout timer on user activity
-function resetAutoLogoutTimer() {
-    if (autoLogoutTimeoutMinutes <= 0) return; // Disabled
-
-    // Update last activity time
-    lastActivityTime = Date.now();
-
-    // Store new deadline in localStorage (v1.11.35)
-    // This persists even if JavaScript is suspended
-    const newDeadline = lastActivityTime + (autoLogoutTimeoutMinutes * 60 * 1000);
-    try {
-        localStorage.setItem(LOGOUT_DEADLINE_KEY, newDeadline.toString());
-    } catch (e) {
-        console.warn('[AutoLogout] Could not save deadline to localStorage');
-    }
-}
-
-// Create inline Web Worker for reliable timing on iOS PWA
-function createAutoLogoutWorker() {
-    const workerCode = `
-        let interval = null;
-        self.onmessage = function(e) {
-            if (e.data === 'start') {
-                if (interval) clearInterval(interval);
-                // Send tick every 5 seconds
-                interval = setInterval(() => {
-                    self.postMessage('tick');
-                }, 5000);
-            } else if (e.data === 'stop') {
-                if (interval) clearInterval(interval);
-                interval = null;
-            }
-        };
-    `;
-    const blob = new Blob([workerCode], { type: 'application/javascript' });
-    return new Worker(URL.createObjectURL(blob));
-}
-
-// Start the Web Worker-based timeout checker
-function startAutoLogoutWorker() {
-    if (autoLogoutWorker) return;
-
-    try {
-        autoLogoutWorker = createAutoLogoutWorker();
-        autoLogoutWorker.onmessage = function(e) {
-            if (e.data === 'tick') {
-                checkAutoLogoutTimeout();
-            }
-        };
-        autoLogoutWorker.postMessage('start');
-        console.log('[AutoLogout] Started Web Worker timer');
-    } catch (err) {
-        console.error('[AutoLogout] Web Worker failed:', err);
-    }
-}
-
-// Start requestAnimationFrame loop as additional fallback (v1.11.35)
-// RAF continues running even when iOS throttles setInterval
-function startRAFLoop() {
-    let lastRAFCheck = Date.now();
-
-    function rafTick() {
-        const now = Date.now();
-        // Only check every 5 seconds to reduce overhead
-        if (now - lastRAFCheck >= 5000) {
-            lastRAFCheck = now;
-            checkAutoLogoutTimeout();
-        }
-        rafId = requestAnimationFrame(rafTick);
-    }
-
-    rafId = requestAnimationFrame(rafTick);
-    console.log('[AutoLogout] Started RAF loop');
-}
-
-// Stop the Web Worker
-function stopAutoLogoutWorker() {
-    if (autoLogoutWorker) {
-        autoLogoutWorker.postMessage('stop');
-        autoLogoutWorker.terminate();
-        autoLogoutWorker = null;
-    }
-    if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-    }
-}
-
-// Check if timeout exceeded (v1.11.35)
-// Uses localStorage deadline for accurate detection even after JS suspension
-function checkAutoLogoutTimeout() {
+/**
+ * Check session with server (v1.11.40)
+ * This is the ONLY reliable way on iOS PWA
+ */
+async function checkServerSession() {
     if (autoLogoutTimeoutMinutes <= 0) return;
 
-    const now = Date.now();
+    console.log('[AutoLogout] Checking session with server...');
 
-    // Check against localStorage deadline (most reliable)
     try {
-        const storedDeadline = localStorage.getItem(LOGOUT_DEADLINE_KEY);
-        if (storedDeadline) {
-            const deadline = parseInt(storedDeadline, 10);
-            if (now >= deadline) {
-                console.log('[AutoLogout] Deadline exceeded (localStorage):', now, '>=', deadline);
-                performAutoLogout();
-                return;
-            }
+        const response = await fetch('api/session_heartbeat.php', {
+            method: 'GET',
+            credentials: 'same-origin' // Important: send cookies
+        });
+
+        const result = await response.json();
+        console.log('[AutoLogout] Server response:', result);
+
+        if (result.expired === true) {
+            console.log('[AutoLogout] SERVER says session expired - logging out');
+            performAutoLogout();
+            return true;
         }
+
+        if (result.error === 1) {
+            console.log('[AutoLogout] Not logged in - redirecting');
+            performAutoLogout();
+            return true;
+        }
+
+        console.log('[AutoLogout] Session valid, time remaining:', result.time_remaining_seconds, 's');
+        return false;
+
     } catch (e) {
-        // Fallback to memory-based check
-    }
-
-    // Fallback: check against in-memory lastActivityTime
-    const elapsed = now - lastActivityTime;
-    const timeoutMs = autoLogoutTimeoutMinutes * 60 * 1000;
-
-    if (elapsed >= timeoutMs) {
-        console.log('[AutoLogout] Timeout exceeded (memory):', elapsed, 'ms >=', timeoutMs, 'ms');
-        performAutoLogout();
+        console.error('[AutoLogout] Error checking session:', e);
+        return false;
     }
 }
 
-// Perform the auto-logout
-function performAutoLogout() {
-    console.log('[AutoLogout] Session timeout - logging out');
-
-    // Stop Web Worker
-    stopAutoLogoutWorker();
-
-    // Clear intervals
-    if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-    }
-    if (autoLogoutCheckInterval) {
-        clearInterval(autoLogoutCheckInterval);
-    }
-
-    // Clear any stored data
-    sessionStorage.removeItem('freshLogin');
-
-    // Clear localStorage deadline (v1.11.35)
+/**
+ * Ping server to update activity (v1.11.40)
+ */
+async function pingServerActivity() {
     try {
-        localStorage.removeItem(LOGOUT_DEADLINE_KEY);
+        await fetch('api/session_heartbeat.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' }
+        });
     } catch (e) {
-        // Ignore errors
+        console.error('[AutoLogout] Heartbeat error:', e);
     }
+}
 
-    // Redirect to login with expired flag
+/**
+ * Perform logout
+ */
+function performAutoLogout() {
+    console.log('[AutoLogout] Redirecting to login...');
+    sessionStorage.removeItem('freshLogin');
     window.location.href = 'index.html?expired=1';
 }
 
-// Initialize auto-logout system
+/**
+ * Initialize auto-logout (v1.11.40)
+ */
 async function initAutoLogout() {
-    // Load settings first
     await loadAutoLogoutSettings();
 
-    // Clear any existing intervals
-    if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-        heartbeatInterval = null;
-    }
-    if (autoLogoutCheckInterval) {
-        clearInterval(autoLogoutCheckInterval);
-        autoLogoutCheckInterval = null;
-    }
-
     if (autoLogoutTimeoutMinutes <= 0) {
-        console.log('[AutoLogout] Auto-logout is disabled');
+        console.log('[AutoLogout] Disabled');
         return;
     }
 
-    console.log('[AutoLogout] Initializing with timeout:', autoLogoutTimeoutMinutes, 'minutes');
+    console.log('[AutoLogout] v1.11.40 - Timeout:', autoLogoutTimeoutMinutes, 'min (SERVER-SIDE)');
 
-    // Initialize last activity time
-    lastActivityTime = Date.now();
+    // Check session with server on init
+    await checkServerSession();
 
-    // Activity events to track
-    const activityEvents = [
-        'mousedown',
-        'mousemove',
-        'keydown',
-        'scroll',
-        'touchstart',
-        'click',
-        'wheel'
-    ];
+    // Activity events - ping server on user interaction (throttled)
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'click'];
 
-    // Throttle activity detection - ping server every 30 seconds on activity
-    let lastServerPingTime = Date.now();
-    const throttleMs = 30000; // Only ping server every 30 seconds
+    let lastPing = Date.now();
+    const pingInterval = 30000; // Ping server every 30 seconds of activity
 
-    const handleActivity = () => {
+    const onActivity = () => {
         const now = Date.now();
-        // Always reset the local timer on any activity
-        resetAutoLogoutTimer();
-
-        // Only ping server every 30 seconds
-        if (now - lastServerPingTime > throttleMs) {
-            lastServerPingTime = now;
-            sendHeartbeat(); // Ping server to update last_activity
+        if (now - lastPing > pingInterval) {
+            lastPing = now;
+            pingServerActivity();
         }
     };
 
-    // Add event listeners
-    activityEvents.forEach(event => {
-        document.addEventListener(event, handleActivity, { passive: true });
+    activityEvents.forEach(evt => {
+        document.addEventListener(evt, onActivity, { passive: true });
     });
 
-    // Set initial deadline in localStorage (v1.11.35)
-    const initialDeadline = lastActivityTime + (autoLogoutTimeoutMinutes * 60 * 1000);
-    try {
-        localStorage.setItem(LOGOUT_DEADLINE_KEY, initialDeadline.toString());
-    } catch (e) {
-        console.warn('[AutoLogout] Could not save initial deadline to localStorage');
-    }
-
-    // Start multiple timer mechanisms for iOS reliability (v1.11.35)
-    // 1. Web Worker (most reliable if not throttled)
-    startAutoLogoutWorker();
-    // 2. RAF loop (continues when setInterval throttled)
-    startRAFLoop();
-    // 3. setInterval as final fallback
-    autoLogoutCheckInterval = setInterval(checkAutoLogoutTimeout, 5000);
-
-    // NOTE: Do NOT send heartbeat on page load - dashboard.php already sets last_activity
-    // Heartbeat is only sent when user does activity (mouse, keyboard, etc.)
-
-    console.log('[AutoLogout] System initialized - Multi-timer tracking active (v1.11.35)');
+    console.log('[AutoLogout] v1.11.40 initialized - using SERVER-SIDE session only');
 }
 
-// Start auto-logout when dashboard loads
+// Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    // Small delay to let other initialization complete
-    setTimeout(initAutoLogout, 1000);
-});
-
-// Handle PWA visibility change - check session when app returns from background (v1.11.35)
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible') {
-        console.log('[AutoLogout] App became visible - checking session');
-
-        // First: Check localStorage deadline immediately (fast, works offline)
-        // This is critical for iOS PWA where JS was suspended
-        if (autoLogoutTimeoutMinutes > 0) {
-            try {
-                const storedDeadline = localStorage.getItem(LOGOUT_DEADLINE_KEY);
-                if (storedDeadline) {
-                    const deadline = parseInt(storedDeadline, 10);
-                    const now = Date.now();
-                    if (now >= deadline) {
-                        console.log('[AutoLogout] Deadline exceeded on visibility change:', now, '>=', deadline);
-                        performAutoLogout();
-                        return; // Don't continue to server check
-                    }
-                }
-            } catch (e) {
-                // Continue to server check
-            }
-        }
-
-        // Second: Check if session is still valid on server
-        try {
-            const response = await fetch('api/session_heartbeat.php', {
-                method: 'GET'
-            });
-            const result = await response.json();
-
-            if (result.expired) {
-                console.log('[AutoLogout] Session expired while in background');
-                performAutoLogout();
-            } else {
-                console.log('[AutoLogout] Session still valid');
-                // Reset the client-side timer
-                resetAutoLogoutTimer();
-            }
-        } catch (e) {
-            console.error('[AutoLogout] Error checking session:', e);
-        }
-    }
+    setTimeout(initAutoLogout, 500);
 });
 
 // ========================================
-// End of Auto-Logout / Session Timeout
+// iOS PWA Wake Detection (v1.11.40)
+// When app returns from background, CHECK WITH SERVER
+// ========================================
+
+// pageshow - most reliable on iOS
+window.addEventListener('pageshow', function(e) {
+    console.log('[AutoLogout] >>> PAGESHOW (persisted:', e.persisted, ')');
+    if (autoLogoutTimeoutMinutes > 0) {
+        checkServerSession();
+    }
+}, false);
+
+// visibilitychange - backup
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        console.log('[AutoLogout] >>> VISIBLE');
+        if (autoLogoutTimeoutMinutes > 0) {
+            checkServerSession();
+        }
+    }
+}, false);
+
+// focus - backup
+window.addEventListener('focus', function() {
+    console.log('[AutoLogout] >>> FOCUS');
+    if (autoLogoutTimeoutMinutes > 0) {
+        checkServerSession();
+    }
+}, false);
+
+// ========================================
+// End of Auto-Logout (v1.11.40)
+// ========================================
+
+// ========================================
+// Push Notifications (v1.11.41)
+// ========================================
+
+/**
+ * Initialize push notification UI
+ */
+async function initPushNotifications() {
+    const section = document.getElementById('push-notification-section');
+    // Section visibility is controlled by PHP - if not present, user is not admin
+    if (!section) {
+        console.log('[Push] Push notification section not found (user not admin)');
+        return;
+    }
+
+    console.log('[Push] Initializing push notifications...');
+
+    const statusIcon = document.getElementById('push-status-icon');
+    const statusText = document.getElementById('push-status-text');
+    const subscribeBtn = document.getElementById('push-subscribe-btn');
+
+    // Check if push notifications are supported
+    if (!('PushManager' in window)) {
+        statusIcon.textContent = '❌';
+        statusText.textContent = 'Push notifications not supported in this browser';
+        return;
+    }
+
+    // Check if service worker is registered
+    if (!('serviceWorker' in navigator)) {
+        statusIcon.textContent = '❌';
+        statusText.textContent = 'Service Worker not supported';
+        return;
+    }
+
+    try {
+        // Get VAPID public key
+        const keyResponse = await fetch('api/get_vapid_key.php');
+        const keyData = await keyResponse.json();
+        vapidPublicKey = keyData.publicKey;
+
+        // Check current subscription status
+        const registration = await navigator.serviceWorker.ready;
+        pushSubscription = await registration.pushManager.getSubscription();
+
+        if (pushSubscription) {
+            statusIcon.textContent = '✅';
+            statusText.textContent = 'Notifications enabled';
+            subscribeBtn.textContent = '🔕 Disable Notifications';
+            subscribeBtn.style.background = 'var(--danger)';
+            subscribeBtn.style.display = 'inline-block';
+        } else {
+            // Check permission status
+            const permission = Notification.permission;
+
+            if (permission === 'denied') {
+                statusIcon.textContent = '🚫';
+                statusText.textContent = 'Notifications blocked - check browser settings';
+            } else {
+                statusIcon.textContent = '🔔';
+                statusText.textContent = 'Notifications not enabled';
+                subscribeBtn.textContent = '🔔 Enable Notifications';
+                subscribeBtn.style.background = '';
+                subscribeBtn.style.display = 'inline-block';
+            }
+        }
+
+    } catch (e) {
+        console.error('[Push] Init error:', e);
+        statusIcon.textContent = '❌';
+        statusText.textContent = 'Error checking notification status';
+    }
+}
+
+/**
+ * Toggle push notifications
+ */
+async function togglePushNotifications() {
+    const statusDiv = document.getElementById('push-notification-status');
+
+    try {
+        if (pushSubscription) {
+            // Unsubscribe
+            await unsubscribePush();
+        } else {
+            // Subscribe
+            await subscribePush();
+        }
+    } catch (e) {
+        console.error('[Push] Toggle error:', e);
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'var(--danger-bg)';
+        statusDiv.style.color = 'var(--danger)';
+        statusDiv.textContent = 'Error: ' + e.message;
+    }
+}
+
+/**
+ * Subscribe to push notifications
+ */
+async function subscribePush() {
+    const statusDiv = document.getElementById('push-notification-status');
+
+    // Request permission first
+    const permission = await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'var(--warning-bg)';
+        statusDiv.style.color = 'var(--warning)';
+        statusDiv.textContent = 'Permission denied. Please enable notifications in browser settings.';
+        return;
+    }
+
+    // Get service worker registration
+    const registration = await navigator.serviceWorker.ready;
+
+    // Convert VAPID key to Uint8Array
+    const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+    // Subscribe
+    pushSubscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey
+    });
+
+    // Send subscription to server
+    const response = await fetch('api/push_subscribe.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pushSubscription.toJSON())
+    });
+
+    const result = await response.json();
+
+    if (result.error) {
+        throw new Error(result.message);
+    }
+
+    // Update UI
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'var(--success-bg)';
+    statusDiv.style.color = 'var(--success)';
+    statusDiv.textContent = 'Notifications enabled successfully!';
+
+    // Refresh UI
+    initPushNotifications();
+}
+
+/**
+ * Unsubscribe from push notifications
+ */
+async function unsubscribePush() {
+    const statusDiv = document.getElementById('push-notification-status');
+
+    // Unsubscribe from browser
+    await pushSubscription.unsubscribe();
+
+    // Remove from server
+    await fetch('api/push_subscribe.php', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: pushSubscription.endpoint })
+    });
+
+    pushSubscription = null;
+
+    // Update UI
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'var(--success-bg)';
+    statusDiv.style.color = 'var(--success)';
+    statusDiv.textContent = 'Notifications disabled successfully.';
+
+    // Refresh UI
+    initPushNotifications();
+}
+
+/**
+ * Convert base64 URL to Uint8Array (for VAPID key)
+ */
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Initialize push notifications when dashboard loads
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initPushNotifications, 1500);
+});
+
+// ========================================
+// End of Push Notifications (v1.11.41)
 // ========================================

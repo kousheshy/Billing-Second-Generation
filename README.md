@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.22-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.46-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -264,6 +264,26 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - `session_heartbeat.php` - Activity tracking and session validation
 - **Database Table**: New `_app_settings` table for global settings
 - **Settings UI**: Auto-logout configuration in Settings tab
+
+### Push Notifications (v1.11.46)
+- **Real-Time Alerts**: Receive instant notifications when resellers create or renew accounts
+- **Multi-Platform Support**:
+  - iOS PWA (16.4+) - Must be installed on home screen
+  - Android Chrome
+  - Desktop browsers (Chrome, Firefox, Safari)
+- **Notification Types**:
+  - New Account: "{Reseller} created account: {Name} ({Plan})"
+  - Renewal: "{Reseller} renewed: {Name} ({Plan}) until {Date}"
+- **Who Receives**: Super Admins and Reseller Admins
+- **Easy Setup**: Enable in Settings → Push Notifications
+- **VAPID Authentication**: Secure Web Push protocol with proper VAPID keys
+- **Library**: Uses `minishlink/web-push` for reliable delivery
+- **New API Endpoints**:
+  - `push_subscribe.php` - Manage subscriptions
+  - `get_vapid_key.php` - Client subscription key
+  - `push_helper.php` - Send notifications
+- **Database Table**: `_push_subscriptions` for storing browser subscriptions
+- **Service Worker**: Push event handling in `service-worker.js`
 
 ### Observer Mode (v1.6.3, Enhanced v1.6.4, v1.7.0)
 - **Read-Only Access**: View all data without ability to modify

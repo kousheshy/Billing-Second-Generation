@@ -2,8 +2,8 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.11.22
-**Last Updated:** November 25, 2025
+**Version:** 1.11.46
+**Last Updated:** November 26, 2025
 **Database:** MySQL 5.7+
 **Character Set:** UTF8MB4
 **Collation:** utf8mb4_unicode_ci
@@ -23,7 +23,7 @@ Complete database schema documentation for the ShowBox Billing Panel.
 
 ## Overview
 
-The ShowBox Billing Panel uses a MySQL relational database with 9 core tables:
+The ShowBox Billing Panel uses a MySQL relational database with 10 core tables:
 
 | Table | Purpose | Records (Typical) |
 |-------|---------|-------------------|
@@ -36,6 +36,7 @@ The ShowBox Billing Panel uses a MySQL relational database with 9 core tables:
 | `_app_settings` | Global application settings (v1.11.20) | 1-10 |
 | `_expiry_reminders` | Sent reminder tracking (v1.7.8) | 1,000-50,000 |
 | `_reminder_settings` | User reminder preferences (v1.7.8) | 10-100 |
+| `_push_subscriptions` | Web push notification subscriptions (v1.11.40) | 10-500 |
 
 **Database Name:** `showboxt_panel`
 **Engine:** InnoDB
@@ -575,6 +576,72 @@ CREATE TABLE IF NOT EXISTS `_reminder_settings` (
 
 ---
 
+### 10. _push_subscriptions
+
+**Purpose:** Store Web Push notification subscriptions for real-time alerts
+
+**Version:** Added in v1.11.40
+
+**Schema:**
+```sql
+CREATE TABLE IF NOT EXISTS `_push_subscriptions` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
+  `endpoint` TEXT NOT NULL COMMENT 'Push service endpoint URL',
+  `p256dh` VARCHAR(255) NOT NULL COMMENT 'Public key for encryption',
+  `auth` VARCHAR(255) NOT NULL COMMENT 'Authentication secret',
+  `user_agent` VARCHAR(500) DEFAULT NULL COMMENT 'Browser/device info',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_endpoint` (`endpoint`(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Fields:**
+
+| Field | Type | Null | Default | Description |
+|-------|------|------|---------|-------------|
+| `id` | INT(11) | NO | AUTO | Primary key |
+| `user_id` | INT(11) | NO | - | FK to _users.id |
+| `endpoint` | TEXT | NO | - | Push service URL (FCM, Apple, etc.) |
+| `p256dh` | VARCHAR(255) | NO | - | P-256 Diffie-Hellman public key |
+| `auth` | VARCHAR(255) | NO | - | Auth secret for message encryption |
+| `user_agent` | VARCHAR(500) | YES | NULL | Browser/device identifier |
+| `created_at` | TIMESTAMP | YES | CURRENT | Subscription creation time |
+
+**Usage:**
+- Stores subscriptions from browser Push API
+- Used by `push_helper.php` to send notifications
+- Admin/reseller admins receive alerts when accounts are created/renewed
+- Supports multiple subscriptions per user (multi-device)
+- Uses VAPID authentication for Web Push protocol
+
+**Notification Types:**
+- `new_account` - Reseller created a new account
+- `renewal` - Reseller renewed an account
+
+**Example Record:**
+```sql
+INSERT INTO `_push_subscriptions` VALUES (
+  1,
+  1, -- user_id (admin)
+  'https://fcm.googleapis.com/fcm/send/abc123...', -- endpoint
+  'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XHhWx9LH5yzfO8...', -- p256dh
+  'tBHItJI5svbpez7KI4CCXg==', -- auth
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)...', -- user_agent
+  NOW()
+);
+```
+
+**iOS PWA Requirements:**
+- iOS 16.4+ required for Web Push support
+- App must be installed to home screen (PWA mode)
+- User must grant notification permission
+- VAPID subject must be a valid HTTPS URL (not localhost or .local domains)
+
+---
+
 ## Relationships
 
 ### Foreign Keys
@@ -653,6 +720,36 @@ CREATE INDEX idx_plans_currency ON _plans(currency);
 ---
 
 ## Migration History
+
+### v1.11.40-v1.11.46 - Push Notifications (November 2025)
+
+**Changes:**
+```sql
+CREATE TABLE IF NOT EXISTS `_push_subscriptions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `endpoint` TEXT NOT NULL,
+  `p256dh` VARCHAR(255) NOT NULL,
+  `auth` VARCHAR(255) NOT NULL,
+  `user_agent` VARCHAR(500) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_endpoint` (`endpoint`(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Features Added:**
+- Web Push notifications for iOS PWA (iOS 16.4+)
+- Admin alerts when resellers create/renew accounts
+- VAPID authentication with minishlink/web-push library
+- Multi-device subscription support
+
+**Rollback:**
+```sql
+DROP TABLE IF EXISTS _push_subscriptions;
+```
+
+---
 
 ### v1.11.22 - Auto-Logout Fix (November 2025)
 
@@ -880,7 +977,7 @@ For database support:
 
 ---
 
-**Document Version:** 1.11.22
-**Last Updated:** November 25, 2025
+**Document Version:** 1.11.46
+**Last Updated:** November 26, 2025
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
