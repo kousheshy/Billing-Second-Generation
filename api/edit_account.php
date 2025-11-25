@@ -118,8 +118,9 @@ try {
         error_log("edit_account.php: Plan lookup result = " . ($plan ? json_encode($plan) : 'NOT FOUND'));
 
         if($plan) {
-            // For resellers, check if they have enough credit
-            if($user_info['super_user'] != 1) {
+            // For resellers (not super admins or reseller admins), check if they have enough credit
+            // Reseller admins don't have balance - they use admin's resources
+            if($user_info['super_user'] != 1 && !$is_reseller_admin) {
                 if($user_info['balance'] < $plan['price']) {
                     $response['error'] = 1;
                     $response['err_msg'] = 'Insufficient balance';
