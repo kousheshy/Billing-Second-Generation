@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.66] - 2025-11-27
+
+### Added - Reseller Self-Notification & Enhanced Push Sync
+
+**Status:** Production Release - Feature Enhancement
+
+**Overview**
+Resellers now receive push notifications for their own account operations, and subscription syncing prevents cross-user notification issues.
+
+**New Features**
+
+1. **Reseller Self-Notification (v1.11.66)**
+   - Resellers receive notifications when THEY create/renew accounts
+   - Previously: Only admins and reseller admins received notifications
+   - Now: Admins + Reseller Admins + The Actor (Reseller)
+   - Better awareness and confirmation of actions
+   - **Files**: `api/add_account.php`, `api/edit_account.php`, `api/push_helper.php`
+
+2. **Push Subscription Sync on Login (v1.11.65)**
+   - Subscription automatically syncs with current user on every login
+   - Fixes: Admin logs out → Reseller logs in → Still receives admin's notifications
+   - Server updates user_id association for existing subscription
+   - Prevents cross-user notification delivery
+   - **Files**: `dashboard.js` (lines 7075-7095)
+
+**Technical Changes**
+
+1. **notifyAdmins() Function Enhancement**
+   - New optional parameter: `$actorId` (user ID of the person performing action)
+   - SQL query includes actor in recipient list: `OR u.id = :actor_id`
+   - Backward compatible (actorId is optional)
+   - **Files**: `api/push_helper.php` (lines 69-100)
+
+2. **notifyNewAccount() & notifyAccountRenewal() Updates**
+   - Both functions now accept `$actorId` parameter
+   - Pass actor ID to notifyAdmins() for inclusion
+   - **Files**: `api/push_helper.php` (lines 148, 165)
+
+3. **Subscription Sync Implementation**
+   - On login, checks for existing push subscription
+   - Sends subscription to server with current user context
+   - Server updates _push_subscriptions.user_id
+   - Ensures notifications go to correct user
+   - **Files**: `dashboard.js` (initPushNotifications function)
+
+**Notification Flow (Updated)**
+- **New Account Creation**:
+  - Recipients: Super Admin + Reseller Admins + The Reseller Who Created It
+  - Message: "[Reseller Name] added: [Account] ([Plan])"
+  
+- **Account Renewal**:
+  - Recipients: Super Admin + Reseller Admins + The Reseller Who Renewed It
+  - Message: "[Reseller Name] renewed: [Account] ([Plan]) until [Date]"
+
+- **Account Expiry**:
+  - Recipients: Reseller Admins + Account Owner (NOT Super Admin)
+  - Message: "Account expired: [Account] ([Plan])"
+
+**Benefits**
+- Resellers get immediate confirmation of their actions
+- Better engagement and awareness
+- Fixes multi-user device notification routing
+- No duplicate notifications (each user gets their own)
+- Proper subscription management across logins
+
+**Files Modified**
+- `api/add_account.php`: Pass actor_id to notifyNewAccount()
+- `api/edit_account.php`: Pass actor_id to notifyAccountRenewal()
+- `api/push_helper.php`: Enhanced notifyAdmins() with actor support
+- `dashboard.js`: Added subscription sync on login
+- `service-worker.js`: Cache version bump to v1.11.66
+
+**Impact**
+- Resellers now have full visibility of their operations
+- Multi-user devices work correctly (no cross-user notifications)
+- Better user experience with immediate feedback
+- Proper subscription lifecycle management
+
+---
+
 ## [1.11.64] - 2025-11-26
 
 ### Changed - Push Notification UX Improvements

@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.11.64
+// ShowBox Dashboard v1.11.66
 // ========================================
 
 // ========================================
@@ -7075,6 +7075,21 @@ async function initPushNotifications() {
         pushSubscription = await registration.pushManager.getSubscription();
 
         if (pushSubscription) {
+            // v1.11.65: Sync subscription with current user on every login
+            // This fixes the issue where admin logs out and reseller logs in
+            // but still receives admin's notifications
+            console.log('[Push] Syncing existing subscription with current user...');
+            try {
+                await fetch('api/push_subscribe.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pushSubscription.toJSON())
+                });
+                console.log('[Push] Subscription synced with current user');
+            } catch (syncError) {
+                console.warn('[Push] Failed to sync subscription:', syncError);
+            }
+
             statusIcon.textContent = '✅';
             statusText.textContent = 'Notifications enabled';
             subscribeBtn.textContent = '🔕 Disable Notifications';

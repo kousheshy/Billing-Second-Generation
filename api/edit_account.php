@@ -326,7 +326,7 @@ try {
         }
     }
 
-    // Send push notification to admins and reseller admins for renewal (v1.11.47)
+    // Send push notification to admins, reseller admins, AND the actor (v1.11.66)
     // Notify for ALL renewals regardless of who renews them
     if($plan_id != 0) {
         try {
@@ -335,7 +335,8 @@ try {
             $account_display_name = $name ?: ($account['full_name'] ?? $original_username);
             // Use logged-in user's name as the actor (who performed the action)
             $actor_name = $user_info['name'] ?: $user_info['username'];
-            notifyAccountRenewal($pdo, $actor_name, $account_display_name, $plan_name, $new_expiration_date);
+            $actor_id = $user_info['id']; // v1.11.66: Also notify the reseller who performed the action
+            notifyAccountRenewal($pdo, $actor_name, $account_display_name, $plan_name, $new_expiration_date, $actor_id);
         } catch (Exception $e) {
             // Silently fail - don't disrupt account update
             error_log("Push notification failed: " . $e->getMessage());

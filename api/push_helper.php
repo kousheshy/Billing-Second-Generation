@@ -1,10 +1,10 @@
 <?php
 /**
- * Push Notification Helper (v1.11.48)
+ * Push Notification Helper (v1.11.66)
  *
  * Uses minishlink/web-push library for proper Web Push support
  * Handles notifications for:
- * - Admin alerts when ANY user adds/renews accounts (super admin + reseller admins)
+ * - Admin alerts when ANY user adds/renews accounts (super admin + reseller admins + actor)
  * - Expiry alerts for resellers/reseller admins when their accounts expire (NOT super admin)
  */
 
@@ -63,26 +63,39 @@ function sendPushNotification($subscription, $payload) {
 }
 
 /**
- * Send notification to all admins and reseller admins
+ * Send notification to all admins, reseller admins, and optionally the actor
  *
  * @param PDO $pdo - Database connection
  * @param string $title - Notification title
  * @param string $body - Notification body
  * @param array $data - Additional data
+ * @param int|null $actorId - Optional: User ID of the actor (reseller) to also notify (v1.11.66)
  */
-function notifyAdmins($pdo, $title, $body, $data = []) {
+function notifyAdmins($pdo, $title, $body, $data = [], $actorId = null) {
     try {
         // Get all admin and reseller admin subscriptions
         // Permissions format: can_edit|can_add|is_reseller_admin|can_delete|reserved
         // Position 3 (1-indexed) is is_reseller_admin flag
-        $stmt = $pdo->prepare("
+        // v1.11.66: Also include the actor (reseller who performed the action)
+        $sql = "
             SELECT ps.*, u.username, u.super_user, u.permissions
             FROM _push_subscriptions ps
             JOIN _users u ON ps.user_id = u.id
             WHERE u.super_user = 1
                OR SUBSTRING_INDEX(SUBSTRING_INDEX(u.permissions, '|', 3), '|', -1) = '1'
-        ");
-        $stmt->execute();
+        ";
+
+        // Add actor to recipients if provided
+        if ($actorId !== null) {
+            $sql .= " OR u.id = :actor_id";
+        }
+
+        $stmt = $pdo->prepare($sql);
+        if ($actorId !== null) {
+            $stmt->execute(['actor_id' => $actorId]);
+        } else {
+            $stmt->execute();
+        }
         $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         error_log("[Push] Found " . count($subscriptions) . " admin subscriptions");
@@ -132,8 +145,9 @@ function notifyAdmins($pdo, $title, $body, $data = []) {
 /**
  * Notify about new account creation
  * @param string $actorName - Name of user who created the account (admin, reseller admin, or reseller)
+ * @param int|null $actorId - User ID of the actor to also receive notification (v1.11.66)
  */
-function notifyNewAccount($pdo, $actorName, $accountName, $planName) {
+function notifyNewAccount($pdo, $actorName, $accountName, $planName, $actorId = null) {
     $title = '📱 New Account Created';
     $body = "$actorName added: $accountName ($planName)";
 
@@ -143,14 +157,15 @@ function notifyNewAccount($pdo, $actorName, $accountName, $planName) {
         'account' => $accountName,
         'plan' => $planName,
         'url' => '/dashboard.php?tab=accounts'
-    ]);
+    ], $actorId);
 }
 
 /**
  * Notify about account renewal
  * @param string $actorName - Name of user who renewed the account (admin, reseller admin, or reseller)
+ * @param int|null $actorId - User ID of the actor to also receive notification (v1.11.66)
  */
-function notifyAccountRenewal($pdo, $actorName, $accountName, $planName, $newExpiry) {
+function notifyAccountRenewal($pdo, $actorName, $accountName, $planName, $newExpiry, $actorId = null) {
     $title = '🔄 Account Renewed';
     $body = "$actorName renewed: $accountName ($planName) until $newExpiry";
 
@@ -161,7 +176,7 @@ function notifyAccountRenewal($pdo, $actorName, $accountName, $planName, $newExp
         'plan' => $planName,
         'expiry' => $newExpiry,
         'url' => '/dashboard.php?tab=accounts'
-    ]);
+    ], $actorId);
 }
 
 /**

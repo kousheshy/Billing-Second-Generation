@@ -111,9 +111,9 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.64</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.66</small>
         </div>
-        <div class="user-info">
+        <div class="user-info":
             <span id="user-balance"></span>
             <span id="username-display"></span>
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
