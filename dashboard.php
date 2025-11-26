@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.49</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.64</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -2094,6 +2094,19 @@ try {
             </a>
         </div>
     </nav>
+
+    <!-- Push Notification Permission Prompt Modal (v1.11.50) -->
+    <div id="push-prompt-modal" class="modal" style="display: none;">
+        <div class="modal-content push-prompt-content">
+            <div class="push-prompt-icon">🔔</div>
+            <h3>Enable Notifications?</h3>
+            <p>Stay updated with real-time alerts for account activity and expiry.</p>
+            <div class="push-prompt-buttons">
+                <button id="push-prompt-enable" class="btn-primary">Enable</button>
+                <button id="push-prompt-later" class="btn-secondary">Maybe Later</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Alert notification (placed at end of body to ensure it appears on top of modals) -->
     <div id="alert" class="alert"></div>

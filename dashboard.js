@@ -1,9 +1,16 @@
 // ========================================
+// ShowBox Dashboard v1.11.64
+// ========================================
+
+// ========================================
 // Simple Debounce (v1.11.3)
 // Prevents accidental double-clicks only
 // ========================================
 
 let isAccountsLoading = false;
+
+// Store original dual server mode value for cancel functionality (moved here to avoid TDZ error)
+let originalDualServerMode = false;
 
 // Global storage for last call times (shared across all debounced functions)
 const lastCallTimes = {};
@@ -450,7 +457,10 @@ function switchTab(tabName) {
     });
 
     document.getElementById(tabName + '-tab').classList.add('active');
-    event.target.classList.add('active');
+    // v1.11.63: Fix - Only access event.target if event exists (called from click)
+    if (typeof event !== 'undefined' && event && event.target) {
+        event.target.classList.add('active');
+    }
 
     // Save current tab to localStorage for persistence across refreshes
     localStorage.setItem('currentTab', tabName);
@@ -6007,9 +6017,6 @@ function updateSecondaryServerVisibility(dualModeEnabled) {
     }
 }
 
-// Store original dual server mode value for cancel functionality
-let originalDualServerMode = false;
-
 /**
  * Enable edit mode for dual server mode toggle
  */
@@ -7125,30 +7132,40 @@ async function togglePushNotifications() {
 async function subscribePush() {
     const statusDiv = document.getElementById('push-notification-status');
 
-    // Request permission first
+    console.log('[Push] Starting subscription process...');
+
+    // Request permission first (this MUST happen from user interaction on iOS)
     const permission = await Notification.requestPermission();
+    console.log('[Push] Permission result:', permission);
 
     if (permission !== 'granted') {
-        statusDiv.style.display = 'block';
-        statusDiv.style.background = 'var(--warning-bg)';
-        statusDiv.style.color = 'var(--warning)';
-        statusDiv.textContent = 'Permission denied. Please enable notifications in browser settings.';
-        return;
+        if (statusDiv) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'var(--warning-bg)';
+            statusDiv.style.color = 'var(--warning)';
+            statusDiv.textContent = 'Permission denied. Please enable notifications in browser settings.';
+        }
+        throw new Error('Permission denied');
     }
 
     // Get service worker registration
+    console.log('[Push] Getting service worker registration...');
     const registration = await navigator.serviceWorker.ready;
+    console.log('[Push] Service worker ready');
 
     // Convert VAPID key to Uint8Array
     const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
     // Subscribe
+    console.log('[Push] Subscribing to push manager...');
     pushSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey
     });
+    console.log('[Push] Subscription successful:', pushSubscription.endpoint.substring(0, 50) + '...');
 
     // Send subscription to server
+    console.log('[Push] Sending subscription to server...');
     const response = await fetch('api/push_subscribe.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -7156,16 +7173,21 @@ async function subscribePush() {
     });
 
     const result = await response.json();
+    console.log('[Push] Server response:', result);
 
     if (result.error) {
         throw new Error(result.message);
     }
 
-    // Update UI
-    statusDiv.style.display = 'block';
-    statusDiv.style.background = 'var(--success-bg)';
-    statusDiv.style.color = 'var(--success)';
-    statusDiv.textContent = 'Notifications enabled successfully!';
+    // Update UI (statusDiv may not exist if called from prompt modal)
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'var(--success-bg)';
+        statusDiv.style.color = 'var(--success)';
+        statusDiv.textContent = 'Notifications enabled successfully!';
+    }
+
+    console.log('[Push] Subscription complete!');
 
     // Refresh UI
     initPushNotifications();
@@ -7222,6 +7244,189 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initPushNotifications, 1500);
 });
 
+// Push notification auto-prompt - v1.11.64
+(function initPushPrompt() {
+    let promptShown = false;
+
+    function showPromptIfNeeded() {
+        if (promptShown) return;
+        promptShown = true;
+        console.log('[Push Prompt] Checking push notification status...');
+        checkPushNotificationPrompt();
+    }
+
+    // Run after DOM is ready + small delay for app initialization
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('[Push Prompt] DOMContentLoaded fired');
+            setTimeout(showPromptIfNeeded, 2500);
+        });
+    } else {
+        // DOM already loaded
+        console.log('[Push Prompt] DOM already ready');
+        setTimeout(showPromptIfNeeded, 2500);
+    }
+
+    // Fallback: also try on window load
+    window.addEventListener('load', () => {
+        console.log('[Push Prompt] Window load fired');
+        setTimeout(showPromptIfNeeded, 3000);
+    });
+})();
+
+/**
+ * Check if we should show the push notification prompt (v1.11.57)
+ * SIMPLIFIED VERSION - Shows modal first, handles errors on button click
+ *
+ * Key changes for iOS PWA:
+ * - Don't check PushManager/Notification at modal display time
+ * - iOS doesn't expose these until after user interaction
+ * - Just show the modal and let subscribePush() handle errors
+ */
+async function checkPushNotificationPrompt() {
+    console.log('[Push Prompt] === Starting check ===');
+
+    // Detect iOS (includes iPad with iPadOS 13+)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // Detect standalone/PWA mode
+    const isStandalone = window.navigator.standalone === true ||  // iOS specific
+                         window.matchMedia('(display-mode: standalone)').matches;
+
+    console.log('[Push Prompt] Platform info:');
+    console.log('  - iOS:', isIOS);
+    console.log('  - Standalone:', isStandalone);
+    console.log('  - navigator.standalone:', window.navigator.standalone);
+    console.log('  - serviceWorker supported:', 'serviceWorker' in navigator);
+
+    // Basic requirement: service worker support
+    if (!('serviceWorker' in navigator)) {
+        console.log('[Push Prompt] No service worker support - cannot show prompt');
+        return;
+    }
+
+    // For non-iOS browsers: Check if push is supported before showing modal
+    // For iOS: Skip these checks (APIs not available until user interaction)
+    if (!isIOS) {
+        if (!('PushManager' in window)) {
+            console.log('[Push Prompt] PushManager not available (non-iOS)');
+            return;
+        }
+        if (!('Notification' in window)) {
+            console.log('[Push Prompt] Notification API not available (non-iOS)');
+            return;
+        }
+        if (Notification.permission === 'denied') {
+            console.log('[Push Prompt] Notification permission denied');
+            return;
+        }
+    }
+
+    // Check localStorage for "Maybe Later" state
+    try {
+        const promptState = localStorage.getItem('push_notification_prompt');
+        if (promptState) {
+            const state = JSON.parse(promptState);
+            console.log('[Push Prompt] localStorage state:', state);
+
+            // If already enabled, verify subscription exists
+            if (state.enabled) {
+                // Try to verify, but don't wait too long
+                try {
+                    const reg = await Promise.race([
+                        navigator.serviceWorker.ready,
+                        new Promise((_, r) => setTimeout(() => r('timeout'), 2000))
+                    ]);
+                    if (reg && reg.pushManager) {
+                        const sub = await reg.pushManager.getSubscription();
+                        if (sub) {
+                            console.log('[Push Prompt] Already subscribed - not showing prompt');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.log('[Push Prompt] Could not verify subscription:', e);
+                }
+                // Subscription not found, clear stale state
+                console.log('[Push Prompt] Clearing stale enabled state');
+                localStorage.removeItem('push_notification_prompt');
+            }
+
+            // If user clicked "Maybe Later" less than 7 days ago
+            if (state.later) {
+                const daysSince = (Date.now() - state.timestamp) / (1000 * 60 * 60 * 24);
+                if (daysSince < 7) {
+                    console.log('[Push Prompt] User clicked Later', daysSince.toFixed(1), 'days ago');
+                    return;
+                }
+            }
+        }
+    } catch (e) {
+        console.log('[Push Prompt] localStorage error:', e);
+        // Continue anyway
+    }
+
+    // Show the modal
+    console.log('[Push Prompt] >>> SHOWING MODAL <<<');
+    showPushPromptModal();
+}
+
+/**
+ * Show the push notification prompt modal
+ */
+function showPushPromptModal() {
+    const modal = document.getElementById('push-prompt-modal');
+    if (!modal) {
+        console.log('[Push Prompt] Modal element not found');
+        return;
+    }
+
+    modal.style.display = 'flex';
+
+    // Handle "Enable" button
+    const enableBtn = document.getElementById('push-prompt-enable');
+    enableBtn.onclick = async () => {
+        modal.style.display = 'none';
+
+        // Try to subscribe FIRST, only mark as enabled if successful
+        try {
+            await subscribePush();
+            // Only mark as enabled if subscription succeeded
+            localStorage.setItem('push_notification_prompt', JSON.stringify({
+                enabled: true,
+                timestamp: Date.now()
+            }));
+            showAlert('Notifications enabled successfully!', 'success');
+        } catch (e) {
+            console.error('[Push Prompt] Subscribe error:', e);
+            // Don't mark as enabled - allow prompt to show again
+            showAlert('Could not enable notifications. You can try again in Settings.', 'warning');
+        }
+    };
+
+    // Handle "Maybe Later" button
+    const laterBtn = document.getElementById('push-prompt-later');
+    laterBtn.onclick = () => {
+        modal.style.display = 'none';
+
+        // Store "later" state
+        localStorage.setItem('push_notification_prompt', JSON.stringify({
+            later: true,
+            timestamp: Date.now()
+        }));
+
+        console.log('[Push Prompt] User clicked "Maybe Later"');
+    };
+
+    // Close modal when clicking outside
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            laterBtn.click();
+        }
+    };
+}
+
 // ========================================
-// End of Push Notifications (v1.11.41)
+// End of Push Notifications (v1.11.50)
 // ========================================

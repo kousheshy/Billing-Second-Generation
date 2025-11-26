@@ -4599,3 +4599,73 @@ body.pwa-mode .modal-header {
 /* ========================================
    End of Phone Number Input Styles
    ======================================== */
+
+/* ========================================
+   Push Notification Prompt Modal (v1.11.50)
+   ======================================== */
+
+.push-prompt-content {
+    max-width: 360px;
+    text-align: center;
+    padding: 30px;
+}
+
+.push-prompt-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    animation: bellRing 1s ease-in-out;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0); }
+    10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+    20%, 40%, 60%, 80% { transform: rotate(10deg); }
+}
+
+.push-prompt-content h3 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    color: var(--text-primary);
+}
+
+.push-prompt-content p {
+    margin: 0 0 25px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.push-prompt-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.push-prompt-buttons .btn-primary {
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+}
+
+.push-prompt-buttons .btn-secondary {
+    padding: 10px 20px;
+    font-size: 14px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.push-prompt-buttons .btn-secondary:hover {
+    color: var(--text-primary);
+}
+
+/* PWA mode adjustments for push prompt */
+body.pwa-mode .push-prompt-content {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+}
+
+/* ========================================
+   End of Push Notification Prompt Styles
+   ======================================== */

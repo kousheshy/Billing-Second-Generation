@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.64] - 2025-11-26
+
+### Changed - Push Notification UX Improvements
+
+**Status:** Production Release - Major Enhancement
+
+**Overview**
+Significant improvements to push notification subscription flow with custom prompt modal, better iOS compatibility, and enhanced debugging.
+
+**New Features**
+
+1. **Custom Push Permission Prompt Modal (v1.11.50)**
+   - Beautiful custom modal before browser permission prompt
+   - Explains benefits of notifications to users
+   - "Enable Notifications" and "Maybe Later" options
+   - Animated bell icon with ring effect
+   - **Files**: `dashboard.php` (lines 2098-2115), `dashboard.css` (70 new lines)
+
+2. **Improved iOS Compatibility**
+   - Permission request happens directly from user interaction (iOS requirement)
+   - Fixed async/await flow for iOS Safari
+   - Proper error handling for denied permissions
+   - Better PWA mode support
+
+3. **Enhanced Debugging & Logging**
+   - Added comprehensive console logging throughout subscription flow
+   - Tracks permission request, service worker, subscription, and server sync
+   - Helps troubleshoot issues on different devices/browsers
+   - **Files**: `dashboard.js` (subscribePush function)
+
+4. **Dual Server Mode Fix (v1.11.63)**
+   - Fixed TDZ (Temporal Dead Zone) error with originalDualServerMode
+   - Moved variable declaration to top of file
+   - Fixed switchTab event handling when called programmatically
+   - **Files**: `dashboard.js` (lines 7, 460-463)
+
+**UI/UX Improvements**
+- Custom prompt is more user-friendly than browser default
+- Clear explanation of notification value proposition
+- Smooth animation for visual appeal
+- Responsive design for mobile and desktop
+- PWA mode adjustments with bottom sheet style
+
+**Technical Changes**
+- Permission check moved earlier in flow
+- Proper error propagation and user feedback
+- Status messages for permission denied state
+- Service worker registration logging
+- Subscription endpoint logging (truncated)
+
+**Files Modified**
+- `dashboard.js`: Enhanced subscription flow, debugging, bug fixes
+- `dashboard.php`: New push prompt modal
+- `dashboard.css`: Complete push prompt styling (70 lines)
+- `service-worker.js`: Cache version bump to v1.11.64
+
+**Impact**
+- Higher notification opt-in rate with custom prompt
+- Better user understanding of notification benefits
+- Easier troubleshooting with debug logs
+- Improved iOS/PWA compatibility
+- Fixed dual server mode bug
+
+---
+
 ## [1.11.49] - 2025-11-26
 
 ### Changed - Version Bump & Cache Busting
