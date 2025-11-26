@@ -676,16 +676,16 @@ if($decoded->status == 'OK')
             }
         }
 
-        // Send push notification to admins (v1.11.41)
-        // Only notify when a reseller (not super admin) creates an account
-        if ($user_info['super_user'] != 1) {
-            try {
-                include_once(__DIR__ . '/push_helper.php');
-                notifyNewAccount($pdo, $reseller_info['name'], $name ?: $username, $plan_name);
-            } catch (Exception $e) {
-                // Silently fail - don't disrupt account creation
-                error_log("Push notification failed: " . $e->getMessage());
-            }
+        // Send push notification to admins and reseller admins (v1.11.47)
+        // Notify for ALL account creations regardless of who creates them
+        try {
+            include_once(__DIR__ . '/push_helper.php');
+            // Use logged-in user's name as the actor (who performed the action)
+            $actor_name = $user_info['name'] ?: $user_info['username'];
+            notifyNewAccount($pdo, $actor_name, $name ?: $username, $plan_name);
+        } catch (Exception $e) {
+            // Silently fail - don't disrupt account creation
+            error_log("Push notification failed: " . $e->getMessage());
         }
 
         $response['error']=0;

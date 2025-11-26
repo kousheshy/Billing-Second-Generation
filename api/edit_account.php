@@ -326,14 +326,16 @@ try {
         }
     }
 
-    // Send push notification to admins for renewal (v1.11.41)
-    // Only notify when a reseller (not super admin) renews an account
-    if($plan_id != 0 && $user_info['super_user'] != 1) {
+    // Send push notification to admins and reseller admins for renewal (v1.11.47)
+    // Notify for ALL renewals regardless of who renews them
+    if($plan_id != 0) {
         try {
             include_once(__DIR__ . '/push_helper.php');
             $plan_name = isset($plan) && $plan ? $plan['name'] : 'Plan #' . $plan_id;
             $account_display_name = $name ?: ($account['full_name'] ?? $original_username);
-            notifyAccountRenewal($pdo, $user_info['name'], $account_display_name, $plan_name, $new_expiration_date);
+            // Use logged-in user's name as the actor (who performed the action)
+            $actor_name = $user_info['name'] ?: $user_info['username'];
+            notifyAccountRenewal($pdo, $actor_name, $account_display_name, $plan_name, $new_expiration_date);
         } catch (Exception $e) {
             // Silently fail - don't disrupt account update
             error_log("Push notification failed: " . $e->getMessage());

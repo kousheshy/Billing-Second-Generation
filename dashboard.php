@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.46</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.47</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -621,18 +621,20 @@ try {
                 <!-- Push Notification Settings (Admin & Reseller Admin Only) -->
                 <div id="push-notification-section" class="settings-item" style="margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
                     <h3 style="margin-bottom: 10px;">Push Notifications</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Receive notifications when resellers add or renew accounts.</p>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Receive notifications when accounts are added or renewed.</p>
 
-                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <div id="push-status" style="display: flex; align-items: center; gap: 10px;">
-                            <span id="push-status-icon">...</span>
-                            <span id="push-status-text">Checking...</span>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <div id="push-status" style="display: flex; align-items: center; gap: 10px; min-width: 180px;">
+                                <span id="push-status-icon">...</span>
+                                <span id="push-status-text">Checking...</span>
+                            </div>
+                            <button id="push-subscribe-btn" class="btn-primary" onclick="togglePushNotifications()" style="display:none;">
+                                Enable Notifications
+                            </button>
                         </div>
-                        <button id="push-subscribe-btn" class="btn-primary" onclick="togglePushNotifications()" style="display:none;">
-                            Enable Notifications
-                        </button>
+                        <div id="push-notification-status" style="display:none; padding: 10px; border-radius: 6px;"></div>
                     </div>
-                    <div id="push-notification-status" style="margin-top: 12px; display:none; padding: 10px; border-radius: 6px;"></div>
                     <p style="color: var(--text-secondary); font-size: 12px; margin-top: 15px;">
                         <strong>Note:</strong> On iOS, you must install this app to Home Screen first (Share > Add to Home Screen), then enable notifications.
                     </p>

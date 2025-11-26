@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.47] - 2025-11-26
+
+### Changed - Push Notification Coverage Expansion
+
+**Status:** Production Release - Feature Enhancement
+
+**Overview**
+Expanded push notification coverage to notify all admins and reseller admins regardless of who performs the action.
+
+**Changes**
+
+1. **Notification Logic Update**
+   - **Previous Behavior**: Only notified when resellers created/renewed accounts
+   - **New Behavior**: Notifies for ALL account creations/renewals regardless of actor
+   - **Rationale**: Admins and reseller admins want to see ALL activity, not just reseller activity
+   - **Files**: `api/add_account.php` (lines 679-689), `api/edit_account.php` (lines 329-339)
+
+2. **Actor Name in Notifications**
+   - Shows who performed the action (admin, reseller admin, or reseller)
+   - Uses logged-in user's name with fallback to username
+   - Clear attribution of account operations
+
+3. **Reseller Admin Query Fix**
+   - **Issue**: Used string search `LIKE '%is_reseller_admin%'` which could match wrong data
+   - **Fix**: Changed to proper pipe-delimited parsing `SUBSTRING_INDEX(permissions, '|', 3)`
+   - **Files**: `api/push_helper.php` (line 82)
+   - **Format**: `can_edit|can_add|is_reseller_admin|can_delete|reserved`
+
+4. **UI Improvements**
+   - Reworded notification description to be more accurate
+   - Improved layout spacing and alignment
+   - Better visual hierarchy for status messages
+   - **Files**: `dashboard.php` (lines 621-636)
+
+**Impact**
+- Super admins see all account activity system-wide
+- Reseller admins see all activity within their scope
+- Clear visibility of who performed each action
+- More robust permission checking
+
+---
+
 ## [1.11.46] - 2025-11-25
 
 ### Fixed - Push Notification VAPID Subject & Display Name

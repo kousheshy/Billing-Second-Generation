@@ -1,9 +1,10 @@
 <?php
 /**
- * Push Notification Helper (v1.11.45)
+ * Push Notification Helper (v1.11.47)
  *
  * Uses minishlink/web-push library for proper Web Push support
- * Handles notifications for admin alerts when resellers add/renew accounts
+ * Handles notifications for admin alerts when ANY user adds/renews accounts
+ * Both super admins and reseller admins receive all notifications
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -71,12 +72,14 @@ function sendPushNotification($subscription, $payload) {
 function notifyAdmins($pdo, $title, $body, $data = []) {
     try {
         // Get all admin and reseller admin subscriptions
+        // Permissions format: can_edit|can_add|is_reseller_admin|can_delete|reserved
+        // Position 3 (1-indexed) is is_reseller_admin flag
         $stmt = $pdo->prepare("
             SELECT ps.*, u.username, u.super_user, u.permissions
             FROM _push_subscriptions ps
             JOIN _users u ON ps.user_id = u.id
             WHERE u.super_user = 1
-               OR u.permissions LIKE '%is_reseller_admin%'
+               OR SUBSTRING_INDEX(SUBSTRING_INDEX(u.permissions, '|', 3), '|', -1) = '1'
         ");
         $stmt->execute();
         $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -127,15 +130,16 @@ function notifyAdmins($pdo, $title, $body, $data = []) {
 
 /**
  * Notify about new account creation
+ * @param string $actorName - Name of user who created the account (admin, reseller admin, or reseller)
  */
-function notifyNewAccount($pdo, $resellerName, $accountUsername, $planName) {
-    $title = 'New Account Created';
-    $body = "$resellerName created account: $accountUsername ($planName)";
+function notifyNewAccount($pdo, $actorName, $accountName, $planName) {
+    $title = '📱 New Account Created';
+    $body = "$actorName added: $accountName ($planName)";
 
     return notifyAdmins($pdo, $title, $body, [
         'type' => 'new_account',
-        'reseller' => $resellerName,
-        'account' => $accountUsername,
+        'actor' => $actorName,
+        'account' => $accountName,
         'plan' => $planName,
         'url' => '/dashboard.php?tab=accounts'
     ]);
@@ -143,15 +147,16 @@ function notifyNewAccount($pdo, $resellerName, $accountUsername, $planName) {
 
 /**
  * Notify about account renewal
+ * @param string $actorName - Name of user who renewed the account (admin, reseller admin, or reseller)
  */
-function notifyAccountRenewal($pdo, $resellerName, $accountUsername, $planName, $newExpiry) {
-    $title = 'Account Renewed';
-    $body = "$resellerName renewed: $accountUsername ($planName) until $newExpiry";
+function notifyAccountRenewal($pdo, $actorName, $accountName, $planName, $newExpiry) {
+    $title = '🔄 Account Renewed';
+    $body = "$actorName renewed: $accountName ($planName) until $newExpiry";
 
     return notifyAdmins($pdo, $title, $body, [
         'type' => 'renewal',
-        'reseller' => $resellerName,
-        'account' => $accountUsername,
+        'actor' => $actorName,
+        'account' => $accountName,
         'plan' => $planName,
         'expiry' => $newExpiry,
         'url' => '/dashboard.php?tab=accounts'
