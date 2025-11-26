@@ -2,8 +2,8 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.11.49
-**Last Updated:** November 26, 2025
+**Version:** 1.11.66
+**Last Updated:** November 27, 2025
 **Database:** MySQL 5.7+
 **Character Set:** UTF8MB4
 **Collation:** utf8mb4_unicode_ci
@@ -1068,7 +1068,7 @@ For database support:
 
 ---
 
-**Document Version:** 1.11.49
-**Last Updated:** November 26, 2025
+**Document Version:** 1.11.66
+**Last Updated:** November 27, 2025
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi

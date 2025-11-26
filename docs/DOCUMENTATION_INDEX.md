@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.11.22!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.11.66!
 
 ---
 

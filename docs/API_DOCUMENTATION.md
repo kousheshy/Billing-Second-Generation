@@ -2,8 +2,8 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.11.46
-**Last Updated:** November 25, 2025
+**Version:** 1.11.66
+**Last Updated:** November 27, 2025
 **Base URL:** `http://your-domain.com/`
 
 ---
@@ -1505,7 +1505,9 @@ The `permissions` field is a pipe-delimited string with 7 fields:
 ### Subscribe to Push Notifications
 **Endpoint:** `POST /api/push_subscribe.php`
 
-**Description:** Subscribe to push notifications. Creates or updates a subscription.
+**Description:** Subscribe to push notifications. Creates a new subscription or updates an existing one.
+
+**Important (v1.11.65):** If the endpoint already exists in the database, the `user_id` is updated to the current session user. This ensures proper notification routing when multiple users share the same device.
 
 **Headers:** Requires active session cookie.
 
@@ -1527,6 +1529,10 @@ The `permissions` field is a pipe-delimited string with 7 fields:
   "message": "Subscribed to notifications"
 }
 ```
+
+**Behavior:**
+- New endpoint: Creates new subscription record
+- Existing endpoint: Updates `user_id`, `p256dh`, `auth`, and `user_agent`
 
 ---
 
@@ -1558,17 +1564,27 @@ If no endpoint is provided, all subscriptions for the user are removed.
 
 ### Push Notification Triggers
 
-Push notifications are automatically sent to admins and reseller admins when:
+Push notifications are automatically sent when accounts are created, renewed, or expired.
 
-1. **New Account Created** (by reseller)
-   - Triggered in: `api/add_account.php`
-   - Notification: "{Reseller} created account: {FullName} ({Plan})"
+#### 1. New Account Created (v1.11.66)
+- **Triggered in:** `api/add_account.php`
+- **Notification:** "📱 {Actor} added: {FullName} ({Plan})"
+- **Recipients:** Super Admin + Reseller Admins + Actor (the reseller who created it)
 
-2. **Account Renewed** (by reseller)
-   - Triggered in: `api/edit_account.php`
-   - Notification: "{Reseller} renewed: {FullName} ({Plan}) until {Date}"
+#### 2. Account Renewed (v1.11.66)
+- **Triggered in:** `api/edit_account.php`
+- **Notification:** "🔄 {Actor} renewed: {FullName} ({Plan}) until {Date}"
+- **Recipients:** Super Admin + Reseller Admins + Actor (the reseller who renewed it)
 
-**Note:** Notifications are only sent when a reseller (not super admin) performs the action.
+#### 3. Account Expired (v1.11.48)
+- **Triggered by:** `api/cron_check_expired.php` (cron job every 10 minutes)
+- **Notification:** "⚠️ {FullName} has expired ({Date})"
+- **Recipients:** Reseller Admins + Account Owner (NOT super admin)
+
+**Notes:**
+- v1.11.66: Resellers now receive notifications for their own actions
+- v1.11.65: Subscription syncs with current user on login (fixes cross-user notification issue)
+- Expiry notifications are only sent once per account per expiry date (tracked in `_push_expiry_tracking`)
 
 ---
 

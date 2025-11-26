@@ -673,13 +673,33 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.49
-**Last Updated:** November 26, 2025
+**Version:** 1.11.66
+**Last Updated:** November 27, 2025
 **Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.66** (Nov 2025) - Reseller Self-Notification & Push Subscription Sync
+  - **Reseller Self-Notification**: Resellers now receive push notifications for their own add/renew actions
+  - **Push Subscription Sync**: Subscription syncs with current user on every login (fixes cross-user notifications)
+  - **Actor Parameter**: `notifyAdmins()` now accepts optional `$actorId` to include actor in recipients
+  - **Multi-User Device Fix**: Prevents admin notifications going to reseller after logout/login
+  - **Files Modified**: push_helper.php, add_account.php, edit_account.php, dashboard.js, service-worker.js
+
+- **v1.11.65** (Nov 2025) - Push Subscription Sync on Login
+  - **User Switching Fix**: Sync push subscription with current user on every login
+  - **Prevents Cross-User Notifications**: Admin logs out → Reseller logs in → No longer receives admin's notifications
+  - **Server-Side Update**: Updates `user_id` in `_push_subscriptions` table for existing endpoints
+  - **Auto-Logout & Session Expiry Safe**: Works correctly even when session times out
+  - **Files Modified**: dashboard.js (initPushNotifications function)
+
+- **v1.11.64** (Nov 2025) - Push Notification UX Improvements
+  - **Custom Push Prompt Modal**: Beautiful modal explaining benefits before browser permission request
+  - **TDZ Bug Fix**: Fixed `originalDualServerMode` Temporal Dead Zone error
+  - **switchTab Fix**: Fixed event.target error when calling switchTab programmatically
+  - **Enhanced Debugging**: Comprehensive console logging for push subscription flow
 
 - **v1.11.49** (Nov 2025) - Version Bump & Cache Busting
   - **Cache Refresh**: Version bump to force cache refresh on all clients
@@ -1118,4 +1138,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.11.49**
+**ShowBox Billing System v1.11.66**

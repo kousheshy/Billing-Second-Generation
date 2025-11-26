@@ -1,7 +1,7 @@
 # Push Notifications Feature
 
-## Version: 1.11.49
-## Date: 2025-11-26
+## Version: 1.11.66
+## Date: 2025-11-27
 
 ---
 
@@ -40,11 +40,13 @@ Push notifications provide real-time alerts for account operations in the ShowBo
 
 ### Who Receives Which Notifications
 
-| Notification Type | Super Admin | Reseller Admin | Reseller (Owner) |
-|-------------------|-------------|----------------|------------------|
-| New Account | ✅ | ✅ | ❌ |
-| Account Renewed | ✅ | ✅ | ❌ |
-| Account Expired | ❌ | ✅ | ✅ (own accounts only) |
+| Notification Type | Super Admin | Reseller Admin | Reseller (Actor) | Reseller (Owner) |
+|-------------------|-------------|----------------|------------------|------------------|
+| New Account | ✅ | ✅ | ✅ (v1.11.66) | - |
+| Account Renewed | ✅ | ✅ | ✅ (v1.11.66) | - |
+| Account Expired | ❌ | ✅ | - | ✅ (own accounts only) |
+
+**Note (v1.11.66):** "Reseller (Actor)" means the reseller who performed the action receives a notification confirming their action.
 
 ### Who Can Enable Push Notifications (v1.11.48+)
 
@@ -371,6 +373,9 @@ Example output:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.11.66 | 2025-11-27 | Resellers receive notifications for their own actions (actor ID passed to notifyAdmins) |
+| 1.11.65 | 2025-11-27 | Push subscription sync on login (fixes cross-user notification issue) |
+| 1.11.64 | 2025-11-26 | Custom push prompt modal, TDZ bug fix, enhanced debugging |
 | 1.11.49 | 2025-11-26 | Version bump for cache refresh |
 | 1.11.48 | 2025-11-26 | Added expiry notifications, cron job, tracking table, all users can enable |
 | 1.11.47 | 2025-11-26 | Expanded to notify for ALL account operations, fixed permission query |
@@ -388,6 +393,29 @@ Example output:
 2. **VAPID Authentication:** All push requests are signed with VAPID private key
 3. **HTTPS Required:** Push notifications only work over HTTPS
 4. **User Consent:** Browser requires explicit user permission
+5. **Subscription Sync (v1.11.65):** Subscription user_id is updated on every login to prevent cross-user notifications
+
+### Push Subscription Sync (v1.11.65)
+
+When multiple users share the same device (e.g., admin and reseller), the push subscription must be associated with the currently logged-in user. Without this:
+
+**Problem:** Admin enables notifications → Logs out → Reseller logs in → Reseller receives admin's notifications
+
+**Solution:** On every login, the client sends the existing subscription to the server, which updates the `user_id` in `_push_subscriptions` table.
+
+```javascript
+// dashboard.js - initPushNotifications()
+if (pushSubscription) {
+    // Sync subscription with current user on every login
+    await fetch('api/push_subscribe.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pushSubscription.toJSON())
+    });
+}
+```
+
+This ensures notifications are always delivered to the correct user, regardless of who previously enabled them on that device.
 
 ---
 
@@ -395,6 +423,8 @@ Example output:
 
 - [x] ~~Expiry notifications for resellers~~ (Completed v1.11.48)
 - [x] ~~All users can enable push notifications~~ (Completed v1.11.48)
+- [x] ~~Subscription sync on login (multi-user device support)~~ (Completed v1.11.65)
+- [x] ~~Reseller self-notification for own actions~~ (Completed v1.11.66)
 - [ ] Notification preferences (choose which events to receive)
 - [ ] Sound customization
 - [ ] Notification grouping for multiple events
