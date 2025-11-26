@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.12.0</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.13.0</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -871,6 +871,72 @@ try {
                             <div style="display: flex; gap: 8px;">
                                 <button id="admin-login-history-prev" class="btn-secondary" onclick="loadAdminLoginHistory(adminLoginHistoryCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
                                 <button id="admin-login-history-next" class="btn-secondary" onclick="loadAdminLoginHistory(adminLoginHistoryCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Log Section (Super Admin Only) -->
+                <div id="audit-log-section" class="settings-item" style="display: none; margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                        Audit Log
+                        <span style="font-size: 11px; padding: 3px 8px; background: #dc2626; color: white; border-radius: 4px; font-weight: normal;">PERMANENT - Cannot Be Deleted</span>
+                    </h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Complete audit trail of all actions in the system. This log is permanent and cannot be deleted by anyone.</p>
+
+                    <!-- Filters -->
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                        <select id="audit-user-filter" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 150px;">
+                            <option value="all">All Users</option>
+                        </select>
+                        <select id="audit-action-filter" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 120px;">
+                            <option value="">All Actions</option>
+                        </select>
+                        <select id="audit-target-filter" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 120px;">
+                            <option value="">All Types</option>
+                        </select>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="color: var(--text-secondary); font-size: 13px;">From:</span>
+                            <input type="date" id="audit-date-from" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="color: var(--text-secondary); font-size: 13px;">To:</span>
+                            <input type="date" id="audit-date-to" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
+                        </div>
+                        <input type="text" id="audit-search" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 150px;" placeholder="Search...">
+                        <button class="btn-primary" onclick="loadAuditLog(1)" style="padding: 8px 16px;">Filter</button>
+                        <button class="btn-secondary" onclick="clearAuditFilters()" style="padding: 8px 16px;">Clear</button>
+                    </div>
+
+                    <div id="audit-log-container">
+                        <div id="audit-log-loading" style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                            Loading audit log...
+                        </div>
+                        <div id="audit-log-table-container" style="display: none; overflow-x: auto;">
+                            <table class="data-table" style="width: 100%; border-collapse: collapse; min-width: 900px;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;">Date & Time</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;">User</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;">Action</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;">Target</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;">Details</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;">IP Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-log-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="audit-log-empty" style="display: none; padding: 20px; text-align: center; color: var(--text-secondary);">
+                            No audit log entries found.
+                        </div>
+                        <!-- Pagination -->
+                        <div id="audit-log-pagination" style="display: none; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div id="audit-log-page-info" style="color: var(--text-secondary); font-size: 13px;"></div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="audit-log-prev" class="btn-secondary" onclick="loadAuditLog(auditLogCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
+                                <button id="audit-log-next" class="btn-secondary" onclick="loadAuditLog(auditLogCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ ini_set('display_startup_errors', 0);
 error_reporting(0);
 include(__DIR__ . '/../config.php');
 include('api.php');
+include('audit_helper.php'); // Include audit log helper
 
 if(isset($_SESSION['login']))
 {
@@ -136,8 +137,29 @@ error_log("Server 1 delete response: " . $res);
 
 if($decoded->status == 'OK')
 {
+    // Get account data before deletion for audit log (v1.12.0)
+    $stmt = $pdo->prepare('SELECT * FROM _accounts WHERE username = ?');
+    $stmt->execute([$id]);
+    $account_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
     $stmt = $pdo->prepare('DELETE FROM _accounts WHERE username = ?');
     $stmt->execute([$id]);
+
+    // Audit log: Account deleted (v1.12.0)
+    try {
+        if ($account_data) {
+            $audit_data = [
+                'mac' => $account_data['mac'] ?? $mac,
+                'username' => $account_data['username'] ?? $id,
+                'name' => $account_data['full_name'] ?? '',
+                'expiry' => $account_data['end_date'] ?? '',
+                'reseller_id' => $account_data['reseller'] ?? null
+            ];
+            auditAccountDeleted($pdo, $account_data['id'] ?? null, $mac, $audit_data);
+        }
+    } catch (Exception $e) {
+        error_log("Audit log failed: " . $e->getMessage());
+    }
 
     $response['error'] = 0;
     $response['err_msg'] = '';

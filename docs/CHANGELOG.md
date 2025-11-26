@@ -7,6 +7,159 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.0] - 2025-11-27
+
+### Added - Audit Log System (Permanent Action Tracking)
+
+**Status:** Production Release - Critical Feature
+
+**Overview**
+Comprehensive audit logging system that permanently records ALL user actions for compliance, security, and forensic purposes. Unlike login history, audit logs are PERMANENT and cannot be deleted.
+
+**New Features**
+
+1. **Audit Helper Library**
+   - Centralized audit logging function: `logAuditEvent()`
+   - Automatic user context detection (from session)
+   - JSON encoding of old/new values
+   - Graceful failure (doesn't break operations if logging fails)
+   - **Files**: `api/audit_helper.php` (new file)
+
+2. **Account Action Auditing**
+   - Create Account: Logs all account details (MAC, username, plan, expiry)
+   - Update Account: Logs before/after values for renewals and edits
+   - Delete Account: Logs complete account info before deletion
+   - **Files**: `api/add_account.php`, `api/edit_account.php`, `api/remove_account.php`
+
+3. **Audit Log Viewer**
+   - New Settings tab: "Audit Log"
+   - Paginated view: 50 entries per page
+   - Filters: Action type, Target type, Date range
+   - Color-coded action badges (create=green, update=blue, delete=red)
+   - Expandable JSON viewer for old/new values
+   - **Files**: `dashboard.php` (66 new lines), `dashboard.js` (238 new lines)
+
+4. **Audit Log API**
+   - GET endpoint: `api/get_audit_log.php`
+   - Pagination: page, per_page parameters
+   - Filters: action, target_type, date_from, date_to
+   - Admin-only access (super_user = 1)
+   - **Files**: `api/get_audit_log.php` (new file)
+
+5. **Database Schema**
+   - New table: `_audit_log`
+   - Columns: id, user_id, username, action, target_type, target_id, target_name, old_value, new_value, details, ip_address, created_at
+   - Indexes: user_id, action, target_type, created_at for performance
+   - Migration script included
+   - **Files**: `scripts/create_audit_log_table.php`
+
+**Audited Actions**
+
+**Account Operations:**
+- Create: MAC address, username, password, plan, expiry date, full name, phone, email, notes
+- Update/Renew: Plan changes, expiry extensions, password resets, profile edits
+- Delete: Complete account information before deletion
+
+**UI Features**
+- Action badges with color coding
+- Target type indicators
+- Expandable JSON viewer for complex data
+- User attribution (who did what)
+- Timestamp display
+- IP address logging
+- Filter controls for searching
+- "Load More" pagination
+
+**Technical Details**
+- JSON encoding for structured data
+- Graceful error handling
+- Doesn't disrupt main operations
+- Automatic table creation check
+- Session-based user detection
+- IP address capture from $_SERVER
+
+**Security Features**
+- Admin-only access to logs
+- Permanent records (no delete capability)
+- Tamper-evident (timestamped, immutable)
+- Complete action history
+- User attribution for accountability
+
+**Database Structure**
+```sql
+CREATE TABLE _audit_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  username VARCHAR(100),
+  action VARCHAR(50) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id VARCHAR(100),
+  target_name VARCHAR(200),
+  old_value TEXT,
+  new_value TEXT,
+  details TEXT,
+  ip_address VARCHAR(45),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id (user_id),
+  INDEX idx_action (action),
+  INDEX idx_target_type (target_type),
+  INDEX idx_created_at (created_at)
+);
+```
+
+**Action Types**
+- `create`: New resource created
+- `update`: Existing resource modified
+- `delete`: Resource permanently removed
+- `view`: Sensitive data accessed (future)
+- `export`: Data exported (future)
+- `login`: User authentication (via login_history)
+- `logout`: User session ended (future)
+
+**Target Types**
+- `account`: Customer IPTV accounts
+- `user`: System users (future)
+- `reseller`: Reseller accounts (future)
+- `plan`: Subscription plans (future)
+- `settings`: System configuration (future)
+- `sms`: SMS operations (future)
+
+**Use Cases**
+- Compliance auditing (SOC2, GDPR, etc.)
+- Security forensics
+- Dispute resolution
+- Performance monitoring
+- User behavior analysis
+- Regulatory requirements
+
+**Files Added**
+- `api/audit_helper.php`: Core logging library
+- `api/get_audit_log.php`: Retrieval API
+- `scripts/create_audit_log_table.php`: Database migration
+
+**Files Modified**
+- `api/add_account.php`: Log account creation (16 new lines)
+- `api/edit_account.php`: Log account updates (20 new lines)
+- `api/remove_account.php`: Log account deletion (22 new lines)
+- `dashboard.php`: Audit Log tab UI (66 new lines)
+- `dashboard.js`: Audit viewer logic (238 new lines)
+
+**Benefits**
+- Complete accountability
+- Compliance readiness
+- Security forensics capability
+- Dispute resolution evidence
+- Regulatory compliance
+- Tamper-evident audit trail
+
+**Impact**
+- Enterprise-grade auditing
+- Full traceability
+- Compliance support
+- Professional security posture
+
+---
+
 ## [1.12.0] - 2025-11-27
 
 ### Added - Login History & Activity Tracking

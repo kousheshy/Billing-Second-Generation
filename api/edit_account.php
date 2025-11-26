@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 include(__DIR__ . '/../config.php');
 include('api.php');
 include('sms_helper.php'); // Include SMS helper functions
+include('audit_helper.php'); // Include audit log helper
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1)
 {
@@ -358,6 +359,25 @@ try {
         'plan_found' => isset($plan) && $plan ? true : false,
         'new_expiration' => $new_expiration_date
     ];
+
+    // Audit log: Account updated/renewed (v1.12.0)
+    try {
+        $old_data = [
+            'name' => $account['full_name'] ?? '',
+            'expiry' => $account['end_date'] ?? '',
+            'status' => $account['status'] ?? 1
+        ];
+        $new_data = [
+            'name' => $name,
+            'expiry' => $new_expiration_date,
+            'status' => $status,
+            'plan' => isset($plan) && $plan ? $plan['name'] : null
+        ];
+        $audit_details = $plan_id != 0 ? 'Account renewed' : 'Account updated';
+        auditAccountUpdated($pdo, $account['id'] ?? null, $account['mac'] ?? $original_username, $old_data, $new_data, $audit_details);
+    } catch (Exception $e) {
+        error_log("Audit log failed: " . $e->getMessage());
+    }
 
 } catch(Exception $e) {
     $response['error'] = 1;

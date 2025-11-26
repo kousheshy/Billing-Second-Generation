@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.12.0
+// ShowBox Dashboard v1.13.0
 // ========================================
 
 // ========================================
@@ -509,6 +509,10 @@ function switchTab(tabName) {
     if(tabName === 'settings') {
         if (typeof initLoginHistory === 'function') {
             initLoginHistory();
+        }
+        // Load audit log for super admin (v1.12.0)
+        if (typeof initAuditLog === 'function') {
+            initAuditLog();
         }
     }
 }
@@ -7765,4 +7769,238 @@ function initLoginHistory() {
 
 // ========================================
 // End of Login History (v1.12.0)
+// ========================================
+
+// ========================================
+// Audit Log (v1.12.0)
+// Permanent audit trail - no delete capability
+// ========================================
+
+// Audit log pagination state
+let auditLogCurrentPage = 1;
+let auditLogTotalPages = 1;
+
+/**
+ * Format action type for display
+ */
+function formatAuditAction(action) {
+    const actionLabels = {
+        'create': '<span style="color: #22c55e; font-weight: 500;">Create</span>',
+        'update': '<span style="color: #3b82f6; font-weight: 500;">Update</span>',
+        'delete': '<span style="color: #ef4444; font-weight: 500;">Delete</span>',
+        'login': '<span style="color: #8b5cf6; font-weight: 500;">Login</span>',
+        'logout': '<span style="color: #6b7280; font-weight: 500;">Logout</span>',
+        'send': '<span style="color: #f59e0b; font-weight: 500;">Send</span>',
+        'export': '<span style="color: #06b6d4; font-weight: 500;">Export</span>',
+        'view': '<span style="color: #64748b; font-weight: 500;">View</span>'
+    };
+    return actionLabels[action] || `<span style="font-weight: 500;">${action}</span>`;
+}
+
+/**
+ * Format target type for display
+ */
+function formatAuditTarget(type, name, id) {
+    const typeLabels = {
+        'account': 'Account',
+        'user': 'User',
+        'reseller': 'Reseller',
+        'settings': 'Settings',
+        'permissions': 'Permissions',
+        'sms': 'SMS',
+        'stb_message': 'STB Message',
+        'plan': 'Plan'
+    };
+    const label = typeLabels[type] || type;
+    if (name) {
+        return `<strong>${label}:</strong> ${name}`;
+    }
+    if (id) {
+        return `<strong>${label}:</strong> #${id}`;
+    }
+    return `<strong>${label}</strong>`;
+}
+
+/**
+ * Format audit date
+ */
+function formatAuditDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+/**
+ * Load audit log with filters
+ */
+async function loadAuditLog(page = 1) {
+    const container = document.getElementById('audit-log-container');
+    const loading = document.getElementById('audit-log-loading');
+    const tableContainer = document.getElementById('audit-log-table-container');
+    const emptyMsg = document.getElementById('audit-log-empty');
+    const pagination = document.getElementById('audit-log-pagination');
+    const tbody = document.getElementById('audit-log-body');
+
+    if (!container) return;
+
+    // Show loading
+    loading.style.display = 'block';
+    tableContainer.style.display = 'none';
+    emptyMsg.style.display = 'none';
+    pagination.style.display = 'none';
+
+    // Build query params
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('per_page', 50);
+
+    const userFilter = document.getElementById('audit-user-filter')?.value;
+    const actionFilter = document.getElementById('audit-action-filter')?.value;
+    const targetFilter = document.getElementById('audit-target-filter')?.value;
+    const dateFrom = document.getElementById('audit-date-from')?.value;
+    const dateTo = document.getElementById('audit-date-to')?.value;
+    const search = document.getElementById('audit-search')?.value;
+
+    if (userFilter && userFilter !== 'all') params.append('user_id', userFilter);
+    if (actionFilter) params.append('action', actionFilter);
+    if (targetFilter) params.append('target_type', targetFilter);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    if (search) params.append('search', search);
+
+    try {
+        const response = await fetch(`api/get_audit_log.php?${params.toString()}`);
+        const result = await response.json();
+
+        loading.style.display = 'none';
+
+        if (result.error) {
+            emptyMsg.textContent = result.message || 'Error loading audit log';
+            emptyMsg.style.display = 'block';
+            return;
+        }
+
+        // Populate filter dropdowns (first load only)
+        if (result.filter_options) {
+            populateAuditFilters(result.filter_options);
+        }
+
+        if (!result.data || result.data.length === 0) {
+            emptyMsg.style.display = 'block';
+            return;
+        }
+
+        // Build table rows
+        tbody.innerHTML = '';
+        result.data.forEach(log => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color); white-space: nowrap;">${formatAuditDate(log.timestamp)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                    <div>${log.user_display_name || log.username}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">${log.user_type || ''}</div>
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">${formatAuditAction(log.action)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">${formatAuditTarget(log.target_type, log.target_name, log.target_id)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color); max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${log.details || ''}">${log.details || '-'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color); font-family: monospace; font-size: 12px;">${log.ip_address || '-'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        tableContainer.style.display = 'block';
+
+        // Update pagination
+        auditLogCurrentPage = result.pagination.current_page;
+        auditLogTotalPages = result.pagination.total_pages;
+
+        if (result.pagination.total_records > 0) {
+            pagination.style.display = 'flex';
+            document.getElementById('audit-log-page-info').textContent =
+                `Page ${auditLogCurrentPage} of ${auditLogTotalPages} (${result.pagination.total_records} entries)`;
+            document.getElementById('audit-log-prev').disabled = auditLogCurrentPage <= 1;
+            document.getElementById('audit-log-next').disabled = auditLogCurrentPage >= auditLogTotalPages;
+        }
+
+    } catch (error) {
+        console.error('Error loading audit log:', error);
+        loading.style.display = 'none';
+        emptyMsg.textContent = 'Error loading audit log: ' + error.message;
+        emptyMsg.style.display = 'block';
+    }
+}
+
+/**
+ * Populate filter dropdowns with available options
+ */
+function populateAuditFilters(options) {
+    // Populate users
+    const userSelect = document.getElementById('audit-user-filter');
+    if (userSelect && options.users && userSelect.options.length <= 1) {
+        options.users.forEach(user => {
+            const opt = document.createElement('option');
+            opt.value = user.user_id;
+            opt.textContent = user.name || user.username;
+            userSelect.appendChild(opt);
+        });
+    }
+
+    // Populate actions
+    const actionSelect = document.getElementById('audit-action-filter');
+    if (actionSelect && options.actions && actionSelect.options.length <= 1) {
+        options.actions.forEach(action => {
+            const opt = document.createElement('option');
+            opt.value = action;
+            opt.textContent = action.charAt(0).toUpperCase() + action.slice(1);
+            actionSelect.appendChild(opt);
+        });
+    }
+
+    // Populate target types
+    const targetSelect = document.getElementById('audit-target-filter');
+    if (targetSelect && options.target_types && targetSelect.options.length <= 1) {
+        options.target_types.forEach(type => {
+            const opt = document.createElement('option');
+            opt.value = type;
+            opt.textContent = type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ');
+            targetSelect.appendChild(opt);
+        });
+    }
+}
+
+/**
+ * Clear all audit log filters
+ */
+function clearAuditFilters() {
+    document.getElementById('audit-user-filter').value = 'all';
+    document.getElementById('audit-action-filter').value = '';
+    document.getElementById('audit-target-filter').value = '';
+    document.getElementById('audit-date-from').value = '';
+    document.getElementById('audit-date-to').value = '';
+    document.getElementById('audit-search').value = '';
+    loadAuditLog(1);
+}
+
+/**
+ * Initialize audit log section (super admin only)
+ */
+function initAuditLog() {
+    const isSuperAdmin = currentUser && currentUser.super_user == 1;
+    const auditSection = document.getElementById('audit-log-section');
+
+    if (isSuperAdmin && auditSection) {
+        auditSection.style.display = 'block';
+        loadAuditLog(1);
+    }
+}
+
+// ========================================
+// End of Audit Log (v1.12.0)
 // ========================================

@@ -29,6 +29,7 @@ try {
 include(__DIR__ . '/../config.php');
 include(__DIR__ . '/api.php');
 include(__DIR__ . '/sms_helper.php');
+include(__DIR__ . '/audit_helper.php');
 
 // PHPMailer is optional - only load if available
 $phpmailer_path = __DIR__ . '/PHPMailer/src/PHPMailer.php';
@@ -700,6 +701,21 @@ if($decoded->status == 'OK')
             'plan_info_days' => isset($plan_info['days']) ? $plan_info['days'] : 'N/A',
             'super_user' => $user_info['super_user']
         ];
+
+        // Audit log: Account created (v1.12.0)
+        try {
+            $audit_data = [
+                'mac' => $mac,
+                'username' => $username,
+                'name' => $name,
+                'plan' => $plan_name ?? $plan,
+                'expiry' => $expire_billing_date,
+                'phone' => $phone_number ?? null
+            ];
+            auditAccountCreated($pdo, $account_id ?? null, $mac, $audit_data);
+        } catch (Exception $e) {
+            error_log("Audit log failed: " . $e->getMessage());
+        }
 
         echo json_encode($response);
 
