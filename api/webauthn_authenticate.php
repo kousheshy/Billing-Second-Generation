@@ -12,6 +12,35 @@ include(__DIR__ . '/../config.php');
 
 header('Content-Type: application/json');
 
+/**
+ * Log login attempt to _login_history table
+ */
+function logLoginAttempt($pdo, $user_id, $username, $status, $method = 'biometric', $failure_reason = null) {
+    try {
+        // Check if table exists
+        $tableCheck = $pdo->query("SHOW TABLES LIKE '_login_history'");
+        if ($tableCheck->rowCount() == 0) {
+            return; // Table not created yet, skip logging
+        }
+
+        // Get client IP address
+        $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
+        if ($ip_address && strpos($ip_address, ',') !== false) {
+            $ip_address = trim(explode(',', $ip_address)[0]);
+        }
+
+        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+        $stmt = $pdo->prepare('
+            INSERT INTO _login_history (user_id, username, login_time, ip_address, user_agent, login_method, status, failure_reason)
+            VALUES (?, ?, NOW(), ?, ?, ?, ?, ?)
+        ');
+        $stmt->execute([$user_id, $username, $ip_address, $user_agent, $method, $status, $failure_reason]);
+    } catch (PDOException $e) {
+        error_log("Login history logging failed: " . $e->getMessage());
+    }
+}
+
 $host = $ub_db_host;
 $db   = $ub_main_db;
 $user = $ub_db_username;
@@ -146,7 +175,13 @@ try {
         // Log the user in
         $_SESSION['login'] = 1;
         $_SESSION['username'] = $username;
+        $_SESSION['user_id'] = $user_data['id'];
+        $_SESSION['super_user'] = $user_data['super_user'];
+        $_SESSION['permissions'] = $user_data['permissions'] ?? '';
         $_SESSION['last_activity'] = time(); // Set activity timestamp for auto-logout
+
+        // Log successful biometric login
+        logLoginAttempt($pdo, $user_data['id'], $username, 'success', 'biometric');
 
         echo json_encode([
             'error' => 0,

@@ -7,6 +7,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.0] - 2025-11-27
+
+### Added - Login History & Activity Tracking
+
+**Status:** Production Release - Major Feature
+
+**Overview**
+Comprehensive login history tracking system with detailed device information, IP addresses, and authentication methods. Users can view their login history with pagination and filtering.
+
+**New Features**
+
+1. **Login History Tracking**
+   - Automatic logging of all login attempts (successful and failed)
+   - Records: username, IP address, user agent, device type, browser, OS
+   - Tracks authentication method: password, biometric (WebAuthn)
+   - Timestamp with timezone support
+   - **Files**: `api/login.php` (lines added), `api/webauthn_authenticate.php`
+
+2. **Login History Viewer**
+   - New settings tab: "Login History"
+   - Paginated view: 20 entries per page
+   - Device icons for desktop/mobile/tablet
+   - Authentication method badges (password/biometric)
+   - IP address display with geolocation potential
+   - **Files**: `dashboard.php` (87 new lines), `dashboard.js` (321 new lines)
+
+3. **Login History API**
+   - GET endpoint: `api/get_login_history.php`
+   - Pagination support: page, per_page parameters
+   - User-specific history (users see only their own)
+   - Super admin can view any user's history (future feature)
+   - **Files**: `api/get_login_history.php` (new file)
+
+4. **Database Schema**
+   - New table: `_login_history`
+   - Columns: id, user_id, username, ip_address, user_agent, device_type, browser, os, auth_method, login_time, status
+   - Indexes: user_id, login_time, status for performance
+   - Migration script included
+   - **Files**: `scripts/create_login_history_table.php`
+
+**UI Features**
+- Clean tabular layout with alternating row colors
+- Device type icons (💻 desktop, 📱 mobile, 📲 tablet)
+- Authentication badges with color coding
+- Browser and OS information display
+- "Load More" pagination button
+- Responsive design for mobile devices
+
+**Technical Details**
+- User agent parsing for device detection
+- Browser detection: Chrome, Firefox, Safari, Edge, Opera
+- OS detection: Windows, macOS, Linux, Android, iOS
+- Device type detection: mobile, tablet, desktop
+- Automatic cleanup potential (configurable retention period)
+
+**Security Features**
+- Users can only view their own login history
+- Super admin capability reserved for future
+- Failed login attempts tracked for security monitoring
+- IP address logging for forensics
+- Session-based authentication required
+
+**Database Structure**
+```sql
+CREATE TABLE _login_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  username VARCHAR(100) NOT NULL,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  device_type VARCHAR(20),
+  browser VARCHAR(50),
+  os VARCHAR(50),
+  auth_method VARCHAR(20),
+  login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status VARCHAR(20) DEFAULT 'success',
+  INDEX idx_user_id (user_id),
+  INDEX idx_login_time (login_time),
+  INDEX idx_status (status)
+);
+```
+
+**Files Added**
+- `api/get_login_history.php`: History retrieval API (150+ lines)
+- `scripts/create_login_history_table.php`: Database migration
+
+**Files Modified**
+- `api/login.php`: Added login history recording (52 new lines)
+- `api/webauthn_authenticate.php`: Added biometric login tracking (35 new lines)
+- `dashboard.php`: Added Login History tab (87 new lines)
+- `dashboard.js`: Added history loading and display logic (321 new lines)
+
+**Use Cases**
+- Users monitor their account access
+- Detect unauthorized login attempts
+- Track device usage patterns
+- Security auditing
+- Compliance and logging requirements
+
+**Impact**
+- Enhanced security visibility
+- User awareness of account activity
+- Forensic capabilities
+- Compliance support
+- Professional security feature
+
+---
+
 ## [1.11.66] - 2025-11-27
 
 ### Added - Reseller Self-Notification & Enhanced Push Sync

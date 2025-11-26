@@ -4,6 +4,46 @@ session_start();
 
 include(__DIR__ . '/../config.php');
 
+/**
+ * Log login attempt to _login_history table
+ */
+function logLoginAttempt($pdo, $user_id, $username, $status, $method = 'password', $failure_reason = null) {
+    try {
+        // Check if table exists
+        $tableCheck = $pdo->query("SHOW TABLES LIKE '_login_history'");
+        if ($tableCheck->rowCount() == 0) {
+            return; // Table not created yet, skip logging
+        }
+
+        // Get client IP address
+        $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
+        // If multiple IPs in X-Forwarded-For, take the first one
+        if ($ip_address && strpos($ip_address, ',') !== false) {
+            $ip_address = trim(explode(',', $ip_address)[0]);
+        }
+
+        // Get user agent
+        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+        $stmt = $pdo->prepare('
+            INSERT INTO _login_history (user_id, username, login_time, ip_address, user_agent, login_method, status, failure_reason)
+            VALUES (?, ?, NOW(), ?, ?, ?, ?, ?)
+        ');
+        $stmt->execute([
+            $user_id,
+            $username,
+            $ip_address,
+            $user_agent,
+            $method,
+            $status,
+            $failure_reason
+        ]);
+    } catch (PDOException $e) {
+        // Silently fail - don't break login if logging fails
+        error_log("Login history logging failed: " . $e->getMessage());
+    }
+}
+
 if($_SERVER['REQUEST_METHOD'] == 'POST')
 {
     $username = trim($_POST['username']);
@@ -44,11 +84,23 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
             $_SESSION['permissions'] = $user_data['permissions'] ?? '';
             $_SESSION['last_activity'] = time(); // Set activity timestamp for auto-logout
 
+            // Log successful login
+            logLoginAttempt($pdo, $user_data['id'], $username, 'success', 'password');
+
             $response['error'] = 0;
             $response['message'] = 'Login successful';
         }
         else
         {
+            // Try to get user_id for failed login (if username exists)
+            $userStmt = $pdo->prepare('SELECT id FROM _users WHERE username = ?');
+            $userStmt->execute([$username]);
+            $existingUser = $userStmt->fetch();
+            $failed_user_id = $existingUser ? $existingUser['id'] : 0;
+
+            // Log failed login attempt
+            logLoginAttempt($pdo, $failed_user_id, $username, 'failed', 'password', 'Invalid credentials');
+
             $response['error'] = 1;
             $response['message'] = 'Invalid username or password';
         }

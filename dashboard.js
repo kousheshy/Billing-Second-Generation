@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.11.66
+// ShowBox Dashboard v1.12.0
 // ========================================
 
 // ========================================
@@ -503,6 +503,13 @@ function switchTab(tabName) {
     // Load reminder settings when switching to messaging tab
     if(tabName === 'messaging') {
         loadReminderSettings();
+    }
+
+    // Load login history when switching to settings tab (v1.12.0)
+    if(tabName === 'settings') {
+        if (typeof initLoginHistory === 'function') {
+            initLoginHistory();
+        }
     }
 }
 
@@ -7444,4 +7451,318 @@ function showPushPromptModal() {
 
 // ========================================
 // End of Push Notifications (v1.11.50)
+// ========================================
+
+// ========================================
+// Login History (v1.12.0)
+// ========================================
+
+let loginHistoryCurrentPage = 1;
+let loginHistoryTotalPages = 1;
+let adminLoginHistoryCurrentPage = 1;
+let adminLoginHistoryTotalPages = 1;
+let adminSelectedUserId = null;
+
+/**
+ * Parse user agent string to get a friendly device name
+ */
+function parseUserAgent(userAgent) {
+    if (!userAgent) return 'Unknown Device';
+
+    // Check for mobile devices first
+    if (/iPhone/.test(userAgent)) {
+        return 'iPhone';
+    } else if (/iPad/.test(userAgent)) {
+        return 'iPad';
+    } else if (/Android/.test(userAgent)) {
+        if (/Mobile/.test(userAgent)) {
+            return 'Android Phone';
+        }
+        return 'Android Tablet';
+    }
+
+    // Check for desktop browsers
+    let browser = 'Browser';
+    let os = '';
+
+    if (/Chrome/.test(userAgent) && !/Edg/.test(userAgent)) {
+        browser = 'Chrome';
+    } else if (/Safari/.test(userAgent) && !/Chrome/.test(userAgent)) {
+        browser = 'Safari';
+    } else if (/Firefox/.test(userAgent)) {
+        browser = 'Firefox';
+    } else if (/Edg/.test(userAgent)) {
+        browser = 'Edge';
+    }
+
+    if (/Windows/.test(userAgent)) {
+        os = 'Windows';
+    } else if (/Macintosh/.test(userAgent)) {
+        os = 'Mac';
+    } else if (/Linux/.test(userAgent)) {
+        os = 'Linux';
+    }
+
+    return os ? `${browser} on ${os}` : browser;
+}
+
+/**
+ * Format login method for display
+ */
+function formatLoginMethod(method) {
+    switch (method) {
+        case 'password':
+            return 'Password';
+        case 'biometric':
+            return 'Face ID / Touch ID';
+        default:
+            return method || 'Unknown';
+    }
+}
+
+/**
+ * Format date for display
+ */
+function formatLoginDate(dateStr) {
+    if (!dateStr) return 'Unknown';
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+}
+
+/**
+ * Load user's own login history
+ */
+async function loadLoginHistory(page = 1) {
+    loginHistoryCurrentPage = page;
+
+    const loading = document.getElementById('login-history-loading');
+    const tableContainer = document.getElementById('login-history-table-container');
+    const emptyState = document.getElementById('login-history-empty');
+    const pagination = document.getElementById('login-history-pagination');
+    const tbody = document.getElementById('login-history-body');
+
+    // Show loading
+    loading.style.display = 'block';
+    tableContainer.style.display = 'none';
+    emptyState.style.display = 'none';
+    pagination.style.display = 'none';
+
+    try {
+        const response = await fetch(`api/get_login_history.php?page=${page}&per_page=15`);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.message);
+        }
+
+        loading.style.display = 'none';
+
+        if (!data.data || data.data.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        // Render table
+        tbody.innerHTML = data.data.map(entry => `
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">${formatLoginDate(entry.login_time)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; ${entry.status === 'success' ? 'background: rgba(16, 185, 129, 0.2); color: #10b981;' : 'background: rgba(239, 68, 68, 0.2); color: #ef4444;'}">
+                        ${entry.status === 'success' ? 'Success' : 'Failed'}
+                    </span>
+                    ${entry.failure_reason ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">${entry.failure_reason}</div>` : ''}
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">${formatLoginMethod(entry.login_method)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color); font-family: monospace; font-size: 12px;">${entry.ip_address || 'Unknown'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);" title="${entry.user_agent || ''}">${parseUserAgent(entry.user_agent)}</td>
+            </tr>
+        `).join('');
+
+        tableContainer.style.display = 'block';
+
+        // Pagination
+        loginHistoryTotalPages = data.pagination.total_pages;
+
+        if (loginHistoryTotalPages > 1) {
+            pagination.style.display = 'flex';
+            document.getElementById('login-history-page-info').textContent =
+                `Page ${data.pagination.current_page} of ${loginHistoryTotalPages} (${data.pagination.total_records} total)`;
+
+            document.getElementById('login-history-prev').disabled = page <= 1;
+            document.getElementById('login-history-next').disabled = page >= loginHistoryTotalPages;
+        }
+
+    } catch (error) {
+        console.error('Error loading login history:', error);
+        loading.style.display = 'none';
+        emptyState.textContent = 'Error loading login history: ' + error.message;
+        emptyState.style.display = 'block';
+    }
+}
+
+/**
+ * Load users list for admin dropdown
+ */
+async function loadUsersForAdminDropdown() {
+    const select = document.getElementById('admin-user-select');
+    if (!select) return;
+
+    try {
+        const response = await fetch('api/get_resellers.php');
+        const data = await response.json();
+
+        if (data.error) {
+            console.error('Error loading users:', data.message);
+            return;
+        }
+
+        // Keep "All Users" as first option
+        select.innerHTML = '<option value="all">All Users</option>';
+
+        // Add all individual users
+        if (data.resellers && Array.isArray(data.resellers)) {
+            data.resellers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.name ? `${user.name} (${user.username})` : user.username;
+                if (user.super_user == 1) {
+                    option.textContent += ' [Admin]';
+                }
+                select.appendChild(option);
+            });
+        }
+
+    } catch (error) {
+        console.error('Error loading users for dropdown:', error);
+    }
+}
+
+/**
+ * Load login history for a specific user or all users (Admin only)
+ */
+async function loadAdminLoginHistory(page = 1) {
+    const select = document.getElementById('admin-user-select');
+    const userId = select ? select.value : 'all';
+
+    adminSelectedUserId = userId;
+    adminLoginHistoryCurrentPage = page;
+
+    const container = document.getElementById('admin-login-history-container');
+    const userInfo = document.getElementById('admin-login-history-user-info');
+    const loading = document.getElementById('admin-login-history-loading');
+    const tableContainer = document.getElementById('admin-login-history-table-container');
+    const emptyState = document.getElementById('admin-login-history-empty');
+    const pagination = document.getElementById('admin-login-history-pagination');
+    const tbody = document.getElementById('admin-login-history-body');
+    const userCol = document.getElementById('admin-history-user-col');
+
+    // Show container and loading
+    container.style.display = 'block';
+    loading.style.display = 'block';
+    tableContainer.style.display = 'none';
+    emptyState.style.display = 'none';
+    pagination.style.display = 'none';
+
+    try {
+        const response = await fetch(`api/get_login_history.php?user_id=${userId}&page=${page}&per_page=15`);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.message);
+        }
+
+        loading.style.display = 'none';
+
+        const isViewingAll = data.view_all_users;
+
+        // Show/hide user column based on view mode
+        if (userCol) {
+            userCol.style.display = isViewingAll ? '' : 'none';
+        }
+
+        // Show user info header
+        if (isViewingAll) {
+            userInfo.innerHTML = `<strong>Viewing:</strong> All Users Login History`;
+            userInfo.style.display = 'block';
+        } else if (data.target_user) {
+            userInfo.innerHTML = `<strong>Viewing history for:</strong> ${data.target_user.name || data.target_user.username} (${data.target_user.username})`;
+            userInfo.style.display = 'block';
+        } else {
+            userInfo.style.display = 'none';
+        }
+
+        if (!data.data || data.data.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        // Render table with User column for "All Users" view
+        tbody.innerHTML = data.data.map(entry => `
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color); ${isViewingAll ? '' : 'display: none;'}">
+                    <strong>${entry.user_name || entry.username}</strong>
+                    <div style="font-size: 11px; color: var(--text-secondary);">${entry.username}</div>
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">${formatLoginDate(entry.login_time)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; ${entry.status === 'success' ? 'background: rgba(16, 185, 129, 0.2); color: #10b981;' : 'background: rgba(239, 68, 68, 0.2); color: #ef4444;'}">
+                        ${entry.status === 'success' ? 'Success' : 'Failed'}
+                    </span>
+                    ${entry.failure_reason ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">${entry.failure_reason}</div>` : ''}
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);">${formatLoginMethod(entry.login_method)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color); font-family: monospace; font-size: 12px;">${entry.ip_address || 'Unknown'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid var(--border-color);" title="${entry.user_agent || ''}">${parseUserAgent(entry.user_agent)}</td>
+            </tr>
+        `).join('');
+
+        tableContainer.style.display = 'block';
+
+        // Pagination
+        adminLoginHistoryTotalPages = data.pagination.total_pages;
+
+        if (adminLoginHistoryTotalPages > 1) {
+            pagination.style.display = 'flex';
+            document.getElementById('admin-login-history-page-info').textContent =
+                `Page ${data.pagination.current_page} of ${adminLoginHistoryTotalPages} (${data.pagination.total_records} total)`;
+
+            document.getElementById('admin-login-history-prev').disabled = page <= 1;
+            document.getElementById('admin-login-history-next').disabled = page >= adminLoginHistoryTotalPages;
+        }
+
+    } catch (error) {
+        console.error('Error loading admin login history:', error);
+        loading.style.display = 'none';
+        emptyState.textContent = 'Error loading login history: ' + error.message;
+        emptyState.style.display = 'block';
+    }
+}
+
+/**
+ * Initialize login history when settings tab is opened
+ */
+function initLoginHistory() {
+    // Load own login history
+    loadLoginHistory(1);
+
+    // If super admin, show the admin section and load users
+    const isSuperAdmin = currentUser && currentUser.super_user == 1;
+    if (isSuperAdmin) {
+        const adminSection = document.getElementById('admin-login-history-section');
+        if (adminSection) {
+            adminSection.style.display = 'block';
+            loadUsersForAdminDropdown();
+        }
+    }
+}
+
+// ========================================
+// End of Login History (v1.12.0)
 // ========================================
