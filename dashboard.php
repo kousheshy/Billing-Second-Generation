@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.13.0</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.14.0</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -174,6 +174,7 @@ try {
             <button class="tab" onclick="switchTab('messaging')">Messaging</button>
             <button class="tab" onclick="switchTab('reports')">Reports</button>
             <button class="tab" onclick="switchTab('settings')">Settings</button>
+            <button class="tab browser-only" id="logs-tab-btn" onclick="switchTab('logs')">Logs</button>
         </div>
 
         <div class="content">
@@ -789,95 +790,17 @@ try {
                     </div>
                 </div>
 
-                <!-- Login History Section (All Users) -->
-                <div id="login-history-section" class="settings-item" style="margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                    <h3 style="margin-bottom: 10px;">Login History</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">View your recent login activity and security events.</p>
+            </div>
 
-                    <div id="login-history-container">
-                        <div id="login-history-loading" style="padding: 20px; text-align: center; color: var(--text-secondary);">
-                            Loading login history...
-                        </div>
-                        <div id="login-history-table-container" style="display: none;">
-                            <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Date & Time</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Status</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Method</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">IP Address</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Device</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="login-history-body">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="login-history-empty" style="display: none; padding: 20px; text-align: center; color: var(--text-secondary);">
-                            No login history found.
-                        </div>
-                        <!-- Pagination -->
-                        <div id="login-history-pagination" style="display: none; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-                            <div id="login-history-page-info" style="color: var(--text-secondary); font-size: 13px;"></div>
-                            <div style="display: flex; gap: 8px;">
-                                <button id="login-history-prev" class="btn-secondary" onclick="loadLoginHistory(loginHistoryCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
-                                <button id="login-history-next" class="btn-secondary" onclick="loadLoginHistory(loginHistoryCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Logs Tab (Browser Only - Hidden in PWA) -->
+            <div id="logs-tab" class="tab-content browser-only">
+                <div class="section-header">
+                    <h2>Logs</h2>
+                    <p style="color: var(--text-secondary); margin-top: 8px;">View audit trail and login history for system activity.</p>
                 </div>
 
-                <!-- Admin: View Reseller Login History (Super Admin Only) -->
-                <div id="admin-login-history-section" class="settings-item" style="display: none; margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                    <h3 style="margin-bottom: 10px;">View User Login History</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">As an administrator, you can view login history for all users or a specific user.</p>
-
-                    <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
-                        <label for="admin-user-select" style="font-weight: 500;">Select User:</label>
-                        <select id="admin-user-select" style="padding: 10px 15px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 200px;">
-                            <option value="all">All Users</option>
-                        </select>
-                        <button class="btn-primary" onclick="loadAdminLoginHistory(1)">View History</button>
-                    </div>
-
-                    <div id="admin-login-history-container" style="display: none;">
-                        <div id="admin-login-history-user-info" style="padding: 12px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 15px;">
-                        </div>
-                        <div id="admin-login-history-loading" style="padding: 20px; text-align: center; color: var(--text-secondary);">
-                            Loading login history...
-                        </div>
-                        <div id="admin-login-history-table-container" style="display: none;">
-                            <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr>
-                                        <th id="admin-history-user-col" style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">User</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Date & Time</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Status</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Method</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">IP Address</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Device</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-login-history-body">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="admin-login-history-empty" style="display: none; padding: 20px; text-align: center; color: var(--text-secondary);">
-                            No login history found.
-                        </div>
-                        <!-- Pagination -->
-                        <div id="admin-login-history-pagination" style="display: none; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-                            <div id="admin-login-history-page-info" style="color: var(--text-secondary); font-size: 13px;"></div>
-                            <div style="display: flex; gap: 8px;">
-                                <button id="admin-login-history-prev" class="btn-secondary" onclick="loadAdminLoginHistory(adminLoginHistoryCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
-                                <button id="admin-login-history-next" class="btn-secondary" onclick="loadAdminLoginHistory(adminLoginHistoryCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Audit Log Section (Super Admin Only) -->
-                <div id="audit-log-section" class="settings-item" style="display: none; margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                <!-- Audit Log Section (Super Admin Only) - FIRST -->
+                <div id="audit-log-section" class="settings-item" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
                     <h3 style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
                         Audit Log
                         <span style="font-size: 11px; padding: 3px 8px; background: #dc2626; color: white; border-radius: 4px; font-weight: normal;">PERMANENT - Cannot Be Deleted</span>
@@ -937,6 +860,97 @@ try {
                             <div style="display: flex; gap: 8px;">
                                 <button id="audit-log-prev" class="btn-secondary" onclick="loadAuditLog(auditLogCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
                                 <button id="audit-log-next" class="btn-secondary" onclick="loadAuditLog(auditLogCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Login History Section (All Users) -->
+                <div id="login-history-section" class="settings-item" style="margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); flex-direction: column; align-items: stretch;">
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="margin-bottom: 8px;">My Login History</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">View your recent login activity and security events.</p>
+                    </div>
+
+                    <div id="login-history-container" style="width: 100%;">
+                        <div id="login-history-loading" style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                            Loading login history...
+                        </div>
+                        <div id="login-history-table-container" style="display: none;">
+                            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Date & Time</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Status</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Method</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">IP Address</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Device</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="login-history-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="login-history-empty" style="display: none; padding: 20px; text-align: center; color: var(--text-secondary);">
+                            No login history found.
+                        </div>
+                        <!-- Pagination -->
+                        <div id="login-history-pagination" style="display: none; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div id="login-history-page-info" style="color: var(--text-secondary); font-size: 13px;"></div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="login-history-prev" class="btn-secondary" onclick="loadLoginHistory(loginHistoryCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
+                                <button id="login-history-next" class="btn-secondary" onclick="loadLoginHistory(loginHistoryCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: View All Users Login History (Super Admin Only) -->
+                <div id="admin-login-history-section" class="settings-item" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); flex-direction: column; align-items: stretch;">
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="margin-bottom: 8px;">All Users Login History</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">As an administrator, you can view login history for all users or a specific user.</p>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                        <label for="admin-user-select" style="font-weight: 500;">Select User:</label>
+                        <select id="admin-user-select" style="padding: 10px 15px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 200px;">
+                            <option value="all">All Users</option>
+                        </select>
+                        <button class="btn-primary" onclick="loadAdminLoginHistory(1)">View History</button>
+                    </div>
+
+                    <div id="admin-login-history-container" style="display: none;">
+                        <div id="admin-login-history-user-info" style="padding: 12px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 15px;">
+                        </div>
+                        <div id="admin-login-history-loading" style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                            Loading login history...
+                        </div>
+                        <div id="admin-login-history-table-container" style="display: none;">
+                            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th id="admin-history-user-col" style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">User</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Date & Time</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Status</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Method</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">IP Address</th>
+                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Device</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-login-history-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="admin-login-history-empty" style="display: none; padding: 20px; text-align: center; color: var(--text-secondary);">
+                            No login history found.
+                        </div>
+                        <!-- Pagination -->
+                        <div id="admin-login-history-pagination" style="display: none; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div id="admin-login-history-page-info" style="color: var(--text-secondary); font-size: 13px;"></div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="admin-login-history-prev" class="btn-secondary" onclick="loadAdminLoginHistory(adminLoginHistoryCurrentPage - 1)" style="padding: 8px 16px;">Previous</button>
+                                <button id="admin-login-history-next" class="btn-secondary" onclick="loadAdminLoginHistory(adminLoginHistoryCurrentPage + 1)" style="padding: 8px 16px;">Next</button>
                             </div>
                         </div>
                     </div>

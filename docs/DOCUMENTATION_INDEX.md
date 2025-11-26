@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.11.66!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.14.0!
 
 ---
 
@@ -59,9 +59,9 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.11.6
    
    **Reference this** for technical understanding!
 
-6. **[CHANGELOG.md](CHANGELOG.md)** (10 KB)
+6. **[CHANGELOG.md](CHANGELOG.md)** (15 KB)
    - Version history
-   - Release notes for v1.10.1, v1.9.0, v1.8.0, etc.
+   - Release notes for v1.14.0, v1.13.0, v1.11.x, etc.
    - Breaking changes
    - Future roadmap
    - Migration guides

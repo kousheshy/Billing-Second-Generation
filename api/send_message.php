@@ -1,11 +1,12 @@
 <?php
 
 session_start();
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 include(__DIR__ . '/../config.php');
 include('api.php');
+include('audit_helper.php');
 
 if(isset($_SESSION['login']))
 {
@@ -123,6 +124,13 @@ if($error_counter == $counter_all)
 
 if($error_counter > 0)
 {
+    // Audit log: Partial bulk message sent (v1.13.0)
+    if($success_counter > 0) {
+        logAuditEvent($pdo, 'send', 'stb_message', null, "Bulk: {$success_counter}/{$counter_all} devices", null,
+            ['message' => $msg, 'success_count' => $success_counter, 'failed_count' => $error_counter, 'failed_devices' => $error_list],
+            "Bulk message sent to {$success_counter}/{$counter_all} devices ({$error_counter} failed)");
+    }
+
     $response['error']=0;
     $response['warning']=1;
     $response['wrn_msg']="Message successfully sent to ".$success_counter." STB's but couldn't send to STB's listed below:<br />";
@@ -139,6 +147,11 @@ if($error_counter > 0)
 
 if($error_counter == 0)
 {
+    // Audit log: Bulk message sent to STBs (v1.13.0)
+    $mac_list = implode(', ', $stb_macs);
+    logAuditEvent($pdo, 'send', 'stb_message', null, "Bulk: {$success_counter} devices", null,
+        ['message' => $msg, 'devices' => $stb_macs], "Bulk message sent to {$success_counter} devices");
+
     $response['error']=0;
     $response['err_msg']="";
 

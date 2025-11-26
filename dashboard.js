@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.13.0
+// ShowBox Dashboard v1.14.0
 // ========================================
 
 // ========================================
@@ -505,8 +505,8 @@ function switchTab(tabName) {
         loadReminderSettings();
     }
 
-    // Load login history when switching to settings tab (v1.12.0)
-    if(tabName === 'settings') {
+    // Load login history and audit log when switching to logs tab (v1.12.0)
+    if(tabName === 'logs') {
         if (typeof initLoginHistory === 'function') {
             initLoginHistory();
         }
@@ -7559,7 +7559,7 @@ async function loadLoginHistory(page = 1) {
     pagination.style.display = 'none';
 
     try {
-        const response = await fetch(`api/get_login_history.php?page=${page}&per_page=15`);
+        const response = await fetch(`api/get_login_history.php?page=${page}&per_page=10`);
         const data = await response.json();
 
         if (data.error) {
@@ -7675,7 +7675,7 @@ async function loadAdminLoginHistory(page = 1) {
     pagination.style.display = 'none';
 
     try {
-        const response = await fetch(`api/get_login_history.php?user_id=${userId}&page=${page}&per_page=15`);
+        const response = await fetch(`api/get_login_history.php?user_id=${userId}&page=${page}&per_page=10`);
         const data = await response.json();
 
         if (data.error) {
@@ -7859,7 +7859,7 @@ async function loadAuditLog(page = 1) {
     // Build query params
     const params = new URLSearchParams();
     params.append('page', page);
-    params.append('per_page', 50);
+    params.append('per_page', 10);
 
     const userFilter = document.getElementById('audit-user-filter')?.value;
     const actionFilter = document.getElementById('audit-action-filter')?.value;

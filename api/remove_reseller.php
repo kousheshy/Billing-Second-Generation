@@ -6,6 +6,7 @@ ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(0);
 include(__DIR__ . '/../config.php');
+include('audit_helper.php');
 
 if(isset($_SESSION['login']))
 {
@@ -102,6 +103,12 @@ if($account_count > 0)
 
 $stmt = $pdo->prepare('DELETE FROM _users WHERE id=?');
 $stmt->execute([$id]);
+
+// Audit log: Reseller deleted (v1.13.0)
+auditUserDeleted($pdo, $id, $reseller_info['username'], [
+    'name' => $reseller_info['name'],
+    'email' => $reseller_info['email']
+]);
 
 // Note: Transaction history for this reseller will remain in _transactions table
 // with the for_user ID, even though the user is deleted

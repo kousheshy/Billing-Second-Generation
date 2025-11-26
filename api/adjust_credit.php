@@ -6,6 +6,7 @@ ini_set('display_startup_errors', 0);
 error_reporting(0);
 
 include(__DIR__ . '/../config.php');
+include('audit_helper.php');
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1)
 {
@@ -101,6 +102,12 @@ $tx_type = ($new_balance > $current_balance) ? 1 : 0; // 1 = credit, 0 = debit
 $tx_amount = abs($new_balance - $current_balance);
 
 $stmt->execute(['admin', $reseller_id, $tx_amount, $reseller['currency_name'], $tx_type, $details, time()]);
+
+// Audit log: Credit adjustment (v1.13.0)
+logAuditEvent($pdo, 'update', 'credit', $reseller_id, $reseller['username'],
+    ['balance' => $current_balance],
+    ['balance' => $new_balance, 'action' => $action, 'amount' => $amount],
+    "Credit {$action}: {$amount} {$reseller['currency_name']} (Previous: {$current_balance}, New: {$new_balance})");
 
 $response['error'] = 0;
 $response['err_msg'] = '';

@@ -3393,6 +3393,12 @@ main {
     }
 } */
 
+/* Browser-only elements: Hidden in PWA mode (v1.12.0)
+   Elements with .browser-only class are hidden when running as installed PWA */
+body.pwa-mode .browser-only {
+    display: none !important;
+}
+
 /* Mobile PWA: iOS-style bottom sheets - ONLY when running as installed PWA (v1.10.1)
    Uses .pwa-mode class added by JavaScript detection
    Standard browsers get centered modals, PWA gets bottom sheets */

@@ -12,6 +12,7 @@ error_reporting(E_ALL);
 try {
     include(__DIR__ . '/../config.php');
     include('api.php');
+    include('audit_helper.php');
 
     // Check if user is logged in
     if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
@@ -135,9 +136,15 @@ try {
     $stmt = $pdo->prepare('UPDATE _accounts SET status = ? WHERE username = ?');
     $stmt->execute([$new_status, $target_username]);
 
+    // Audit log: Account status toggled (v1.13.0)
+    $status_text = $new_status == 1 ? 'active' : 'disabled';
+    logAuditEvent($pdo, 'update', 'account_status', null, $mac,
+        ['status' => $new_status == 1 ? 0 : 1],
+        ['status' => $new_status],
+        "Account {$full_name} ({$mac}) status changed to {$status_text}");
+
     error_log("Status toggle for {$target_username} (MAC: {$mac}): Updated to {$new_status}");
 
-    $status_text = $new_status == 1 ? 'active' : 'disabled';
     echo json_encode([
         'error' => 0,
         'err_msg' => '',

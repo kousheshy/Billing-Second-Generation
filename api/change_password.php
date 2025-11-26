@@ -5,6 +5,7 @@ header('Content-Type: application/json');
 
 // Include config for database connection
 include(__DIR__ . '/../config.php');
+include('audit_helper.php');
 
 // Database connection using config variables
 try {
@@ -55,6 +56,8 @@ $updateStmt = $pdo->prepare("UPDATE _users SET password = ? WHERE id = ?");
 $success = $updateStmt->execute([$hashedNewPassword, $user['id']]);
 
 if ($success) {
+    // Audit log: Password changed (v1.13.0)
+    logAuditEvent($pdo, 'update', 'password', $user['id'], $username, null, null, 'Password changed by user');
     echo json_encode(['error' => 0, 'message' => 'Password changed successfully']);
 } else {
     echo json_encode(['error' => 1, 'message' => 'Failed to update password']);

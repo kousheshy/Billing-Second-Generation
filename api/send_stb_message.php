@@ -12,6 +12,7 @@ error_reporting(0);
 
 include(__DIR__ . '/../config.php');
 include('api.php');
+include('audit_helper.php');
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
     $response['error'] = 1;
@@ -136,6 +137,9 @@ try {
     if(isset($decoded->status) && $decoded->status == 'OK') {
         $response['error'] = 0;
         $response['message'] = 'Message sent successfully to device ' . $mac;
+
+        // Audit log: Message sent to STB (v1.13.0)
+        auditStbMessage($pdo, $mac, $message);
 
         // Log the action
         error_log("User {$username} sent message to device {$mac}: {$message}");

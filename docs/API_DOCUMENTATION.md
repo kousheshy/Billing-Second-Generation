@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.11.66
+**Version:** 1.14.0
 **Last Updated:** November 27, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -22,7 +22,9 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 10. [STB Device Control](#stb-device-control)
 11. [Theme Management](#theme-management)
 12. [Push Notifications](#push-notifications)
-13. [Error Codes](#error-codes)
+13. [Audit Log](#audit-log) **NEW in v1.13.0**
+14. [Login History](#login-history) **NEW in v1.11.22**
+15. [Error Codes](#error-codes)
 
 ---
 
@@ -1585,6 +1587,129 @@ Push notifications are automatically sent when accounts are created, renewed, or
 - v1.11.66: Resellers now receive notifications for their own actions
 - v1.11.65: Subscription syncs with current user on login (fixes cross-user notification issue)
 - Expiry notifications are only sent once per account per expiry date (tracked in `_push_expiry_tracking`)
+
+---
+
+## Audit Log
+
+**Added in v1.13.0** | **Extended in v1.14.0**
+
+The audit log provides a permanent, immutable record of all critical administrative actions.
+
+### Get Audit Log
+**Endpoint:** `GET /api/get_audit_log.php`
+
+**Description:** Retrieve paginated audit log entries with optional filters.
+
+**Access:** Super Admin only (super_user = 1)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| page | int | No | Page number (default: 1) |
+| per_page | int | No | Entries per page (default: 10, max: 100) |
+| action | string | No | Filter by action type |
+| target_type | string | No | Filter by target type |
+| date_from | string | No | Start date (YYYY-MM-DD) |
+| date_to | string | No | End date (YYYY-MM-DD) |
+
+**Response:**
+```json
+{
+  "error": 0,
+  "logs": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "username": "admin",
+      "action": "create",
+      "target_type": "account",
+      "target_id": "AA:BB:CC:DD:EE:FF",
+      "target_name": "John Doe",
+      "old_value": null,
+      "new_value": "{\"mac\":\"AA:BB:CC:DD:EE:FF\",\"plan\":\"Monthly\"}",
+      "details": "New account created for John Doe",
+      "ip_address": "192.168.1.100",
+      "created_at": "2025-11-27 10:30:00"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 10,
+    "total": 150,
+    "total_pages": 15
+  }
+}
+```
+
+**Audited Actions (v1.14.0)**
+
+| Action | Target Type | Description |
+|--------|-------------|-------------|
+| create | account | New account created |
+| update | account | Account details modified |
+| delete | account | Account removed |
+| send | stb_message | Message sent to STB device(s) |
+| create | user | New reseller created |
+| delete | user | Reseller removed |
+| update | credit | Reseller credit adjusted |
+| update | password | User password changed |
+| update | account_status | Account enabled/disabled |
+
+---
+
+## Login History
+
+**Added in v1.11.22**
+
+### Get Login History
+**Endpoint:** `GET /api/get_login_history.php`
+
+**Description:** Retrieve paginated login history for the current user or all users (admin).
+
+**Access:** All authenticated users (own history), Super Admin for all users
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| page | int | No | Page number (default: 1) |
+| per_page | int | No | Entries per page (default: 10) |
+| user_id | int | No | Filter by user ID (admin only) |
+
+**Response:**
+```json
+{
+  "error": 0,
+  "history": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "username": "admin",
+      "login_time": "2025-11-27 10:30:00",
+      "ip_address": "192.168.1.100",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      "device_info": "Chrome on Mac",
+      "login_method": "password",
+      "status": "success",
+      "failure_reason": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 10,
+    "total": 50,
+    "total_pages": 5
+  }
+}
+```
+
+**Login Methods:**
+- `password`: Standard username/password
+- `biometric`: Face ID / Touch ID (WebAuthn)
+
+**Status Values:**
+- `success`: Successful login
+- `failed`: Failed login attempt
 
 ---
 

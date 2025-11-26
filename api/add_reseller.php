@@ -13,6 +13,7 @@ header('Content-Type: application/json');
 try {
     include(__DIR__ . '/../config.php');
     include('sms_helper.php'); // Include SMS helper functions
+    include('audit_helper.php'); // Audit logging
 
     if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
         echo json_encode(['error' => 1, 'err_msg' => 'Not logged in']);
@@ -88,6 +89,15 @@ try {
     // Initialize SMS settings and templates for the new reseller
     // This allows them to automatically send welcome SMS when adding accounts
     initializeResellerSMS($pdo, $new_reseller_id);
+
+    // Audit log: Reseller created (v1.13.0)
+    auditUserCreated($pdo, $new_reseller_id, $username, [
+        'name' => $name,
+        'email' => $email,
+        'max_users' => $max_users,
+        'balance' => $balance,
+        'is_observer' => $is_observer
+    ]);
 
     echo json_encode(['error' => 0, 'err_msg' => '']);
 

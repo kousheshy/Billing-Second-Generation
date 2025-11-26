@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.0] - 2025-11-27
+
+### Added - Extended Audit Logging & UI Improvements
+
+**Status:** Production Release
+
+**Overview**
+Extended the audit logging system to cover all critical administrative actions and improved the Logs tab UI for better usability.
+
+**Extended Audit Logging**
+
+The following actions are now tracked in the permanent audit log:
+
+1. **STB Messaging**
+   - Single device messages: Logs MAC address and message content
+   - Bulk device messages: Logs recipient count, message, and any failures
+   - **Files**: `api/send_stb_message.php`, `api/send_message.php`
+
+2. **Reseller Management**
+   - Reseller creation: Logs new reseller details (name, email, max_users, balance)
+   - Reseller deletion: Logs deleted reseller information
+   - **Files**: `api/add_reseller.php`, `api/remove_reseller.php`
+
+3. **Credit Adjustments**
+   - Logs credit add/deduct/set operations
+   - Records previous balance, new balance, action type, and amount
+   - **Files**: `api/adjust_credit.php`
+
+4. **Password Changes**
+   - Logs when users change their passwords
+   - **Files**: `api/change_password.php`
+
+5. **Account Status Toggles**
+   - Logs when accounts are enabled/disabled
+   - Records account name, MAC, and new status
+   - **Files**: `api/toggle_account_status.php`
+
+**UI Improvements**
+
+1. **Pagination Defaults Changed**
+   - My Login History: Changed from 15 to **10** entries per page
+   - Admin Login History (All Users): Changed from 15 to **10** entries per page
+   - Audit Log: Changed from 50 to **10** entries per page
+   - **Files**: `dashboard.js`
+
+2. **Login History Section Reordering**
+   - "My Login History" now appears **before** "All Users Login History"
+   - Provides better UX - users see their own history first
+   - **Files**: `dashboard.php`
+
+3. **Login History Layout Fix**
+   - Fixed ugly side-by-side layout in login history sections
+   - Title and description now stack **vertically** above the table
+   - Clean, full-width table display
+   - **Files**: `dashboard.php`
+
+**Audit Log Coverage Summary**
+
+| Action | Target Type | Logged Since |
+|--------|-------------|--------------|
+| Account Create | account | v1.13.0 |
+| Account Update/Renew | account | v1.13.0 |
+| Account Delete | account | v1.13.0 |
+| **STB Message (Single)** | stb_message | **v1.14.0** |
+| **STB Message (Bulk)** | stb_message | **v1.14.0** |
+| **Reseller Create** | user | **v1.14.0** |
+| **Reseller Delete** | user | **v1.14.0** |
+| **Credit Adjustment** | credit | **v1.14.0** |
+| **Password Change** | password | **v1.14.0** |
+| **Account Status Toggle** | account_status | **v1.14.0** |
+
+**Files Modified**
+- `api/send_stb_message.php`: Added audit logging for single device messages
+- `api/send_message.php`: Added audit logging for bulk messages
+- `api/add_reseller.php`: Added audit logging for reseller creation
+- `api/remove_reseller.php`: Added audit logging for reseller deletion
+- `api/adjust_credit.php`: Added audit logging for credit adjustments
+- `api/change_password.php`: Added audit logging for password changes
+- `api/toggle_account_status.php`: Added audit logging for status toggles
+- `dashboard.js`: Updated pagination defaults to 10 per page
+- `dashboard.php`: Reordered and restyled login history sections
+
+**Cache Busting**
+- Service worker cache updated to `v1.14.0`
+- Forces PWA users to receive latest updates
+
+---
+
 ## [1.13.0] - 2025-11-27
 
 ### Added - Audit Log System (Permanent Action Tracking)
