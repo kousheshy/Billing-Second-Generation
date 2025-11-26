@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.11.47</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.11.49</small>
         </div>
         <div class="user-info">
             <span id="user-balance"></span>
@@ -618,10 +618,10 @@ try {
                     </p>
                 </div>
 
-                <!-- Push Notification Settings (Admin & Reseller Admin Only) -->
+                <!-- Push Notification Settings (All Users) -->
                 <div id="push-notification-section" class="settings-item" style="margin-top: 20px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
                     <h3 style="margin-bottom: 10px;">Push Notifications</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Receive notifications when accounts are added or renewed.</p>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Receive alerts when accounts are added, renewed, or expired.</p>
 
                     <div style="display: flex; flex-direction: column; gap: 15px;">
                         <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">

@@ -1,10 +1,11 @@
 <?php
 /**
- * Push Notification Helper (v1.11.47)
+ * Push Notification Helper (v1.11.48)
  *
  * Uses minishlink/web-push library for proper Web Push support
- * Handles notifications for admin alerts when ANY user adds/renews accounts
- * Both super admins and reseller admins receive all notifications
+ * Handles notifications for:
+ * - Admin alerts when ANY user adds/renews accounts (super admin + reseller admins)
+ * - Expiry alerts for resellers/reseller admins when their accounts expire (NOT super admin)
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -161,5 +162,88 @@ function notifyAccountRenewal($pdo, $actorName, $accountName, $planName, $newExp
         'expiry' => $newExpiry,
         'url' => '/dashboard.php?tab=accounts'
     ]);
+}
+
+/**
+ * Notify reseller/reseller admin about account expiry (v1.11.48)
+ * Does NOT notify super admin - only the account owner and reseller admins
+ *
+ * @param PDO $pdo - Database connection
+ * @param int $resellerId - The reseller who owns the account
+ * @param string $accountName - Account name or full name
+ * @param string $accountUsername - Account username
+ * @param string $expiryDate - When the account expired
+ * @return array - Result with sent/failed counts
+ */
+function notifyAccountExpired($pdo, $resellerId, $accountName, $accountUsername, $expiryDate) {
+    try {
+        // Get subscriptions for:
+        // 1. The reseller who owns the account
+        // 2. Reseller admins (NOT super admin)
+        $stmt = $pdo->prepare("
+            SELECT ps.*, u.username, u.super_user, u.permissions, u.id as uid
+            FROM _push_subscriptions ps
+            JOIN _users u ON ps.user_id = u.id
+            WHERE u.super_user = 0
+              AND (
+                  u.id = :reseller_id
+                  OR SUBSTRING_INDEX(SUBSTRING_INDEX(u.permissions, '|', 3), '|', -1) = '1'
+              )
+        ");
+        $stmt->execute(['reseller_id' => $resellerId]);
+        $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        error_log("[Push-Expiry] Found " . count($subscriptions) . " subscriptions for reseller $resellerId");
+
+        if (count($subscriptions) === 0) {
+            error_log("[Push-Expiry] No subscriptions found");
+            return ['sent' => 0, 'failed' => 0];
+        }
+
+        $displayName = $accountName ?: $accountUsername;
+        $title = '⚠️ Account Expired';
+        $body = "$displayName has expired ($expiryDate)";
+
+        $payload = [
+            'title' => $title,
+            'body' => $body,
+            'icon' => '/assets/icons/icon-192x192.png',
+            'badge' => '/assets/icons/icon-72x72.png',
+            'data' => [
+                'type' => 'expiry',
+                'account' => $displayName,
+                'username' => $accountUsername,
+                'expiry' => $expiryDate,
+                'url' => '/dashboard.php?tab=accounts'
+            ],
+            'timestamp' => time() * 1000
+        ];
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($subscriptions as $sub) {
+            error_log("[Push-Expiry] Sending to user {$sub['username']} (ID: {$sub['user_id']})");
+
+            $success = sendPushNotification([
+                'endpoint' => $sub['endpoint'],
+                'p256dh' => $sub['p256dh'],
+                'auth' => $sub['auth']
+            ], $payload);
+
+            if ($success) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        error_log("[Push-Expiry] Notified: sent=$sent, failed=$failed");
+        return ['sent' => $sent, 'failed' => $failed];
+
+    } catch (Exception $e) {
+        error_log('[Push-Expiry] Error: ' . $e->getMessage());
+        return ['sent' => 0, 'failed' => 0, 'error' => $e->getMessage()];
+    }
 }
 ?>

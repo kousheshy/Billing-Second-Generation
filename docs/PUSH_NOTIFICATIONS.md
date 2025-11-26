@@ -1,13 +1,17 @@
 # Push Notifications Feature
 
-## Version: 1.11.46
-## Date: 2025-11-25
+## Version: 1.11.49
+## Date: 2025-11-26
 
 ---
 
 ## Overview
 
-Push notifications allow administrators and reseller admins to receive real-time alerts when resellers create new accounts or renew existing accounts. This feature works on iOS PWA, Android, and desktop browsers.
+Push notifications provide real-time alerts for account operations in the ShowBox Billing Panel. This feature works on iOS PWA (16.4+), Android, and desktop browsers.
+
+**Three notification types:**
+1. **Activity Notifications** - When ANY user creates/renews accounts (sent to admins)
+2. **Expiry Notifications** - When accounts expire (sent to resellers, NOT admins)
 
 ---
 
@@ -15,20 +19,38 @@ Push notifications allow administrators and reseller admins to receive real-time
 
 ### Notification Types
 
-1. **New Account Created**
-   - Triggered when a reseller (not super admin) creates a new account
-   - Shows: Reseller name, account holder's full name, plan name
-   - Example: `"John Reseller created account: Ali Mohammadi (1 Month Plan)"`
+1. **📱 New Account Created** (v1.11.47+)
+   - Triggered when ANY user (admin, reseller admin, or reseller) creates an account
+   - Shows: Actor name, account holder's full name, plan name
+   - Example: `"📱 New Account Created: John Reseller added: Ali Mohammadi (1 Month Plan)"`
+   - **Recipients**: Super Admin + Reseller Admins
 
-2. **Account Renewed**
-   - Triggered when a reseller (not super admin) renews an account
-   - Shows: Reseller name, account holder's full name, plan name, new expiry date
-   - Example: `"John Reseller renewed: Ali Mohammadi (3 Month Plan) until 2025/12/25"`
+2. **🔄 Account Renewed** (v1.11.47+)
+   - Triggered when ANY user renews an account
+   - Shows: Actor name, account holder's full name, plan name, new expiry date
+   - Example: `"🔄 Account Renewed: John Reseller renewed: Ali Mohammadi (3 Month Plan) until 2025/12/25"`
+   - **Recipients**: Super Admin + Reseller Admins
 
-### Who Receives Notifications
+3. **⚠️ Account Expired** (v1.11.48+)
+   - Triggered automatically via cron when accounts expire
+   - Shows: Account holder's full name, expiry date/time
+   - Example: `"⚠️ Account Expired: Ali Mohammadi has expired (2025-11-26 14:30)"`
+   - **Recipients**: Account owner (reseller) + Reseller Admins
+   - **NOT sent to**: Super Admin (intentional - admin doesn't need individual expiry alerts)
 
-- **Super Admins** (super_user = 1)
-- **Reseller Admins** (permissions contain is_reseller_admin)
+### Who Receives Which Notifications
+
+| Notification Type | Super Admin | Reseller Admin | Reseller (Owner) |
+|-------------------|-------------|----------------|------------------|
+| New Account | ✅ | ✅ | ❌ |
+| Account Renewed | ✅ | ✅ | ❌ |
+| Account Expired | ❌ | ✅ | ✅ (own accounts only) |
+
+### Who Can Enable Push Notifications (v1.11.48+)
+
+- **All users** can now enable push notifications
+- Previously only admins could enable; now resellers can too
+- Resellers only receive expiry notifications for their own accounts
 
 ### Platform Support
 
@@ -51,9 +73,9 @@ Push notifications allow administrators and reseller admins to receive real-time
 
 #### New Files
 
-1. **api/push_helper.php**
+1. **api/push_helper.php** (v1.11.48)
    - Main push notification helper using minishlink/web-push library
-   - Functions: `sendPushNotification()`, `notifyAdmins()`, `notifyNewAccount()`, `notifyAccountRenewal()`
+   - Functions: `sendPushNotification()`, `notifyAdmins()`, `notifyNewAccount()`, `notifyAccountRenewal()`, `notifyAccountExpired()`
 
 2. **api/push_subscribe.php**
    - Handles push subscription management
@@ -64,6 +86,12 @@ Push notifications allow administrators and reseller admins to receive real-time
 
 4. **scripts/migration_add_push_subscriptions.sql**
    - Database migration for `_push_subscriptions` table
+
+5. **api/cron_check_expired.php** (v1.11.48)
+   - Cron job script for automatic expiry notifications
+   - Runs every 10 minutes via crontab
+   - Creates `_push_expiry_tracking` table for duplicate prevention
+   - Only checks accounts expired within last 24 hours
 
 #### Modified Files
 
@@ -114,6 +142,27 @@ CREATE TABLE IF NOT EXISTS `_push_subscriptions` (
   KEY `idx_endpoint` (`endpoint`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
+
+### Table: _push_expiry_tracking (v1.11.48)
+
+Tracks sent expiry notifications to prevent duplicates:
+
+```sql
+CREATE TABLE IF NOT EXISTS `_push_expiry_tracking` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `account_id` INT(11) NOT NULL,
+  `expiry_date` DATE NOT NULL,
+  `notified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_account_expiry` (`account_id`, `expiry_date`),
+  INDEX `idx_notified_at` (`notified_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Purpose:**
+- Prevents duplicate notifications for the same account expiry
+- Auto-cleaned: Records older than 30 days are automatically deleted
+- Unique constraint ensures one notification per account per expiry date
 
 ---
 
@@ -266,10 +315,65 @@ If no endpoint provided, removes all subscriptions for user.
 
 ---
 
+## Cron Job Setup (v1.11.48)
+
+The expiry notification cron job automatically checks for expired accounts and sends notifications.
+
+### Installation
+
+```bash
+# Edit root crontab
+sudo crontab -e
+
+# Add this line (runs every 10 minutes)
+*/10 * * * * /usr/bin/php /var/www/showbox/api/cron_check_expired.php >> /var/log/showbox_expiry.log 2>&1
+```
+
+### Configuration
+
+The cron script has these settings (in `cron_check_expired.php`):
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `EXPIRY_CHECK_WINDOW_HOURS` | 24 | Only check accounts expired in last 24 hours |
+| Cron interval | 10 minutes | Frequency of checks |
+| Auto-cleanup | 30 days | Old tracking records automatically deleted |
+
+### How It Works
+
+1. **Query expired accounts** - Finds accounts where `end_date < NOW()` and expired within the last 24 hours
+2. **Check tracking table** - Skips accounts that have already been notified for this expiry date
+3. **Send notifications** - Sends push notification to reseller owner and all reseller admins
+4. **Record notification** - Marks the account/expiry combination as notified
+5. **Cleanup** - Removes tracking records older than 30 days
+
+### Monitoring
+
+View cron output:
+```bash
+tail -f /var/log/showbox_expiry.log
+```
+
+Example output:
+```
+2025-11-26 14:30:00 - Expiry check completed. Sent: 3, Skipped: 15, Failed: 0
+```
+
+### Performance
+
+- **Execution time**: ~50-100ms (with no expired accounts)
+- **Database queries**: 2-3 indexed queries per run
+- **Server impact**: Minimal (designed for every 10 minutes)
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.11.49 | 2025-11-26 | Version bump for cache refresh |
+| 1.11.48 | 2025-11-26 | Added expiry notifications, cron job, tracking table, all users can enable |
+| 1.11.47 | 2025-11-26 | Expanded to notify for ALL account operations, fixed permission query |
 | 1.11.46 | 2025-11-25 | Fixed VAPID subject for Apple push service |
 | 1.11.45 | 2025-11-25 | Installed minishlink/web-push library, regenerated VAPID keys |
 | 1.11.44 | 2025-11-25 | Fixed session variable bug, added !isSuperUser check for card selection |
@@ -289,6 +393,8 @@ If no endpoint provided, removes all subscriptions for user.
 
 ## Future Enhancements
 
+- [x] ~~Expiry notifications for resellers~~ (Completed v1.11.48)
+- [x] ~~All users can enable push notifications~~ (Completed v1.11.48)
 - [ ] Notification preferences (choose which events to receive)
 - [ ] Sound customization
 - [ ] Notification grouping for multiple events

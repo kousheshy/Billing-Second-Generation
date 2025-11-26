@@ -2,7 +2,7 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.11.46
+**Version:** 1.11.49
 **Last Updated:** November 26, 2025
 **Database:** MySQL 5.7+
 **Character Set:** UTF8MB4
@@ -23,7 +23,7 @@ Complete database schema documentation for the ShowBox Billing Panel.
 
 ## Overview
 
-The ShowBox Billing Panel uses a MySQL relational database with 10 core tables:
+The ShowBox Billing Panel uses a MySQL relational database with 11 core tables:
 
 | Table | Purpose | Records (Typical) |
 |-------|---------|-------------------|
@@ -37,6 +37,7 @@ The ShowBox Billing Panel uses a MySQL relational database with 10 core tables:
 | `_expiry_reminders` | Sent reminder tracking (v1.7.8) | 1,000-50,000 |
 | `_reminder_settings` | User reminder preferences (v1.7.8) | 10-100 |
 | `_push_subscriptions` | Web push notification subscriptions (v1.11.40) | 10-500 |
+| `_push_expiry_tracking` | Expiry notification tracking (v1.11.48) | 100-5,000 |
 
 **Database Name:** `showboxt_panel`
 **Engine:** InnoDB
@@ -642,6 +643,63 @@ INSERT INTO `_push_subscriptions` VALUES (
 
 ---
 
+### 11. _push_expiry_tracking
+
+**Purpose:** Track sent expiry push notifications to prevent duplicates
+
+**Version:** Added in v1.11.48
+
+**Schema:**
+```sql
+CREATE TABLE IF NOT EXISTS `_push_expiry_tracking` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `account_id` INT(11) NOT NULL COMMENT 'FK to _accounts.id',
+  `expiry_date` DATE NOT NULL COMMENT 'The expiry date that triggered notification',
+  `notified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When notification was sent',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_account_expiry` (`account_id`, `expiry_date`),
+  INDEX `idx_notified_at` (`notified_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Fields:**
+
+| Field | Type | Null | Default | Description |
+|-------|------|------|---------|-------------|
+| `id` | INT(11) | NO | AUTO | Primary key |
+| `account_id` | INT(11) | NO | - | FK to _accounts.id |
+| `expiry_date` | DATE | NO | - | The expiry date that triggered the notification |
+| `notified_at` | TIMESTAMP | YES | CURRENT | When the notification was sent |
+
+**Unique Constraint:**
+- `unique_account_expiry` ensures only ONE notification per account per expiry date
+- If an account expires, gets renewed, then expires again, a new notification is sent
+
+**Usage:**
+- Created automatically by `cron_check_expired.php` cron job
+- Prevents duplicate notifications for the same expiry event
+- Records older than 30 days are automatically cleaned up
+- Used to track which expired accounts have already been notified
+
+**Example Record:**
+```sql
+INSERT INTO `_push_expiry_tracking` VALUES (
+  1,
+  12345, -- account_id
+  '2025-11-26', -- expiry_date
+  '2025-11-26 14:30:00' -- notified_at
+);
+```
+
+**Auto-Cleanup:**
+```sql
+-- Run by cron script to remove old records
+DELETE FROM _push_expiry_tracking
+WHERE notified_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+```
+
+---
+
 ## Relationships
 
 ### Foreign Keys
@@ -720,6 +778,39 @@ CREATE INDEX idx_plans_currency ON _plans(currency);
 ---
 
 ## Migration History
+
+### v1.11.48 - Push Expiry Tracking (November 2025)
+
+**Changes:**
+```sql
+CREATE TABLE IF NOT EXISTS `_push_expiry_tracking` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `account_id` INT(11) NOT NULL,
+  `expiry_date` DATE NOT NULL,
+  `notified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_account_expiry` (`account_id`, `expiry_date`),
+  INDEX `idx_notified_at` (`notified_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Features Added:**
+- Automatic expiry push notifications via cron job
+- Duplicate notification prevention
+- 30-day auto-cleanup of tracking records
+- Resellers and reseller admins notified (not super admin)
+
+**Cron Setup:**
+```bash
+*/10 * * * * /usr/bin/php /var/www/showbox/api/cron_check_expired.php >> /var/log/showbox_expiry.log 2>&1
+```
+
+**Rollback:**
+```sql
+DROP TABLE IF EXISTS _push_expiry_tracking;
+```
+
+---
 
 ### v1.11.40-v1.11.46 - Push Notifications (November 2025)
 
@@ -977,7 +1068,7 @@ For database support:
 
 ---
 
-**Document Version:** 1.11.46
+**Document Version:** 1.11.49
 **Last Updated:** November 26, 2025
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi

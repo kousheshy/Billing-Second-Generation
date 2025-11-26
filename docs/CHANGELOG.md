@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.49] - 2025-11-26
+
+### Changed - Version Bump & Cache Busting
+
+**Status:** Production Release - Maintenance
+
+**Overview**
+Version bump to force cache refresh on all clients after push notification changes.
+
+**Changes**
+
+1. **Version Updates**
+   - Updated service-worker.js cache version to v1.11.49
+   - Updated dashboard.php version display
+   - Updated index.html version display
+   - Ensures all clients receive latest push notification code
+
+---
+
+## [1.11.48] - 2025-11-26
+
+### Added - Account Expiry Push Notifications
+
+**Status:** Production Release - Major Feature
+
+**Overview**
+Implemented automatic push notifications when customer accounts expire. Resellers and reseller admins receive notifications when their accounts expire. Super admin does NOT receive expiry notifications (only new account/renewal notifications).
+
+**New Features**
+
+1. **Expiry Notification Function**
+   - New `notifyAccountExpired()` function in push_helper.php
+   - Sends to: Account owner (reseller) + all reseller admins
+   - Does NOT notify super admin (intentional design)
+   - **Files**: `api/push_helper.php` (lines 166-247)
+
+2. **Automated Cron Job**
+   - New `cron_check_expired.php` script for scheduled expiry checks
+   - Runs every 10 minutes via crontab
+   - Only checks accounts expired within last 24 hours
+   - Sends individual notification for each expired account
+   - **Files**: `api/cron_check_expired.php` (195 lines)
+
+3. **Duplicate Prevention**
+   - New `_push_expiry_tracking` table tracks sent notifications
+   - Unique constraint on (account_id, expiry_date) prevents duplicates
+   - Auto-cleanup of records older than 30 days
+   - **Schema**: See DATABASE_SCHEMA.md
+
+4. **Push Notifications for All Users**
+   - All users (including regular resellers) can now enable push notifications
+   - Mobile push button visible for all user types
+   - **Files**: `dashboard.js` (lines 1430-1436)
+
+**Cron Configuration**
+```bash
+# Added to server crontab (root@192.168.15.230)
+*/10 * * * * /usr/bin/php /var/www/showbox/api/cron_check_expired.php >> /var/log/showbox_expiry.log 2>&1
+```
+
+**Notification Format**
+- Title: `⚠️ Account Expired`
+- Body: `{Full Name} has expired ({YYYY-MM-DD HH:MM})`
+- Click action: Opens dashboard accounts tab
+
+**Performance**
+- Minimal server impact (~50-100ms per run)
+- Only queries accounts expired in last 24 hours
+- Skips already-notified accounts
+- Rate-limited HTTP requests to push services
+
+**UI Changes**
+
+1. **Hidden Sync Accounts Section**
+   - Sync section now hidden for both super admin and reseller admin
+   - Lines commented out (not deleted) for easy restoration
+   - **Files**: `dashboard.js` (lines 1373-1378, 1423-1427)
+
+2. **Push Notification Layout Fix**
+   - Fixed overlapping text in push notification settings box
+   - Changed to column-based flex layout
+   - **Files**: `dashboard.php` (line 628)
+
+---
+
 ## [1.11.47] - 2025-11-26
 
 ### Changed - Push Notification Coverage Expansion

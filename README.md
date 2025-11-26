@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.11.47-blue.svg)
+![Version](https://img.shields.io/badge/version-1.11.49-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -265,16 +265,22 @@ Your IPTV/STB billing management system is running with complete UI integrated w
 - **Database Table**: New `_app_settings` table for global settings
 - **Settings UI**: Auto-logout configuration in Settings tab
 
-### Push Notifications (v1.11.46)
-- **Real-Time Alerts**: Receive instant notifications when resellers create or renew accounts
+### Push Notifications (v1.11.49)
+- **Real-Time Alerts**: Receive instant notifications for account activity and expiry
 - **Multi-Platform Support**:
   - iOS PWA (16.4+) - Must be installed on home screen
   - Android Chrome
   - Desktop browsers (Chrome, Firefox, Safari)
 - **Notification Types**:
-  - New Account: "{Reseller} created account: {Name} ({Plan})"
-  - Renewal: "{Reseller} renewed: {Name} ({Plan}) until {Date}"
-- **Who Receives**: Super Admins and Reseller Admins
+  - 📱 New Account: "{Actor} added: {Name} ({Plan})" - All admins notified
+  - 🔄 Renewal: "{Actor} renewed: {Name} ({Plan}) until {Date}" - All admins notified
+  - ⚠️ Expiry (v1.11.48): "{Name} has expired ({Date})" - Reseller + reseller admins notified
+- **Who Receives**:
+  - Activity notifications (add/renew): Super Admin + Reseller Admins
+  - Expiry notifications: Account owner (reseller) + Reseller Admins (NOT super admin)
+- **All Users Can Subscribe**: Regular resellers can now enable notifications (v1.11.48)
+- **Automatic Expiry Alerts**: Cron job checks every 10 minutes for expired accounts
+- **Duplicate Prevention**: Tracking table ensures one notification per expiry event
 - **Easy Setup**: Enable in Settings → Push Notifications
 - **VAPID Authentication**: Secure Web Push protocol with proper VAPID keys
 - **Library**: Uses `minishlink/web-push` for reliable delivery
@@ -282,7 +288,10 @@ Your IPTV/STB billing management system is running with complete UI integrated w
   - `push_subscribe.php` - Manage subscriptions
   - `get_vapid_key.php` - Client subscription key
   - `push_helper.php` - Send notifications
-- **Database Table**: `_push_subscriptions` for storing browser subscriptions
+  - `cron_check_expired.php` - Automated expiry checking (v1.11.48)
+- **Database Tables**:
+  - `_push_subscriptions` - Browser subscriptions
+  - `_push_expiry_tracking` - Expiry notification tracking (v1.11.48)
 - **Service Worker**: Push event handling in `service-worker.js`
 
 ### Observer Mode (v1.6.3, Enhanced v1.6.4, v1.7.0)
@@ -664,13 +673,32 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.22
-**Last Updated:** November 25, 2025
+**Version:** 1.11.49
+**Last Updated:** November 26, 2025
 **Status:** Beta Testing 🧪
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.11.49** (Nov 2025) - Version Bump & Cache Busting
+  - **Cache Refresh**: Version bump to force cache refresh on all clients
+  - **Service Worker**: Updated cache version to v1.11.49
+  - **Ensures**: All clients receive latest push notification code
+
+- **v1.11.48** (Nov 2025) - Account Expiry Push Notifications
+  - **Expiry Notifications**: Automatic push alerts when customer accounts expire
+  - **Cron Job**: `cron_check_expired.php` runs every 10 minutes
+  - **Recipients**: Reseller (account owner) + Reseller Admins only (NOT super admin)
+  - **Duplicate Prevention**: New `_push_expiry_tracking` table prevents repeat notifications
+  - **All Users**: Regular resellers can now enable push notifications
+  - **Hidden Sync**: Sync Accounts section hidden in settings (not deleted)
+  - **UI Fix**: Fixed overlapping text in push notification settings box
+
+- **v1.11.47** (Nov 2025) - Push Notification Coverage Expansion
+  - **All Activity**: Notifications sent for ALL account operations (admin, reseller admin, or reseller)
+  - **Actor Attribution**: Shows who performed the action in notification
+  - **Permission Fix**: Fixed reseller admin query using SUBSTRING_INDEX
 
 - **v1.11.22** (Nov 2025) - Auto-Logout Timeout Precision Fix
   - **Timeout Fix**: Changed comparison from `>` to `>=` for exact timeout at limit
@@ -1090,4 +1118,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.11.22**
+**ShowBox Billing System v1.11.49**

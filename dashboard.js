@@ -260,8 +260,8 @@ async function checkAuth() {
             document.getElementById('balance-display').style.display = 'none';
             document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
 
-            // Show sync section for super admin only
-            document.getElementById('sync-section').style.display = 'block';
+            // Show sync section for super admin only (HIDDEN v1.11.47)
+            // document.getElementById('sync-section').style.display = 'block';
 
             // Show database backup section for super admin
             document.getElementById('database-backup-section').style.display = 'block';
@@ -298,8 +298,8 @@ async function checkAuth() {
             document.getElementById('balance-display').style.display = 'none';
             document.querySelector('.stat-card:nth-child(2)').style.display = 'none';
 
-            // Show sync section for reseller admins
-            document.getElementById('sync-section').style.display = 'block';
+            // Show sync section for reseller admins (HIDDEN v1.11.47)
+            // document.getElementById('sync-section').style.display = 'block';
 
             // Show database backup section for reseller admin
             document.getElementById('database-backup-section').style.display = 'block';
@@ -360,6 +360,13 @@ async function checkAuth() {
             const actionsHeader = document.getElementById('plans-actions-header');
             if(addPlanBtn) addPlanBtn.style.display = 'none';
             if(actionsHeader) actionsHeader.style.display = 'none';
+
+            // Show Mobile Push Notifications button for regular resellers (v1.11.48)
+            // Resellers need this to receive expiry notifications for their accounts
+            const mobilePushBtnReseller = document.getElementById('mobile-push-btn');
+            if (mobilePushBtnReseller) {
+                mobilePushBtnReseller.style.display = 'flex';
+            }
         }
 
         // Show/hide reminder section based on permissions (v1.7.8)
