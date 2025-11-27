@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.1] - 2025-11-27
+
+### Enhanced - Plan Price Display & Formatting
+
+**Status:** Production Release
+
+#### UI/UX Improvements
+
+**Plan Price Formatting**
+- Added thousand separators to plan prices for better readability
+- Price now displays as "1,200,000" instead of "1200000"
+- Enhanced visual clarity in Plans tab
+- Improved user experience when viewing and managing plans
+
+**Edit Plan Form Enhancement**
+- Plan price field now shows formatted values with commas
+- Form automatically strips formatting before submission
+- Changed input type from `number` to `text` to support formatted display
+- Maintains data integrity while improving readability
+
+#### Technical Details
+
+**Files Modified:**
+- `dashboard.js`: 
+  - Enhanced `loadPlans()` to format prices with thousand separators
+  - Updated `editPlan()` to display formatted prices in edit form
+  - Modified `submitEditPlan()` to strip commas before API submission
+- `dashboard.php`:
+  - Changed edit plan price input from `type="number"` to `type="text"`
+
+#### Version Updates
+- Dashboard version: `v1.14.1`
+- Login page version: `v1.14.1`
+- Service worker cache: `v1.14.1`
+- README badge: `v1.14.1`
+
+**Migration Notes:**
+- No database changes required
+- No breaking changes
+- Backward compatible with existing plan data
+
+---
+
 ## [1.14.0] - 2025-11-27
 
 ### Added - Extended Audit Logging & UI Improvements

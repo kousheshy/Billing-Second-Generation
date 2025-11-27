@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.14.0
+// ShowBox Dashboard v1.14.1
 // ========================================
 
 // ========================================
@@ -1955,7 +1955,8 @@ async function loadPlans() {
                 const tr = document.createElement('tr');
                 // Normalize currency display (IRT -> IRR)
                 const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
-                const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                const formattedPrice = formatBalance(plan.price, plan.currency_id);
+                const formattedPriceWithSymbol = getCurrencySymbol(plan.currency_id) + formattedPrice;
 
                 // Format category display
                 const categoryLabels = {
@@ -2006,14 +2007,14 @@ async function loadPlans() {
                 // Add ALL plans to dropdown (admins see all plans)
                 const option = document.createElement('option');
                 option.value = `${plan.external_id}-${plan.currency_id}`;
-                option.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
+                option.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${plan.days} days)`;
                 planSelect.appendChild(option);
 
                 // Add to reseller plan assignment dropdown with planID-currency format
                 if(resellerPlansSelect) {
                     const resellerOption = document.createElement('option');
                     resellerOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    resellerOption.textContent = `${plan.name || plan.external_id} - ${formattedPrice} (${plan.days} days)`;
+                    resellerOption.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${plan.days} days)`;
                     resellerPlansSelect.appendChild(resellerOption);
                 }
             });
@@ -2609,7 +2610,12 @@ async function editPlan(planId) {
         const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
         document.getElementById('edit-plan-currency-display').value = displayCurrency;
 
-        document.getElementById('edit-plan-price').value = plan.price;
+        // Format price with thousand separators
+        const priceNum = parseFloat(plan.price) || 0;
+        document.getElementById('edit-plan-price').value = priceNum.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
         document.getElementById('edit-plan-days').value = plan.days;
         document.getElementById('edit-plan-category').value = plan.category || '';
 
@@ -2627,6 +2633,11 @@ async function submitEditPlan(e) {
     e.preventDefault();
 
     const formData = new FormData(e.target);
+    // Strip commas from price before submitting
+    const priceValue = formData.get('price');
+    if (priceValue) {
+        formData.set('price', priceValue.replace(/,/g, ''));
+    }
     const params = new URLSearchParams(formData).toString();
 
     try {

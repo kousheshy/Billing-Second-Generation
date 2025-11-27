@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.14.0</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.14.1</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -1783,7 +1783,7 @@ try {
 
                 <div class="form-group">
                     <label>Price *</label>
-                    <input type="number" step="0.01" name="price" id="edit-plan-price" required>
+                    <input type="text" name="price" id="edit-plan-price" required>
                 </div>
 
                 <div class="form-group">
