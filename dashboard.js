@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.14.1
+// ShowBox Dashboard v1.14.4
 // ========================================
 
 // ========================================
@@ -1873,7 +1873,10 @@ async function loadResellers() {
                 const resellerBalance = reseller.balance || 0;
                 const resellerCurrency = reseller.currency_name || 'IRR';
 
-                // Check if user is observer
+                // Check if this reseller is an observer
+                const isResellerObserver = reseller.is_observer == 1;
+
+                // Check if current user is observer
                 const isObserver = currentUser && currentUser.is_observer == 1;
                 const isSuperAdmin = currentUser && currentUser.super_user == 1;
                 const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
@@ -1898,12 +1901,17 @@ async function loadResellers() {
                     ? `<button class="btn-sm btn-delete" onclick="deleteReseller(${reseller.id})">Delete</button>`
                     : '';
 
+                // For observers, show "-" for currency and balance
+                const displayCurrency = isResellerObserver ? '-' : resellerCurrency;
+                const displayBalance = isResellerObserver ? '-' : formatBalance(reseller.balance || 0, reseller.currency_name);
+
                 tr.innerHTML = `
                     <td>${reseller.name || ''}</td>
                     <td>${reseller.username || ''}</td>
-                    <td>${reseller.email || ''}</td>
-                    <td>${getCurrencySymbol(reseller.currency_name)}${formatBalance(reseller.balance || 0, reseller.currency_name)}</td>
-                    <td>${reseller.account_count || 0}</td>
+                    <td class="hide-in-pwa">${reseller.email || ''}</td>
+                    <td>${displayCurrency}</td>
+                    <td style="text-align: left;">${displayBalance}</td>
+                    <td class="hide-in-pwa">${reseller.account_count || 0}</td>
                     <td>
                         <div class="action-buttons">
                             ${editButton}
@@ -1916,7 +1924,7 @@ async function loadResellers() {
                 tbody.appendChild(tr);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999">No resellers found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999">No resellers found</td></tr>';
         }
     } catch(error) {
         console.error('Error loading resellers:', error);
@@ -1938,14 +1946,14 @@ async function loadPlans() {
 
         const tbody = document.getElementById('plans-tbody');
         const planSelect = document.getElementById('add-plan-select');
-        const resellerPlansSelect = document.getElementById('reseller-plans-select');
+        const resellerPlansCheckboxes = document.getElementById('reseller-plans-checkboxes');
         const assignPlansSelect = document.getElementById('assign-plans-select');
 
         if(result.error == 0 && result.plans && result.plans.length > 0) {
             console.log('[loadPlans] Loading', result.plans.length, 'plans into dropdowns');
             tbody.innerHTML = '';
             planSelect.innerHTML = '<option value="0">No Plan</option>';
-            if(resellerPlansSelect) resellerPlansSelect.innerHTML = '';
+            if(resellerPlansCheckboxes) resellerPlansCheckboxes.innerHTML = '';
             document.getElementById('total-plans').textContent = result.plans.length;
 
             // Store plans globally for use in assign modal
@@ -2010,12 +2018,23 @@ async function loadPlans() {
                 option.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${plan.days} days)`;
                 planSelect.appendChild(option);
 
-                // Add to reseller plan assignment dropdown with planID-currency format
-                if(resellerPlansSelect) {
-                    const resellerOption = document.createElement('option');
-                    resellerOption.value = `${plan.external_id}-${plan.currency_id}`;
-                    resellerOption.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${plan.days} days)`;
-                    resellerPlansSelect.appendChild(resellerOption);
+                // Add to reseller plan assignment checkboxes with planID-currency format
+                if(resellerPlansCheckboxes) {
+                    // Normalize IRT to IRR for filtering
+                    const filterCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
+                    const checkboxItem = document.createElement('div');
+                    checkboxItem.className = 'plan-checkbox-item';
+                    checkboxItem.dataset.currency = filterCurrency;
+                    checkboxItem.innerHTML = `
+                        <label class="plan-checkbox-label">
+                            <input type="checkbox" name="reseller_plans" value="${plan.external_id}-${plan.currency_id}">
+                            <div class="plan-info">
+                                <span class="plan-name">${plan.name || plan.external_id}</span>
+                                <span class="plan-details">${formattedPriceWithSymbol} (${plan.days} days)</span>
+                            </div>
+                        </label>
+                    `;
+                    resellerPlansCheckboxes.appendChild(checkboxItem);
                 }
             });
         } else {
@@ -2499,15 +2518,51 @@ async function submitAddAccountForm(formData) {
     }
 }
 
+// Filter plans by currency in Add Reseller modal
+function filterPlansByCurrency() {
+    const currencySelect = document.getElementById('add-reseller-currency');
+    const selectedCurrency = currencySelect ? currencySelect.value : null;
+    const planItems = document.querySelectorAll('#reseller-plans-checkboxes .plan-checkbox-item');
+
+    let visibleCount = 0;
+    planItems.forEach(item => {
+        const planCurrency = item.dataset.currency;
+        if (!selectedCurrency || planCurrency === selectedCurrency) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+            // Uncheck hidden plans
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = false;
+        }
+    });
+
+    // Show message if no plans match
+    const container = document.getElementById('reseller-plans-checkboxes');
+    let noPlansMsg = container.querySelector('.no-plans-message');
+    if (visibleCount === 0) {
+        if (!noPlansMsg) {
+            noPlansMsg = document.createElement('div');
+            noPlansMsg.className = 'no-plans-message';
+            noPlansMsg.style.cssText = 'padding: 20px; text-align: center; color: var(--text-secondary);';
+            noPlansMsg.textContent = 'No plans available for this currency';
+            container.appendChild(noPlansMsg);
+        }
+    } else if (noPlansMsg) {
+        noPlansMsg.remove();
+    }
+}
+
 // Add Reseller
 async function addReseller(e) {
     e.preventDefault();
 
     const formData = new FormData(e.target);
 
-    // Get selected plans from multi-select
-    const plansSelect = document.getElementById('reseller-plans-select');
-    const selectedPlans = Array.from(plansSelect.selectedOptions).map(opt => opt.value);
+    // Get selected plans from checkboxes
+    const selectedCheckboxes = document.querySelectorAll('#reseller-plans-checkboxes input[type="checkbox"]:checked');
+    const selectedPlans = Array.from(selectedCheckboxes).map(cb => cb.value);
     const plansString = selectedPlans.join(',');
 
     formData.set('plans', plansString);

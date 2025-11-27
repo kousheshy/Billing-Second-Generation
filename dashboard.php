@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.14.1</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.14.4</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -225,21 +225,22 @@ try {
             <div id="resellers-tab" class="tab-content">
                 <div class="section-header">
                     <h2>Reseller Management</h2>
-                    <button class="btn-primary" onclick="openModal('addResellerModal')">+ Add Reseller</button>
+                    <button class="btn-primary" onclick="openModal('addResellerModal'); filterPlansByCurrency();">+ Add Reseller</button>
                 </div>
                 <table id="resellers-table">
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Username</th>
-                            <th>Email</th>
-                            <th>Balance</th>
-                            <th>Total Accounts</th>
+                            <th class="hide-in-pwa">Email</th>
+                            <th>Currency</th>
+                            <th style="text-align: left;">Balance</th>
+                            <th class="hide-in-pwa">Total Accounts</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="resellers-tbody">
-                        <tr><td colspan="6" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1475,7 +1476,7 @@ try {
                 </div>
                 <div class="form-group">
                     <label>Currency</label>
-                    <select name="currency">
+                    <select name="currency" id="add-reseller-currency" onchange="filterPlansByCurrency()">
                         <option value="GBP">GBP</option>
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -1488,10 +1489,10 @@ try {
                 </div>
                 <div class="form-group">
                     <label>Assigned Plans</label>
-                    <select name="plans" id="reseller-plans-select" multiple size="8" style="width:100%">
-                        <!-- Plans will be loaded dynamically -->
-                    </select>
-                    <small>Hold Ctrl/Cmd to select multiple plans</small>
+                    <div class="plans-checkbox-container" id="reseller-plans-checkboxes">
+                        <!-- Plans will be loaded dynamically as checkboxes -->
+                    </div>
+                    <small>Select plans this reseller can use</small>
                 </div>
                 <div class="form-group">
                     <label>User Theme</label>

@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.4] - 2025-11-27
+
+### Enhanced - Plan Table, Reseller Management & Currency Filtering
+
+**Status:** Production Release
+
+#### Plan Table Improvements
+
+**Removed Redundant Currency Display**
+- Removed currency prefix (IRR, £, etc.) from Price column in Plans table
+- Currency is already shown in dedicated Currency column, no need to duplicate
+- Cleaner, more readable price display
+
+**Edit Plan Price Formatting Fix**
+- Fixed blank price field issue in Edit Plan modal
+- Changed input type from `number` to `text` to support thousand separators
+- Price now displays formatted (e.g., "90,000,000") when editing
+- Commas automatically stripped before form submission
+
+#### Reseller Management Enhancements
+
+**Added Currency Column**
+- New Currency column added to Reseller Management table
+- Shows each reseller's assigned currency (GBP, USD, EUR, IRR)
+- Column positioned between Email and Balance for logical grouping
+
+**Improved Balance Display**
+- Balance column now left-aligned instead of centered
+- Removed currency symbol from Balance column (shown in Currency column)
+- Observer users display "-" for both Currency and Balance columns
+
+**Redesigned Assigned Plans UI**
+- Replaced old multi-select dropdown with modern checkbox card layout
+- Each plan displayed as a selectable card with:
+  - Plan name on the left
+  - Price and duration on the right
+- Cards highlight in purple when selected
+- Scrollable container for multiple plans
+- No more "Hold Ctrl/Cmd to select" - just click to toggle
+
+**Currency-Based Plan Filtering**
+- When creating a reseller, plans are automatically filtered by selected currency
+- Selecting GBP shows only GBP plans, IRR shows only IRR plans, etc.
+- Prevents mismatched currency assignments
+- Plans automatically uncheck when currency is changed
+- Shows "No plans available" message if no plans exist for selected currency
+
+#### PWA Optimizations
+
+**Reseller Table Mobile Layout**
+- Fixed column visibility for PWA/mobile view
+- Visible columns: Username, Currency, Balance, Actions
+- Hidden columns: Name, Email, Total Accounts
+- Provides better space utilization on mobile devices
+
+**CSS Column Position Fix**
+- Updated nth-child selectors to match new 7-column layout
+- Fixed Balance column being hidden instead of Total Accounts
+- Corrected Actions column positioning
+
+#### Technical Details
+
+**Files Modified:**
+- `dashboard.js`:
+  - Updated `loadPlans()` to separate price formatting with/without symbol
+  - Added `filterPlansByCurrency()` function for currency-based filtering
+  - Updated `loadResellers()` with new column order and observer handling
+  - Modified `addReseller()` to read from checkbox container
+  - Enhanced `editPlan()` with inline price formatting
+- `dashboard.php`:
+  - Added Currency column to reseller table header
+  - Changed edit plan price input from `type="number"` to `type="text"`
+  - Replaced multi-select with checkbox container for plan assignment
+  - Added `onchange="filterPlansByCurrency()"` to currency select
+  - Added `hide-in-pwa` classes for mobile optimization
+- `dashboard.css`:
+  - Added `.plan-checkbox-item:has(input:checked)` styles for selected state
+  - Added `body.pwa-mode .hide-in-pwa` rule to hide elements in PWA
+  - Updated reseller table nth-child selectors for 7-column layout
+  - Fixed mobile column visibility rules
+
+**Database Changes:**
+- None required
+
+**Migration Notes:**
+- No breaking changes
+- Backward compatible
+- Clear browser cache or update PWA to see changes
+
+#### Version Updates
+- Service worker cache: `v1.14.4`
+
+---
+
 ## [1.14.1] - 2025-11-27
 
 ### Enhanced - Plan Price Display & Formatting

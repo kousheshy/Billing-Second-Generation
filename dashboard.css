@@ -2038,6 +2038,15 @@ input[type="number"] {
     border-color: var(--primary);
 }
 
+.plan-checkbox-item:has(input:checked) {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+}
+
+.plan-checkbox-item:has(input:checked) .plan-name {
+    color: var(--primary);
+}
+
 .plan-checkbox-label {
     display: flex;
     align-items: center;
@@ -3399,6 +3408,11 @@ body.pwa-mode .browser-only {
     display: none !important;
 }
 
+/* Hide specific columns in PWA mode to save space */
+body.pwa-mode .hide-in-pwa {
+    display: none !important;
+}
+
 /* Mobile PWA: iOS-style bottom sheets - ONLY when running as installed PWA (v1.10.1)
    Uses .pwa-mode class added by JavaScript detection
    Standard browsers get centered modals, PWA gets bottom sheets */
@@ -3701,8 +3715,14 @@ body.pwa-mode .modal-header {
         display: none;
     }
 
-    /* Resellers table columns: 1=Name, 2=Username, 3=Email, 4=Balance, 5=Total Accounts, 6=Actions */
-    /* Show: Name (1), Username (2), Balance (4), Actions (6) */
+    /* Resellers table columns: 1=Name, 2=Username, 3=Email, 4=Currency, 5=Balance, 6=Total Accounts, 7=Actions */
+    /* Show on mobile: Username (2), Currency (4), Balance (5), Actions (7) */
+
+    /* Hide Name column (1st) in Resellers table on mobile */
+    #resellers-table thead tr th:nth-child(1),
+    #resellers-table tbody tr td:nth-child(1) {
+        display: none;
+    }
 
     /* Hide Email column (3rd) in Resellers table */
     #resellers-table thead tr th:nth-child(3),
@@ -3710,9 +3730,9 @@ body.pwa-mode .modal-header {
         display: none;
     }
 
-    /* Hide Total Accounts column (5th) in Resellers table on mobile */
-    #resellers-table thead tr th:nth-child(5),
-    #resellers-table tbody tr td:nth-child(5) {
+    /* Hide Total Accounts column (6th) in Resellers table on mobile */
+    #resellers-table thead tr th:nth-child(6),
+    #resellers-table tbody tr td:nth-child(6) {
         display: none;
     }
 
@@ -3774,37 +3794,40 @@ body.pwa-mode .modal-header {
     }
 
     /* Resellers Table: Optimize column widths for full screen (v1.10.1) */
-    /* Columns visible on mobile: Username (2), Balance (4), Actions (6) */
-
-    /* Hide Name column (1st) on mobile - not needed since username is shown */
-    #resellers-table thead tr th:nth-child(1),
-    #resellers-table tbody tr td:nth-child(1) {
-        display: none;
-    }
+    /* Columns: 1=Name, 2=Username, 3=Email, 4=Currency, 5=Balance, 6=Total Accounts, 7=Actions */
+    /* Columns visible on mobile: Username (2), Currency (4), Balance (5), Actions (7) */
 
     /* Resellers Table: Username column (2nd) - wider for better visibility */
     #resellers-table thead tr th:nth-child(2),
     #resellers-table tbody tr td:nth-child(2) {
         white-space: normal;
         word-break: break-word;
-        width: 40%;
-        min-width: 120px;
+        width: 30%;
+        min-width: 100px;
         font-size: 12px;
         font-weight: 500;
     }
 
-    /* Resellers Table: Balance column (4th) - wider for better visibility */
+    /* Resellers Table: Currency column (4th) */
     #resellers-table thead tr th:nth-child(4),
     #resellers-table tbody tr td:nth-child(4) {
-        width: 35%;
-        min-width: 110px;
+        width: 15%;
+        min-width: 50px;
+        font-size: 12px;
+    }
+
+    /* Resellers Table: Balance column (5th) - wider for better visibility */
+    #resellers-table thead tr th:nth-child(5),
+    #resellers-table tbody tr td:nth-child(5) {
+        width: 30%;
+        min-width: 100px;
         font-size: 12px;
         white-space: nowrap;
     }
 
-    /* Resellers Table: Actions column (6th) - optimized width */
-    #resellers-table thead tr th:nth-child(6),
-    #resellers-table tbody tr td:nth-child(6) {
+    /* Resellers Table: Actions column (7th) - optimized width */
+    #resellers-table thead tr th:nth-child(7),
+    #resellers-table tbody tr td:nth-child(7) {
         width: 25%;
         min-width: 85px;
     }
