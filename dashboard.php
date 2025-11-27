@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.15.1</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.15.2</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -421,15 +421,39 @@ try {
 
                     <!-- Transaction Details Table -->
                     <div class="invoice-details">
-                        <h4>Transaction Details</h4>
+                        <!-- Header with Title and Per Page -->
+                        <div class="invoice-details-header">
+                            <h4>Transaction Details</h4>
+                            <div class="pagination-options">
+                                <label>Per page:</label>
+                                <select id="invoice-per-page" onchange="changeInvoicePerPage()">
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls Top -->
+                        <div class="invoice-pagination-controls">
+                            <div class="pagination-info">
+                                <span id="invoice-showing-info">Showing 0-0 of 0</span>
+                            </div>
+                            <div class="pagination-buttons">
+                                <button type="button" id="invoice-prev-btn" onclick="invoicePrevPage()" disabled>Previous</button>
+                                <span id="invoice-page-info">Page 1 of 1</span>
+                                <button type="button" id="invoice-next-btn" onclick="invoiceNextPage()" disabled>Next</button>
+                            </div>
+                        </div>
+
                         <table id="invoice-transactions-table" class="invoice-table">
                             <thead>
                                 <tr>
-                                    <th>Date (Gregorian)</th>
-                                    <th>Date (Shamsi)</th>
+                                    <th class="sortable" data-sort="date_gregorian" onclick="sortInvoiceTable('date_gregorian')">Date (Gregorian) <span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="date_shamsi" onclick="sortInvoiceTable('date_shamsi')">Date (Shamsi) <span class="sort-icon">↕</span></th>
                                     <th>Type</th>
                                     <th>MAC Address</th>
-                                    <th>Amount</th>
+                                    <th>Price</th>
                                     <th>Description</th>
                                 </tr>
                             </thead>
@@ -437,6 +461,18 @@ try {
                                 <tr><td colspan="6" style="text-align:center;padding:20px;color:#999">Select filters and click Generate Invoice</td></tr>
                             </tbody>
                         </table>
+
+                        <!-- Pagination Controls Bottom -->
+                        <div class="invoice-pagination-controls bottom">
+                            <div class="pagination-info">
+                                <span id="invoice-showing-info-bottom">Showing 0-0 of 0</span>
+                            </div>
+                            <div class="pagination-buttons">
+                                <button type="button" id="invoice-prev-btn-bottom" onclick="invoicePrevPage()" disabled>Previous</button>
+                                <span id="invoice-page-info-bottom">Page 1 of 1</span>
+                                <button type="button" id="invoice-next-btn-bottom" onclick="invoiceNextPage()" disabled>Next</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -5106,6 +5106,132 @@ body.pwa-mode .push-prompt-content {
     color: #007bff;
 }
 
+/* Invoice Details Header */
+.invoice-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.invoice-details-header h4 {
+    margin: 0;
+}
+
+.invoice-details-header .pagination-options {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.invoice-details-header .pagination-options label {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.invoice-details-header .pagination-options select {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Invoice Pagination Controls */
+.invoice-pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.invoice-pagination-controls.bottom {
+    margin-top: 16px;
+    margin-bottom: 0;
+}
+
+.invoice-pagination-controls .pagination-info {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.invoice-pagination-controls .pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.invoice-pagination-controls .pagination-buttons button {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.invoice-pagination-controls .pagination-buttons button:hover:not(:disabled) {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.invoice-pagination-controls .pagination-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.invoice-pagination-controls .pagination-buttons span {
+    color: var(--text-secondary);
+    font-size: 13px;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Sortable Table Headers */
+.invoice-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.invoice-table th.sortable:hover {
+    background: var(--bg-primary);
+}
+
+.invoice-table th.sortable .sort-icon {
+    margin-left: 6px;
+    opacity: 0.4;
+    font-size: 12px;
+}
+
+.invoice-table th.sortable.asc .sort-icon,
+.invoice-table th.sortable.desc .sort-icon {
+    opacity: 1;
+}
+
+.invoice-table th.sortable.asc .sort-icon::after {
+    content: '↑';
+}
+
+.invoice-table th.sortable.desc .sort-icon::after {
+    content: '↓';
+}
+
+.invoice-table th.sortable.asc .sort-icon,
+.invoice-table th.sortable.desc .sort-icon {
+    color: var(--accent-color);
+}
+
 /* Responsive Design for Accounting */
 @media (max-width: 768px) {
     .accounting-filters .filter-row {

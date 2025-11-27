@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.15.1
+// ShowBox Dashboard v1.15.2
 // ========================================
 
 // ========================================
@@ -2304,11 +2304,8 @@ function renderTransactionsPage() {
             // Use MAC address from API response
             const macAddress = tx.mac_address || '-';
 
-            // Clean up details - remove MAC address if present
-            const macMatch = details.match(/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/);
-            if (macMatch) {
-                details = details.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
-            }
+            // Use formatted description from API if available
+            const displayDescription = tx.formatted_description || details;
 
             // Build reseller column if needed
             const resellerColumn = showResellerColumn
@@ -2322,7 +2319,7 @@ function renderTransactionsPage() {
                 <td><span class="badge ${typeClass}" style="font-size: 10px; padding: 4px 8px;">${type}</span></td>
                 <td><code style="font-size: 13px;">${macAddress}</code></td>
                 ${resellerColumn}
-                <td>${details}</td>
+                <td>${displayDescription}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -8107,6 +8104,13 @@ function initAuditLog() {
 // Global variable to store current invoice data
 let currentInvoiceData = null;
 
+// Invoice pagination and sorting state
+let invoiceCurrentPage = 1;
+let invoicePerPage = 25;
+let invoiceSortColumn = 'date_gregorian';
+let invoiceSortDirection = 'asc';
+let invoiceProcessedTransactions = []; // Stores sorted transactions
+
 // Shamsi month names
 const shamsiMonths = [
     { value: 1, name: 'فروردین', nameEn: 'Farvardin' },
@@ -8345,14 +8349,65 @@ function displayInvoice(invoice) {
     // Update amount owed
     document.getElementById('invoice-amount-owed').textContent = invoice.reseller.currency_symbol + invoice.summary.amount_owed_formatted;
 
-    // Update transactions table
+    // Store transactions for sorting/pagination and reset pagination
+    invoiceProcessedTransactions = [...invoice.transactions];
+    invoiceCurrentPage = 1;
+
+    // Apply initial sort and render
+    sortInvoiceTransactions();
+    renderInvoiceTable();
+}
+
+/**
+ * Sort invoice transactions based on current sort settings
+ */
+function sortInvoiceTransactions() {
+    invoiceProcessedTransactions.sort((a, b) => {
+        let valA, valB;
+
+        if (invoiceSortColumn === 'date_gregorian') {
+            valA = a.date_gregorian || '';
+            valB = b.date_gregorian || '';
+        } else if (invoiceSortColumn === 'date_shamsi') {
+            valA = a.date_shamsi || '';
+            valB = b.date_shamsi || '';
+        }
+
+        // String comparison for dates (works for YYYY-MM-DD and YYYY/MM/DD formats)
+        if (invoiceSortDirection === 'asc') {
+            return valA.localeCompare(valB);
+        } else {
+            return valB.localeCompare(valA);
+        }
+    });
+}
+
+/**
+ * Render invoice transactions table with pagination
+ */
+function renderInvoiceTable() {
+    if (!currentInvoiceData) return;
+
+    const invoice = currentInvoiceData;
     const tbody = document.getElementById('invoice-transactions-tbody');
     tbody.innerHTML = '';
 
-    if (invoice.transactions.length === 0) {
+    const totalTransactions = invoiceProcessedTransactions.length;
+    const totalPages = Math.ceil(totalTransactions / invoicePerPage);
+
+    // Ensure current page is valid
+    if (invoiceCurrentPage > totalPages) invoiceCurrentPage = totalPages || 1;
+    if (invoiceCurrentPage < 1) invoiceCurrentPage = 1;
+
+    // Calculate pagination range
+    const startIndex = (invoiceCurrentPage - 1) * invoicePerPage;
+    const endIndex = Math.min(startIndex + invoicePerPage, totalTransactions);
+    const pageTransactions = invoiceProcessedTransactions.slice(startIndex, endIndex);
+
+    if (totalTransactions === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#999">No transactions in this period</td></tr>';
     } else {
-        invoice.transactions.forEach(trans => {
+        pageTransactions.forEach(trans => {
             const tr = document.createElement('tr');
 
             // Determine transaction type from description
@@ -8364,7 +8419,7 @@ function displayInvoice(invoice) {
             if (descLower.includes('account renewal') || descLower.includes('renew')) {
                 transType = 'Renewal';
                 typeClass = 'active';
-            } else if (descLower.includes('plan ') && descLower.includes('assigned')) {
+            } else if (descLower.startsWith('new account') || (descLower.includes('plan ') && descLower.includes('assigned'))) {
                 transType = 'New Account';
                 typeClass = 'inactive';
             }
@@ -8386,6 +8441,94 @@ function displayInvoice(invoice) {
             tbody.appendChild(tr);
         });
     }
+
+    // Update pagination info
+    const showingStart = totalTransactions > 0 ? startIndex + 1 : 0;
+    const showingEnd = endIndex;
+    const showingText = `Showing ${showingStart}-${showingEnd} of ${totalTransactions}`;
+    const pageText = `Page ${invoiceCurrentPage} of ${totalPages || 1}`;
+
+    document.getElementById('invoice-showing-info').textContent = showingText;
+    document.getElementById('invoice-showing-info-bottom').textContent = showingText;
+    document.getElementById('invoice-page-info').textContent = pageText;
+    document.getElementById('invoice-page-info-bottom').textContent = pageText;
+
+    // Update button states
+    const prevDisabled = invoiceCurrentPage <= 1;
+    const nextDisabled = invoiceCurrentPage >= totalPages;
+
+    document.getElementById('invoice-prev-btn').disabled = prevDisabled;
+    document.getElementById('invoice-prev-btn-bottom').disabled = prevDisabled;
+    document.getElementById('invoice-next-btn').disabled = nextDisabled;
+    document.getElementById('invoice-next-btn-bottom').disabled = nextDisabled;
+
+    // Update sort header icons
+    updateInvoiceSortHeaders();
+}
+
+/**
+ * Update sort header visual indicators
+ */
+function updateInvoiceSortHeaders() {
+    const headers = document.querySelectorAll('#invoice-transactions-table th.sortable');
+    headers.forEach(th => {
+        th.classList.remove('asc', 'desc');
+        const sortCol = th.getAttribute('data-sort');
+        if (sortCol === invoiceSortColumn) {
+            th.classList.add(invoiceSortDirection);
+        }
+    });
+}
+
+/**
+ * Sort invoice table by column
+ */
+function sortInvoiceTable(column) {
+    if (invoiceSortColumn === column) {
+        // Toggle direction
+        invoiceSortDirection = invoiceSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New column, default to ascending
+        invoiceSortColumn = column;
+        invoiceSortDirection = 'asc';
+    }
+
+    // Reset to first page on sort
+    invoiceCurrentPage = 1;
+
+    sortInvoiceTransactions();
+    renderInvoiceTable();
+}
+
+/**
+ * Change invoice per page count
+ */
+function changeInvoicePerPage() {
+    const select = document.getElementById('invoice-per-page');
+    invoicePerPage = parseInt(select.value, 10);
+    invoiceCurrentPage = 1; // Reset to first page
+    renderInvoiceTable();
+}
+
+/**
+ * Go to previous invoice page
+ */
+function invoicePrevPage() {
+    if (invoiceCurrentPage > 1) {
+        invoiceCurrentPage--;
+        renderInvoiceTable();
+    }
+}
+
+/**
+ * Go to next invoice page
+ */
+function invoiceNextPage() {
+    const totalPages = Math.ceil(invoiceProcessedTransactions.length / invoicePerPage);
+    if (invoiceCurrentPage < totalPages) {
+        invoiceCurrentPage++;
+        renderInvoiceTable();
+    }
 }
 
 /**
@@ -8396,6 +8539,19 @@ function formatNumber(num, currency) {
         return Math.round(num).toLocaleString('en-US');
     }
     return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Convert Persian month names to English transliteration for PDF export
+ */
+function getPeriodDisplayForPDF(invoice) {
+    if (invoice.period.calendar === 'shamsi') {
+        // Use English transliteration for Shamsi months
+        const monthObj = shamsiMonths.find(m => m.value === invoice.period.month);
+        const monthName = monthObj ? monthObj.nameEn : invoice.period.month;
+        return `${monthName} ${invoice.period.year} (Shamsi)`;
+    }
+    return invoice.period.display_en;
 }
 
 /**
@@ -8416,9 +8572,9 @@ function exportInvoicePDF() {
     doc.setFontSize(20);
     doc.text('Monthly Invoice', 105, 20, { align: 'center' });
 
-    // Period
+    // Period - use English transliteration for Shamsi months
     doc.setFontSize(12);
-    doc.text(invoice.period.display_en, 105, 30, { align: 'center' });
+    doc.text(getPeriodDisplayForPDF(invoice), 105, 30, { align: 'center' });
 
     // Reseller Info
     doc.setFontSize(10);
@@ -8449,7 +8605,7 @@ function exportInvoicePDF() {
             let transType = '';
             if (descLower.includes('account renewal') || descLower.includes('renew')) {
                 transType = 'Renewal';
-            } else if (descLower.includes('plan ') && descLower.includes('assigned')) {
+            } else if (descLower.startsWith('new account') || (descLower.includes('plan ') && descLower.includes('assigned'))) {
                 transType = 'New Account';
             }
 

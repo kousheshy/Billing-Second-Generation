@@ -2,7 +2,7 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.15.1
+**Version:** 1.15.2
 **Last Updated:** November 27, 2025
 **Database:** MySQL 5.7+ / MariaDB 10.3+
 **Character Set:** utf8mb4
@@ -700,6 +700,7 @@ Then run: `php scripts/setup_complete_database.php`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.15.2 | 2025-11-27 | Documentation sync (no schema changes) |
 | 1.15.1 | 2025-11-27 | Documentation sync (no schema changes) |
 | 1.14.0 | 2025-11-27 | Added complete setup script, comprehensive documentation |
 | 1.13.0 | 2025-11-27 | Added _audit_log table |

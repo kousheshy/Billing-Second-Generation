@@ -221,30 +221,81 @@ try {
         $shamsiDate = gregorianToJalali($gy, $gm, $gd);
         $shamsiDateStr = sprintf('%04d/%02d/%02d', $shamsiDate[0], $shamsiDate[1], $shamsiDate[2]);
 
-        // Count transaction types from description
+        // Count transaction types from description and extract info
         $details = $trans['details'] ?? '';
-        $description = strtolower($details);
-        if (strpos($description, 'account renewal') !== false || strpos($description, 'renew') !== false) {
-            $renewals++;
-        } elseif (strpos($description, 'plan ') !== false && strpos($description, 'assigned') !== false) {
-            $newAccounts++;
-        }
-
-        // Extract MAC address from description or look it up from accounts table
+        $descriptionLower = strtolower($details);
+        $transactionType = '';
+        $planName = '';
+        $fullName = '';
         $macAddress = '';
 
-        // First try to find MAC address directly in description (format: XX:XX:XX:XX:XX:XX)
-        if (preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $matches)) {
-            $macAddress = strtoupper($matches[1]);
+        if (preg_match('/Account renewal:\s*([a-zA-Z0-9]+)\s*-\s*Plan:\s*([^-]+)/i', $details, $matches)) {
+            // Renewal transaction
+            $renewals++;
+            $transactionType = 'Account renewal';
+            $accountUsername = trim($matches[1]);
+            $planName = trim($matches[2]);
+
+            // Look up MAC and full_name from accounts table
+            $acctStmt = $pdo->prepare('SELECT mac, full_name FROM _accounts WHERE username = ? LIMIT 1');
+            $acctStmt->execute([$accountUsername]);
+            $accountRow = $acctStmt->fetch();
+            if ($accountRow) {
+                $macAddress = !empty($accountRow['mac']) ? strtoupper($accountRow['mac']) : '';
+                $fullName = $accountRow['full_name'] ?? '';
+            }
         }
-        // For renewals, extract username and look up MAC from accounts table
-        elseif (preg_match('/Account renewal:\s*([a-zA-Z0-9]+)\s*-/', $details, $matches)) {
-            $accountUsername = $matches[1];
-            $macStmt = $pdo->prepare('SELECT mac FROM _accounts WHERE username = ? LIMIT 1');
-            $macStmt->execute([$accountUsername]);
-            $accountRow = $macStmt->fetch();
-            if ($accountRow && !empty($accountRow['mac'])) {
-                $macAddress = strtoupper($accountRow['mac']);
+        elseif (preg_match('/Plan\s+"([^"]+)"\s+assigned\s+for\s+([a-zA-Z0-9]+)/i', $details, $matches)) {
+            // New account transaction with quoted plan name: Plan "Name" assigned for username
+            $newAccounts++;
+            $transactionType = 'New account';
+            $planName = trim($matches[1]);
+            $accountUsername = trim($matches[2]);
+
+            // Look up MAC and full_name from accounts table using username
+            $acctStmt = $pdo->prepare('SELECT mac, full_name FROM _accounts WHERE username = ? LIMIT 1');
+            $acctStmt->execute([$accountUsername]);
+            $accountRow = $acctStmt->fetch();
+            if ($accountRow) {
+                $macAddress = !empty($accountRow['mac']) ? strtoupper($accountRow['mac']) : '';
+                $fullName = $accountRow['full_name'] ?? '';
+            }
+        }
+        elseif (preg_match('/Plan\s+([^\s]+)\s+assigned\s+to\s+([0-9A-Fa-f:]+)/i', $details, $matches)) {
+            // New account transaction: Plan Name assigned to MAC
+            $newAccounts++;
+            $transactionType = 'New account';
+            $planName = trim($matches[1]);
+            $macAddress = strtoupper(trim($matches[2]));
+
+            // Look up full_name from accounts table using MAC
+            $acctStmt = $pdo->prepare('SELECT full_name FROM _accounts WHERE mac = ? LIMIT 1');
+            $acctStmt->execute([$macAddress]);
+            $accountRow = $acctStmt->fetch();
+            if ($accountRow) {
+                $fullName = $accountRow['full_name'] ?? '';
+            }
+        }
+        else {
+            // Fallback for other transaction types
+            if (strpos($descriptionLower, 'account renewal') !== false || strpos($descriptionLower, 'renew') !== false) {
+                $renewals++;
+            } elseif (strpos($descriptionLower, 'plan ') !== false && strpos($descriptionLower, 'assigned') !== false) {
+                $newAccounts++;
+            }
+
+            // Try to find MAC address directly in description
+            if (preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $matches)) {
+                $macAddress = strtoupper($matches[1]);
+            }
+        }
+
+        // Format description: "{Type}, Plan: {Plan Name}, {Full Name}"
+        $formattedDescription = $details;
+        if (!empty($transactionType) && !empty($planName)) {
+            $formattedDescription = $transactionType . ', Plan: ' . $planName;
+            if (!empty($fullName)) {
+                $formattedDescription .= ', ' . $fullName;
             }
         }
 
@@ -258,7 +309,7 @@ try {
             'mac_address' => $macAddress,
             'amount' => floatval($trans['amount']),
             'currency' => $trans['currency'] ?? $reseller['currency_id'],
-            'description' => $trans['details'] ?? ''
+            'description' => $formattedDescription
         ];
     }
 

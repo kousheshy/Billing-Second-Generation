@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.2] - 2025-11-27
+
+### Enhanced - Accounting Tab UX & PDF Export Improvements
+
+**Status:** Production Release
+
+#### Transaction Details Table Enhancements
+
+**Column Rename**
+- Changed "Amount" column header to "Price" for better clarity
+
+**Sortable Date Columns**
+- Date (Gregorian) and Date (Shamsi) columns are now clickable and sortable
+- Click to toggle between ascending (↑) and descending (↓) sort order
+- Visual indicator shows current sort direction with colored arrow
+- Sort icon changes color to accent color when active
+
+**Pagination**
+- Added pagination controls to Transaction Details table
+- Default: 25 transactions per page
+- Options: 25, 50, or 100 per page
+- "Showing X-Y of Z" info display
+- Previous/Next navigation buttons
+- Controls appear both above and below the table
+
+**Layout Improvement**
+- Moved "Per page" dropdown to same line as "Transaction Details" header
+- Title on left, Per page selector on right
+- Cleaner, more professional layout
+
+#### PDF Export Fix
+
+**Persian Month Names**
+- Fixed garbled characters for Persian (Shamsi) month names in PDF export
+- jsPDF doesn't support Persian characters natively
+- Added `getPeriodDisplayForPDF()` helper function
+- Uses English transliterations for Shamsi months:
+  - فروردین → Farvardin
+  - اردیبهشت → Ordibehesht
+  - خرداد → Khordad
+  - تیر → Tir
+  - مرداد → Mordad
+  - شهریور → Shahrivar
+  - مهر → Mehr
+  - آبان → Aban
+  - آذر → Azar
+  - دی → Dey
+  - بهمن → Bahman
+  - اسفند → Esfand
+- PDF now displays "Azar 1404 (Shamsi)" instead of garbled text
+
+#### Files Modified
+
+**Frontend Files:**
+- `dashboard.php`:
+  - Changed "Amount" to "Price" column header
+  - Added sortable class and onclick handlers to date columns
+  - Added pagination controls (top and bottom)
+  - Created new header structure with Per page selector
+- `dashboard.css`:
+  - Added `.invoice-details-header` styles for new layout
+  - Added `.invoice-pagination-controls` styles
+  - Added `.sortable` column header styles
+  - Added hover and active states for sort indicators
+- `dashboard.js`:
+  - Added pagination state variables (invoiceCurrentPage, invoicePerPage, etc.)
+  - Added `sortInvoiceTransactions()` function
+  - Added `renderInvoiceTable()` function with pagination
+  - Added `updateInvoiceSortHeaders()` function
+  - Added `sortInvoiceTable()` function
+  - Added `changeInvoicePerPage()` function
+  - Added `invoicePrevPage()` and `invoiceNextPage()` functions
+  - Added `getPeriodDisplayForPDF()` function for Persian month transliteration
+  - Updated `displayInvoice()` to use new render function
+  - Updated `exportInvoicePDF()` to use transliterated month names
+
+**Version Updates:**
+- dashboard.php: v1.15.2
+- dashboard.js: v1.15.2
+- index.html: v1.15.2
+- service-worker.js: v1.15.2
+
+---
+
 ## [1.15.1] - 2025-11-27
 
 ### Enhanced - Accounting Tab & Transaction Display Improvements

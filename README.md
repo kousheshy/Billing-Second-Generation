@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.15.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.15.2-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -673,13 +673,20 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.15.1
+**Version:** 1.15.2
 **Last Updated:** November 27, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.15.2** (Nov 2025) - Accounting Tab UX & PDF Export Improvements
+  - **Price Column**: Renamed "Amount" to "Price" for clarity
+  - **Sortable Dates**: Date columns now clickable with ascending/descending sort
+  - **Pagination**: Added 25/50/100 per page options with navigation controls
+  - **Layout**: Per page selector moved to Transaction Details header line
+  - **PDF Fix**: Fixed Persian month names showing as garbled characters (uses English transliteration)
 
 - **v1.15.1** (Nov 2025) - Accounting Tab Enhancements & Transaction Display Improvements
   - **MAC Address Column**: Added to Transactions and Accounting tabs with lookup from `_accounts` table for renewals
@@ -1160,4 +1167,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.15.1**
+**ShowBox Billing System v1.15.2**

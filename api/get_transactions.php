@@ -66,27 +66,79 @@ try {
 
     $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Add MAC address to each transaction
+    // Add MAC address and formatted description to each transaction
     foreach ($transactions as &$tx) {
         $macAddress = '';
+        $fullName = '';
+        $planName = '';
+        $transactionType = '';
         $details = $tx['details'] ?? '';
 
-        // First try to find MAC address directly in details (format: XX:XX:XX:XX:XX:XX)
-        if (preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $matches)) {
-            $macAddress = strtoupper($matches[1]);
+        // Determine transaction type and extract info
+        if (preg_match('/Account renewal:\s*([a-zA-Z0-9]+)\s*-\s*Plan:\s*([^-]+)/i', $details, $matches)) {
+            // Renewal transaction
+            $transactionType = 'Account renewal';
+            $accountUsername = trim($matches[1]);
+            $planName = trim($matches[2]);
+
+            // Look up MAC and full_name from accounts table
+            $acctStmt = $pdo->prepare('SELECT mac, full_name FROM _accounts WHERE username = ? LIMIT 1');
+            $acctStmt->execute([$accountUsername]);
+            $accountRow = $acctStmt->fetch();
+            if ($accountRow) {
+                $macAddress = !empty($accountRow['mac']) ? strtoupper($accountRow['mac']) : '';
+                $fullName = $accountRow['full_name'] ?? '';
+            }
         }
-        // For renewals, extract username and look up MAC from accounts table
-        elseif (preg_match('/Account renewal:\s*([a-zA-Z0-9]+)\s*-/', $details, $matches)) {
-            $accountUsername = $matches[1];
-            $macStmt = $pdo->prepare('SELECT mac FROM _accounts WHERE username = ? LIMIT 1');
-            $macStmt->execute([$accountUsername]);
-            $accountRow = $macStmt->fetch();
-            if ($accountRow && !empty($accountRow['mac'])) {
-                $macAddress = strtoupper($accountRow['mac']);
+        elseif (preg_match('/Plan\s+"([^"]+)"\s+assigned\s+for\s+([a-zA-Z0-9]+)/i', $details, $matches)) {
+            // New account transaction with quoted plan name: Plan "Name" assigned for username
+            $transactionType = 'New account';
+            $planName = trim($matches[1]);
+            $accountUsername = trim($matches[2]);
+
+            // Look up MAC and full_name from accounts table using username
+            $acctStmt = $pdo->prepare('SELECT mac, full_name FROM _accounts WHERE username = ? LIMIT 1');
+            $acctStmt->execute([$accountUsername]);
+            $accountRow = $acctStmt->fetch();
+            if ($accountRow) {
+                $macAddress = !empty($accountRow['mac']) ? strtoupper($accountRow['mac']) : '';
+                $fullName = $accountRow['full_name'] ?? '';
+            }
+        }
+        elseif (preg_match('/Plan\s+([^\s]+)\s+assigned\s+to\s+([0-9A-Fa-f:]+)/i', $details, $matches)) {
+            // New account transaction: Plan Name assigned to MAC
+            $transactionType = 'New account';
+            $planName = trim($matches[1]);
+            $macAddress = strtoupper(trim($matches[2]));
+
+            // Look up full_name from accounts table using MAC
+            $acctStmt = $pdo->prepare('SELECT full_name FROM _accounts WHERE mac = ? LIMIT 1');
+            $acctStmt->execute([$macAddress]);
+            $accountRow = $acctStmt->fetch();
+            if ($accountRow) {
+                $fullName = $accountRow['full_name'] ?? '';
+            }
+        }
+        else {
+            // Try to find MAC address directly in details
+            if (preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $matches)) {
+                $macAddress = strtoupper($matches[1]);
             }
         }
 
         $tx['mac_address'] = $macAddress;
+
+        // Format description: "{Type}, Plan: {Plan Name}, {Full Name}"
+        if (!empty($transactionType) && !empty($planName)) {
+            $formattedDesc = $transactionType . ', Plan: ' . $planName;
+            if (!empty($fullName)) {
+                $formattedDesc .= ', ' . $fullName;
+            }
+            $tx['formatted_description'] = $formattedDesc;
+        } else {
+            // Keep original details if can't parse
+            $tx['formatted_description'] = $details;
+        }
     }
     unset($tx); // Break the reference
 
