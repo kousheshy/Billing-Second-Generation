@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.14.4</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.15.1</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -170,6 +170,7 @@ try {
             <button class="tab" onclick="switchTab('resellers')">Resellers</button>
             <button class="tab" onclick="switchTab('plans')">Plans</button>
             <button class="tab" onclick="switchTab('transactions')">Transactions</button>
+            <button class="tab" onclick="switchTab('accounting')">Accounting</button>
             <button class="tab" onclick="switchTab('stb-control')">STB Control</button>
             <button class="tab" onclick="switchTab('messaging')">Messaging</button>
             <button class="tab" onclick="switchTab('reports')">Reports</button>
@@ -291,15 +292,160 @@ try {
                             <th>Amount</th>
                             <th>Currency</th>
                             <th>Type</th>
+                            <th>MAC Address</th>
                             <th id="reseller-column-header">Reseller</th>
                             <th>Details</th>
                         </tr>
                     </thead>
                     <tbody id="transactions-tbody">
-                        <tr><td colspan="6" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;padding:40px;color:#999">Loading...</td></tr>
                     </tbody>
                 </table>
                 <div id="transactions-pagination" class="pagination-buttons"></div>
+            </div>
+
+            <!-- Accounting Tab -->
+            <div id="accounting-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>Monthly Invoices & Accounting</h2>
+                </div>
+
+                <!-- Invoice Filters -->
+                <div class="accounting-filters">
+                    <div class="filter-row">
+                        <!-- Reseller Selector -->
+                        <div class="filter-group">
+                            <label>Reseller:</label>
+                            <select id="accounting-reseller" onchange="loadMonthlyInvoice()">
+                                <option value="">-- Select Reseller --</option>
+                            </select>
+                        </div>
+
+                        <!-- Calendar Type -->
+                        <div class="filter-group">
+                            <label>Calendar:</label>
+                            <select id="accounting-calendar" onchange="updateCalendarOptions()">
+                                <option value="shamsi">Persian (شمسی)</option>
+                                <option value="gregorian">Gregorian (میلادی)</option>
+                            </select>
+                        </div>
+
+                        <!-- Year Selector -->
+                        <div class="filter-group">
+                            <label>Year:</label>
+                            <select id="accounting-year" onchange="loadMonthlyInvoice()">
+                            </select>
+                        </div>
+
+                        <!-- Month Selector -->
+                        <div class="filter-group">
+                            <label>Month:</label>
+                            <select id="accounting-month" onchange="loadMonthlyInvoice()">
+                            </select>
+                        </div>
+
+                        <!-- Generate Button -->
+                        <div class="filter-group">
+                            <button class="btn-primary" onclick="loadMonthlyInvoice()">Generate Invoice</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Display -->
+                <div id="invoice-container" style="display: none;">
+                    <!-- Invoice Header -->
+                    <div class="invoice-header">
+                        <div class="invoice-title">
+                            <h3 id="invoice-title-text">Monthly Invoice</h3>
+                            <p id="invoice-period"></p>
+                        </div>
+                        <div class="invoice-actions">
+                            <button class="btn-export" onclick="exportInvoicePDF()">📄 Export PDF</button>
+                            <button class="btn-export" onclick="exportInvoiceExcel()">📊 Export Excel</button>
+                        </div>
+                    </div>
+
+                    <!-- Reseller Info Card -->
+                    <div class="invoice-info-card">
+                        <div class="info-row">
+                            <span class="info-label">Reseller:</span>
+                            <span id="invoice-reseller-name" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Username:</span>
+                            <span id="invoice-reseller-username" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Currency:</span>
+                            <span id="invoice-currency" class="info-value"></span>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="invoice-summary-grid">
+                        <div class="summary-card">
+                            <div class="summary-icon">🛒</div>
+                            <div class="summary-content">
+                                <span class="summary-label">New Accounts</span>
+                                <span id="invoice-new-accounts" class="summary-value">0</span>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">🔄</div>
+                            <div class="summary-content">
+                                <span class="summary-label">Renewals</span>
+                                <span id="invoice-renewals" class="summary-value">0</span>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">📝</div>
+                            <div class="summary-content">
+                                <span class="summary-label">Total Transactions</span>
+                                <span id="invoice-total-transactions" class="summary-value">0</span>
+                            </div>
+                        </div>
+                        <div class="summary-card highlight">
+                            <div class="summary-icon">💰</div>
+                            <div class="summary-content">
+                                <span class="summary-label">Total Sales</span>
+                                <span id="invoice-total-sales" class="summary-value">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Amount Owed Section -->
+                    <div class="amount-owed-section">
+                        <h4>Amount Owed to System</h4>
+                        <div id="invoice-amount-owed" class="amount-owed-value">0</div>
+                    </div>
+
+                    <!-- Transaction Details Table -->
+                    <div class="invoice-details">
+                        <h4>Transaction Details</h4>
+                        <table id="invoice-transactions-table" class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>Date (Gregorian)</th>
+                                    <th>Date (Shamsi)</th>
+                                    <th>Type</th>
+                                    <th>MAC Address</th>
+                                    <th>Amount</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoice-transactions-tbody">
+                                <tr><td colspan="6" style="text-align:center;padding:20px;color:#999">Select filters and click Generate Invoice</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="invoice-empty-state" class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <h3>Select Filters to Generate Invoice</h3>
+                    <p>Choose a reseller and time period to view their monthly invoice and sales summary.</p>
+                </div>
             </div>
 
             <!-- STB Control Tab -->

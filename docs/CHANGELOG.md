@@ -7,6 +7,185 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.1] - 2025-11-27
+
+### Enhanced - Accounting Tab & Transaction Display Improvements
+
+**Status:** Production Release
+
+#### Transaction Tab Enhancements
+
+**MAC Address Column**
+- Added dedicated MAC Address column to Transactions tab
+- MAC address lookup from `_accounts` table for renewal transactions
+- Renewals previously showed empty MAC (only stored username in details)
+- Regex extraction: `/Account renewal:\s*([a-zA-Z0-9]+)\s*-/`
+- MAC displayed in monospace font (13px) for readability
+- Removed MAC address from Description column (now in dedicated column)
+
+**Type Column**
+- Added Type column showing "Renewal" or "New Account"
+- Replaced generic "Debit"/"Credit" labels
+- Color-coded badges: Green for Renewal, Blue for New Account
+- Type determined from transaction description content
+- Compact styling (10px font, 4px padding)
+
+#### Accounting Tab Enhancements
+
+**MAC Address Column**
+- Added MAC Address column to invoice transaction table
+- Same lookup logic as Transactions tab
+- Included in PDF and Excel exports
+
+**Type Column**
+- Added Type column showing Renewal/New Account
+- Included in PDF export (new column)
+- Included in Excel export (new column)
+
+**Shamsi Calendar Default**
+- Persian (Shamsi) calendar now default selection
+- Better UX for Iranian resellers
+- Gregorian still available as second option
+
+**Currency Display Fix**
+- Fixed all resellers showing "GBP" in dropdown
+- Changed from `reseller.currency` to `reseller.currency_id`
+- Each reseller now shows their actual currency
+
+**Observer Filter**
+- Observer users excluded from reseller dropdown
+- Modified SQL: `WHERE ... AND (us.is_observer = 0 OR us.is_observer IS NULL)`
+- Prevents selecting observer accounts for invoicing
+
+#### Date Conversion Verification
+
+**Jalali/Gregorian Accuracy**
+- Verified conversion algorithms for financial accuracy
+- Round-trip testing confirmed:
+  - آذر 1, 1403 → 2024-11-21 → 1403/09/01 ✓
+  - Month boundaries correct (آبان 30 = Nov 20, آذر 1 = Nov 21)
+  - Year boundaries correct (اسفند 29, 1403 → 2025-03-19)
+- Safe for billing/invoicing purposes
+
+#### Files Modified
+
+**API Files:**
+- `api/get_monthly_invoice.php`:
+  - Added MAC address lookup for renewals
+  - Returns `mac_address` field in transaction data
+- `api/get_transactions.php`:
+  - Added MAC address lookup for renewals
+  - Returns `mac_address` field in transaction data
+- `api/get_resellers.php`:
+  - Added observer filter to SQL query
+  - Excludes `is_observer = 1` users from results
+
+**Frontend Files:**
+- `dashboard.php`:
+  - Added MAC Address and Type column headers to Transactions table
+  - Added MAC Address and Type column headers to Accounting invoice table
+  - Changed Shamsi to default calendar option
+- `dashboard.js`:
+  - Updated `renderTransactionsPage()` for new columns
+  - Updated `displayInvoice()` for new columns
+  - Updated `exportInvoicePDF()` with Type column
+  - Updated `exportInvoiceExcel()` with Type column
+  - Fixed currency display (`currency_id`)
+
+**Version Updates:**
+- dashboard.php: v1.15.1
+- index.html: v1.15.1
+- service-worker.js: v1.15.1
+
+---
+
+## [1.15.0] - 2025-11-27
+
+### Added - Accounting & Monthly Invoices Tab
+
+**Status:** Production Release
+
+#### New Accounting Tab
+
+**Monthly Invoice Generation**
+- New "Accounting" tab added to the dashboard
+- Generate monthly invoices for any reseller
+- View sales summary for any selected month
+- Filter by reseller, calendar type (Gregorian/Shamsi), year, and month
+
+**Dual Calendar Support**
+- Full support for both Gregorian and Persian (Shamsi/Jalali) calendars
+- Switch between calendars seamlessly
+- Year and month selectors automatically update based on calendar type
+- All dates displayed in both formats in transaction details
+
+**Sales Summary**
+- Track new account sales per month
+- Track renewal transactions
+- Total transaction count
+- Total sales amount in reseller's currency
+- Amount owed to system (total debit transactions)
+
+**Transaction Details**
+- Detailed list of all sales transactions in the period
+- Shows both Gregorian and Shamsi dates
+- Transaction type, amount, and description
+- Only includes debit transactions (sales) - excludes admin credit additions
+
+**Export Features**
+- Export to PDF with full invoice details
+- Export to Excel with multiple sheets (Summary + Transactions)
+- Both exports include Shamsi dates
+- Professional formatting with company branding
+
+**Access Control**
+- Super Admin: View all resellers' invoices
+- Reseller Admin: View all resellers' invoices
+- Observer: View all resellers' invoices
+- Regular Reseller: View only their own invoices
+
+#### Technical Implementation
+
+**New Files Created:**
+- `api/get_monthly_invoice.php` - API endpoint for invoice generation
+  - Gregorian to Jalali date conversion
+  - Jalali to Gregorian date conversion
+  - Month name functions for both calendars
+  - Permission-based access control
+  - Transaction filtering and summarization
+
+**Files Modified:**
+- `dashboard.php`:
+  - Added Accounting tab button
+  - Added Accounting tab content with filters and invoice display
+- `dashboard.js`:
+  - Added accounting initialization functions
+  - Calendar type switching logic
+  - Invoice data loading and display
+  - PDF export with jsPDF
+  - Excel export with SheetJS (xlsx)
+  - Shamsi month names and conversion functions
+- `dashboard.css`:
+  - Accounting filter styles
+  - Empty state styling
+  - Invoice header and info card
+  - Summary grid cards
+  - Amount owed section (highlighted in red)
+  - Invoice transaction table
+  - Responsive design for mobile
+  - Dark mode support
+- `service-worker.js`:
+  - Cache version updated to v1.15.0
+
+**Version Updates:**
+- dashboard.php: v1.15.0
+- index.html: v1.15.0
+- service-worker.js: v1.15.0
+- README.md: v1.15.0
+- API_DOCUMENTATION.md: v1.15.0
+
+---
+
 ## [1.14.4] - 2025-11-27
 
 ### Enhanced - Plan Table, Reseller Management & Currency Filtering

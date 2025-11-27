@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.14.4
+**Version:** 1.15.1
 **Last Updated:** November 27, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -17,7 +17,8 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 5. [Reseller Management](#reseller-management)
 6. [Plan Management](#plan-management)
 7. [Transaction Management](#transaction-management)
-8. [User Management](#user-management)
+8. [Accounting & Monthly Invoices](#accounting--monthly-invoices) **NEW in v1.15.0**
+9. [User Management](#user-management)
 9. [Stalker Portal Integration](#stalker-portal-integration)
 10. [STB Device Control](#stb-device-control)
 11. [Theme Management](#theme-management)
@@ -1022,6 +1023,98 @@ The `permissions` field is a pipe-delimited string with 7 fields:
   "error": 0,
   "err_msg": "Transaction created successfully",
   "transaction_id": 10
+}
+```
+
+---
+
+## Accounting & Monthly Invoices
+
+### Get Monthly Invoice
+**Endpoint:** `GET /api/get_monthly_invoice.php`
+
+**Description:** Generate monthly invoice data for a specific reseller. Returns sales transactions (new accounts and renewals) for the selected period. Supports both Gregorian and Persian (Shamsi/Jalali) calendars.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `reseller_id` | int | Yes | ID of the reseller |
+| `calendar` | string | No | `gregorian` (default) or `shamsi` |
+| `year` | int | Yes | Year number (e.g., 2024 or 1403) |
+| `month` | int | Yes | Month number (1-12) |
+
+**Example Request:**
+```
+GET /api/get_monthly_invoice.php?reseller_id=5&calendar=shamsi&year=1403&month=9
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "invoice": {
+    "period": {
+      "calendar": "shamsi",
+      "year": 1403,
+      "month": 9,
+      "display": "آذر 1403",
+      "display_en": "آذر 1403 (Shamsi)",
+      "start_date": "2024-11-21",
+      "end_date": "2024-12-20"
+    },
+    "reseller": {
+      "id": 5,
+      "name": "Reseller Name",
+      "username": "reseller1",
+      "email": "reseller@example.com",
+      "currency": "IRR",
+      "currency_symbol": "IRR ",
+      "current_balance": 500000
+    },
+    "summary": {
+      "new_accounts": 3,
+      "renewals": 12,
+      "total_transactions": 15,
+      "total_sales": 1500000,
+      "total_sales_formatted": "1,500,000",
+      "amount_owed": 1500000,
+      "amount_owed_formatted": "1,500,000"
+    },
+    "transactions": [
+      {
+        "id": 1234,
+        "date_gregorian": "2024-11-22",
+        "date_shamsi": "1403/09/02",
+        "time": "14:30",
+        "mac_address": "00:1A:79:XX:XX:XX",
+        "amount": 100000,
+        "currency": "IRR",
+        "description": "Account renewal: user123 - Plan: Monthly"
+      }
+    ]
+  }
+}
+```
+
+**Access Control:**
+| User Type | Access |
+|-----------|--------|
+| Super Admin | All resellers |
+| Reseller Admin | All resellers |
+| Observer | All resellers (read-only) |
+| Regular Reseller | Own data only |
+
+**Notes:**
+- Only includes debit transactions (sales)
+- Excludes admin credit adjustments
+- MAC address is looked up from `_accounts` table for renewal transactions
+- Shamsi dates are calculated using standard Jalali conversion algorithms
+
+**Error Response:**
+```json
+{
+  "error": 1,
+  "message": "Missing required parameters (reseller_id, year, month)"
 }
 ```
 

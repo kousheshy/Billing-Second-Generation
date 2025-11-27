@@ -1071,6 +1071,102 @@ input[type="number"] {
     font-size: 14px;
 }
 
+/* Settings Card - Modern card design for settings sections */
+.settings-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+}
+
+.settings-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-md);
+}
+
+.settings-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 24px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-card-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.settings-card-title h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+}
+
+.settings-card-title p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.settings-card-body {
+    padding: 20px 24px;
+}
+
+.settings-card-footer {
+    padding: 12px 24px;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border-color);
+}
+
+.settings-card-footer small {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Push Notification Status Row */
+.push-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.push-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.push-status-indicator .status-icon {
+    font-size: 18px;
+}
+
+.push-status-indicator #push-status-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.push-notification-feedback {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+}
+
 /* Reports Section */
 .report-filters {
     display: grid;
@@ -4697,4 +4793,398 @@ body.pwa-mode .push-prompt-content {
 
 /* ========================================
    End of Push Notification Prompt Styles
+   ======================================== */
+
+/* ========================================
+   Accounting Tab Styles (v1.15.0)
+   ======================================== */
+
+/* Filter Section */
+.accounting-filters {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.accounting-filters .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.accounting-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 150px;
+}
+
+.accounting-filters .filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.accounting-filters select {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    min-width: 180px;
+}
+
+.accounting-filters select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+}
+
+.empty-state .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: 18px;
+}
+
+.empty-state p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Invoice Container */
+#invoice-container {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Invoice Header */
+.invoice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.invoice-title h3 {
+    margin: 0;
+    font-size: 24px;
+    color: var(--text-primary);
+}
+
+.invoice-title p {
+    margin: 4px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.invoice-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-export {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-export:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Invoice Info Card */
+.invoice-info-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.invoice-info-card .info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.invoice-info-card .info-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.invoice-info-card .info-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Summary Grid */
+.invoice-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.summary-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card.highlight {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border-color: var(--primary);
+}
+
+.summary-card .summary-icon {
+    font-size: 32px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    border-radius: 12px;
+}
+
+.summary-card .summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.summary-card .summary-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-card .summary-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Amount Owed Section */
+.amount-owed-section {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: center;
+    color: white;
+}
+
+.amount-owed-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.9;
+}
+
+.amount-owed-value {
+    font-size: 36px;
+    font-weight: 700;
+}
+
+/* Invoice Details Table */
+.invoice-details {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.invoice-details h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.invoice-table th,
+.invoice-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.invoice-table th {
+    background: var(--bg-primary);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.invoice-table tbody tr:hover {
+    background: var(--bg-primary);
+}
+
+.invoice-table td {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* Badge styles for invoice */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-debit {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+}
+
+.badge-credit {
+    background: rgba(0, 123, 255, 0.15);
+    color: #007bff;
+}
+
+/* Responsive Design for Accounting */
+@media (max-width: 768px) {
+    .accounting-filters .filter-row {
+        flex-direction: column;
+    }
+
+    .accounting-filters .filter-group {
+        width: 100%;
+    }
+
+    .accounting-filters select {
+        width: 100%;
+    }
+
+    .invoice-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .invoice-actions {
+        width: 100%;
+    }
+
+    .invoice-actions .btn-export {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .invoice-info-card {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .invoice-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-card .summary-value {
+        font-size: 20px;
+    }
+
+    .amount-owed-value {
+        font-size: 28px;
+    }
+
+    .invoice-table {
+        font-size: 12px;
+    }
+
+    .invoice-table th,
+    .invoice-table td {
+        padding: 8px;
+    }
+
+    /* Hide Shamsi date column on mobile */
+    .invoice-table th:nth-child(2),
+    .invoice-table td:nth-child(2) {
+        display: none;
+    }
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .summary-card {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .summary-card .summary-icon {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .amount-owed-section {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
+}
+
+[data-theme="dark"] .invoice-table th {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* ========================================
+   End of Accounting Tab Styles (v1.15.0)
    ======================================== */

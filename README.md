@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.14.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.15.1-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -673,13 +673,35 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.11.66
+**Version:** 1.15.1
 **Last Updated:** November 27, 2025
-**Status:** Beta Testing 🧪
+**Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.15.1** (Nov 2025) - Accounting Tab Enhancements & Transaction Display Improvements
+  - **MAC Address Column**: Added to Transactions and Accounting tabs with lookup from `_accounts` table for renewals
+  - **Type Column**: Shows "Renewal" or "New Account" instead of generic "Debit"/"Credit"
+  - **Shamsi Default**: Persian calendar now default in Accounting tab
+  - **Currency Fix**: Fixed reseller currency display in Accounting dropdown
+  - **Observer Filter**: Excluded observer users from Accounting reseller list
+  - **Date Verification**: Verified Jalali/Gregorian conversion accuracy for financial records
+
+- **v1.15.0** (Nov 2025) - Accounting & Monthly Invoices Tab
+  - **Monthly Invoice Generation**: Generate monthly sales reports per reseller
+  - **Dual Calendar Support**: Full Gregorian and Persian (Shamsi/Jalali) calendar support
+  - **Sales Summary**: Track new accounts, renewals, total transactions, and amount owed
+  - **Export Features**: PDF and Excel export with professional formatting
+  - **Access Control**: Role-based visibility (admin sees all, reseller sees own)
+  - **Files**: New `api/get_monthly_invoice.php`, updated dashboard files
+
+- **v1.14.x** (Nov 2025) - Plan Table, Reseller Management & Audit Log
+  - **Audit Log System**: Comprehensive action tracking in `_audit_log` table
+  - **Login History**: Track login attempts in `_login_history` table
+  - **Plan Table Improvements**: Edit plan functionality, category system
+  - **Currency-Based Filtering**: Plans filtered by reseller currency
 
 - **v1.11.66** (Nov 2025) - Reseller Self-Notification & Push Subscription Sync
   - **Reseller Self-Notification**: Resellers now receive push notifications for their own add/renew actions
@@ -1138,4 +1160,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.11.66**
+**ShowBox Billing System v1.15.1**

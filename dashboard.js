@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.14.4
+// ShowBox Dashboard v1.15.1
 // ========================================
 
 // ========================================
@@ -2278,9 +2278,37 @@ function renderTransactionsPage() {
 
         pageTransactions.forEach(tx => {
             const tr = document.createElement('tr');
-            const type = tx.type == 1 ? 'Credit' : 'Debit';
             const currencySymbol = getCurrencySymbol(tx.currency);
             const formattedAmount = formatBalance(tx.amount, tx.currency);
+
+            // Determine transaction type from details
+            let details = tx.details || '';
+            const detailsLower = details.toLowerCase();
+            let type = '';
+            let typeClass = '';
+
+            if (detailsLower.includes('account renewal') || detailsLower.includes('renew')) {
+                type = 'Renewal';
+                typeClass = 'active';
+            } else if (detailsLower.includes('plan ') && detailsLower.includes('assigned')) {
+                type = 'New Account';
+                typeClass = 'inactive';
+            } else if (detailsLower.includes('credit adjustment')) {
+                type = 'Credit';
+                typeClass = 'active';
+            } else {
+                type = tx.type == 1 ? 'Credit' : 'Debit';
+                typeClass = tx.type == 1 ? 'active' : 'inactive';
+            }
+
+            // Use MAC address from API response
+            const macAddress = tx.mac_address || '-';
+
+            // Clean up details - remove MAC address if present
+            const macMatch = details.match(/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/);
+            if (macMatch) {
+                details = details.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
+            }
 
             // Build reseller column if needed
             const resellerColumn = showResellerColumn
@@ -2291,9 +2319,10 @@ function renderTransactionsPage() {
                 <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
                 <td>${formattedAmount}</td>
                 <td>${tx.currency || currencySymbol.trim() || ''}</td>
-                <td><span class="badge ${tx.type == 1 ? 'active' : 'inactive'}">${type}</span></td>
+                <td><span class="badge ${typeClass}" style="font-size: 10px; padding: 4px 8px;">${type}</span></td>
+                <td><code style="font-size: 13px;">${macAddress}</code></td>
                 ${resellerColumn}
-                <td>${tx.details || ''}</td>
+                <td>${details}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -2305,7 +2334,7 @@ function renderTransactionsPage() {
         // Render pagination buttons
         renderTransactionsPagination();
     } else {
-        const colspan = showResellerColumn ? '6' : '5';
+        const colspan = showResellerColumn ? '7' : '6';
         tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:40px;color:#999">No transactions found</td></tr>`;
         document.getElementById('transactions-pagination-info').textContent = '';
         document.getElementById('transactions-pagination').innerHTML = '';
@@ -8069,4 +8098,501 @@ function initAuditLog() {
 
 // ========================================
 // End of Audit Log (v1.12.0)
+// ========================================
+
+// ========================================
+// Accounting & Monthly Invoices (v1.15.0)
+// ========================================
+
+// Global variable to store current invoice data
+let currentInvoiceData = null;
+
+// Shamsi month names
+const shamsiMonths = [
+    { value: 1, name: 'فروردین', nameEn: 'Farvardin' },
+    { value: 2, name: 'اردیبهشت', nameEn: 'Ordibehesht' },
+    { value: 3, name: 'خرداد', nameEn: 'Khordad' },
+    { value: 4, name: 'تیر', nameEn: 'Tir' },
+    { value: 5, name: 'مرداد', nameEn: 'Mordad' },
+    { value: 6, name: 'شهریور', nameEn: 'Shahrivar' },
+    { value: 7, name: 'مهر', nameEn: 'Mehr' },
+    { value: 8, name: 'آبان', nameEn: 'Aban' },
+    { value: 9, name: 'آذر', nameEn: 'Azar' },
+    { value: 10, name: 'دی', nameEn: 'Dey' },
+    { value: 11, name: 'بهمن', nameEn: 'Bahman' },
+    { value: 12, name: 'اسفند', nameEn: 'Esfand' }
+];
+
+// Gregorian month names
+const gregorianMonths = [
+    { value: 1, name: 'January' },
+    { value: 2, name: 'February' },
+    { value: 3, name: 'March' },
+    { value: 4, name: 'April' },
+    { value: 5, name: 'May' },
+    { value: 6, name: 'June' },
+    { value: 7, name: 'July' },
+    { value: 8, name: 'August' },
+    { value: 9, name: 'September' },
+    { value: 10, name: 'October' },
+    { value: 11, name: 'November' },
+    { value: 12, name: 'December' }
+];
+
+/**
+ * Gregorian to Jalali conversion
+ */
+function gregorianToJalali(gy, gm, gd) {
+    const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let jy = (gy <= 1600) ? 0 : 979;
+    gy -= (gy <= 1600) ? 621 : 1600;
+    const gy2 = (gm > 2) ? (gy + 1) : gy;
+    let days = (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+    jy += 33 * Math.floor(days / 12053);
+    days %= 12053;
+    jy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    jy += Math.floor((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    const jm = (days < 186) ? 1 + Math.floor(days / 31) : 7 + Math.floor((days - 186) / 30);
+    const jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+    return [jy, jm, jd];
+}
+
+/**
+ * Get current Shamsi date
+ */
+function getCurrentShamsiDate() {
+    const now = new Date();
+    return gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+/**
+ * Initialize accounting tab
+ */
+function initAccountingTab() {
+    console.log('[Accounting] Initializing accounting tab');
+    populateAccountingResellers();
+    updateCalendarOptions();
+}
+
+/**
+ * Populate reseller dropdown
+ */
+async function populateAccountingResellers() {
+    const select = document.getElementById('accounting-reseller');
+    if (!select) return;
+
+    console.log('[Accounting] Populating resellers, currentUser:', currentUser);
+
+    // Always try to load resellers from API first
+    try {
+        const response = await fetch('api/get_resellers.php');
+        const data = await response.json();
+
+        console.log('[Accounting] Resellers API response:', data);
+
+        if (data.error === 0 && data.resellers && data.resellers.length > 0) {
+            select.innerHTML = '<option value="">-- Select Reseller --</option>';
+            data.resellers.forEach(reseller => {
+                const opt = document.createElement('option');
+                opt.value = reseller.id;
+                opt.textContent = `${reseller.full_name || reseller.name || reseller.username} (${reseller.currency_id || 'GBP'})`;
+                select.appendChild(opt);
+            });
+            select.disabled = false;
+            console.log('[Accounting] Loaded', data.resellers.length, 'resellers');
+        } else if (currentUser && currentUser.id) {
+            // Fallback: If no resellers returned (regular reseller), show only self
+            select.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = currentUser.id;
+            opt.textContent = currentUser.name || currentUser.full_name || currentUser.username || 'My Account';
+            opt.selected = true;
+            select.appendChild(opt);
+            select.disabled = true;
+            console.log('[Accounting] Showing self only');
+        }
+    } catch (error) {
+        console.error('[Accounting] Error loading resellers:', error);
+        // Fallback on error
+        if (currentUser && currentUser.id) {
+            select.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = currentUser.id;
+            opt.textContent = currentUser.name || currentUser.full_name || currentUser.username || 'My Account';
+            opt.selected = true;
+            select.appendChild(opt);
+        }
+    }
+}
+
+/**
+ * Update calendar options (year and month dropdowns)
+ */
+function updateCalendarOptions() {
+    const calendarType = document.getElementById('accounting-calendar').value;
+    const yearSelect = document.getElementById('accounting-year');
+    const monthSelect = document.getElementById('accounting-month');
+
+    if (!yearSelect || !monthSelect) return;
+
+    // Clear existing options
+    yearSelect.innerHTML = '';
+    monthSelect.innerHTML = '';
+
+    if (calendarType === 'shamsi') {
+        // Shamsi years (current year and 5 years back)
+        const currentShamsi = getCurrentShamsiDate();
+        const currentYear = currentShamsi[0];
+
+        for (let y = currentYear; y >= currentYear - 5; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            yearSelect.appendChild(opt);
+        }
+
+        // Shamsi months
+        shamsiMonths.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.value;
+            opt.textContent = `${m.name} (${m.nameEn})`;
+            monthSelect.appendChild(opt);
+        });
+
+        // Set current month
+        monthSelect.value = currentShamsi[1];
+    } else {
+        // Gregorian years
+        const currentYear = new Date().getFullYear();
+
+        for (let y = currentYear; y >= currentYear - 5; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            yearSelect.appendChild(opt);
+        }
+
+        // Gregorian months
+        gregorianMonths.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.value;
+            opt.textContent = m.name;
+            monthSelect.appendChild(opt);
+        });
+
+        // Set current month
+        monthSelect.value = new Date().getMonth() + 1;
+    }
+}
+
+/**
+ * Load monthly invoice data
+ */
+async function loadMonthlyInvoice() {
+    const resellerId = document.getElementById('accounting-reseller').value;
+    const calendarType = document.getElementById('accounting-calendar').value;
+    const year = document.getElementById('accounting-year').value;
+    const month = document.getElementById('accounting-month').value;
+
+    if (!resellerId) {
+        // Show empty state
+        document.getElementById('invoice-container').style.display = 'none';
+        document.getElementById('invoice-empty-state').style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch(`api/get_monthly_invoice.php?reseller_id=${resellerId}&calendar=${calendarType}&year=${year}&month=${month}`);
+        const data = await response.json();
+
+        if (data.error === 0 && data.invoice) {
+            currentInvoiceData = data.invoice;
+            displayInvoice(data.invoice);
+        } else {
+            showAlert(data.message || 'Failed to load invoice data', 'error');
+        }
+    } catch (error) {
+        console.error('[Accounting] Error loading invoice:', error);
+        showAlert('Failed to load invoice data', 'error');
+    }
+}
+
+/**
+ * Display invoice data
+ */
+function displayInvoice(invoice) {
+    // Hide empty state, show invoice
+    document.getElementById('invoice-empty-state').style.display = 'none';
+    document.getElementById('invoice-container').style.display = 'block';
+
+    // Update header
+    document.getElementById('invoice-title-text').textContent = 'Monthly Invoice';
+    document.getElementById('invoice-period').textContent = invoice.period.display_en;
+
+    // Update reseller info
+    document.getElementById('invoice-reseller-name').textContent = invoice.reseller.name;
+    document.getElementById('invoice-reseller-username').textContent = invoice.reseller.username;
+    document.getElementById('invoice-currency').textContent = `${invoice.reseller.currency} (${invoice.reseller.currency_symbol})`;
+
+    // Update summary
+    document.getElementById('invoice-new-accounts').textContent = invoice.summary.new_accounts;
+    document.getElementById('invoice-renewals').textContent = invoice.summary.renewals;
+    document.getElementById('invoice-total-transactions').textContent = invoice.summary.total_transactions;
+    document.getElementById('invoice-total-sales').textContent = invoice.reseller.currency_symbol + invoice.summary.total_sales_formatted;
+
+    // Update amount owed
+    document.getElementById('invoice-amount-owed').textContent = invoice.reseller.currency_symbol + invoice.summary.amount_owed_formatted;
+
+    // Update transactions table
+    const tbody = document.getElementById('invoice-transactions-tbody');
+    tbody.innerHTML = '';
+
+    if (invoice.transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#999">No transactions in this period</td></tr>';
+    } else {
+        invoice.transactions.forEach(trans => {
+            const tr = document.createElement('tr');
+
+            // Determine transaction type from description
+            let description = trans.description || '-';
+            const descLower = description.toLowerCase();
+            let transType = '';
+            let typeClass = '';
+
+            if (descLower.includes('account renewal') || descLower.includes('renew')) {
+                transType = 'Renewal';
+                typeClass = 'active';
+            } else if (descLower.includes('plan ') && descLower.includes('assigned')) {
+                transType = 'New Account';
+                typeClass = 'inactive';
+            }
+
+            // Clean up description - remove MAC address if present
+            const macMatch = description.match(/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/);
+            if (macMatch) {
+                description = description.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
+            }
+
+            tr.innerHTML = `
+                <td>${trans.date_gregorian}</td>
+                <td dir="rtl">${trans.date_shamsi}</td>
+                <td><span class="badge ${typeClass}" style="font-size: 10px; padding: 4px 8px;">${transType}</span></td>
+                <td><code style="font-size: 13px;">${trans.mac_address || '-'}</code></td>
+                <td>${invoice.reseller.currency_symbol}${formatNumber(trans.amount, invoice.reseller.currency)}</td>
+                <td>${description}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+/**
+ * Format number based on currency
+ */
+function formatNumber(num, currency) {
+    if (currency === 'IRR' || currency === 'IRT') {
+        return Math.round(num).toLocaleString('en-US');
+    }
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Export invoice to PDF
+ */
+function exportInvoicePDF() {
+    if (!currentInvoiceData) {
+        showAlert('No invoice data to export', 'error');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const invoice = currentInvoiceData;
+
+    // Title
+    doc.setFontSize(20);
+    doc.text('Monthly Invoice', 105, 20, { align: 'center' });
+
+    // Period
+    doc.setFontSize(12);
+    doc.text(invoice.period.display_en, 105, 30, { align: 'center' });
+
+    // Reseller Info
+    doc.setFontSize(10);
+    doc.text(`Reseller: ${invoice.reseller.name}`, 20, 45);
+    doc.text(`Username: ${invoice.reseller.username}`, 20, 52);
+    doc.text(`Currency: ${invoice.reseller.currency}`, 20, 59);
+
+    // Summary
+    doc.setFontSize(12);
+    doc.text('Summary', 20, 75);
+    doc.setFontSize(10);
+    doc.text(`New Accounts: ${invoice.summary.new_accounts}`, 20, 85);
+    doc.text(`Renewals: ${invoice.summary.renewals}`, 20, 92);
+    doc.text(`Total Transactions: ${invoice.summary.total_transactions}`, 20, 99);
+    doc.text(`Total Sales: ${invoice.reseller.currency_symbol}${invoice.summary.total_sales_formatted}`, 20, 106);
+
+    // Amount Owed
+    doc.setFontSize(14);
+    doc.setTextColor(220, 53, 69);
+    doc.text(`Amount Owed to System: ${invoice.reseller.currency_symbol}${invoice.summary.amount_owed_formatted}`, 20, 120);
+    doc.setTextColor(0, 0, 0);
+
+    // Transaction table
+    if (invoice.transactions.length > 0) {
+        const tableData = invoice.transactions.map(trans => {
+            // Determine type
+            const descLower = (trans.description || '').toLowerCase();
+            let transType = '';
+            if (descLower.includes('account renewal') || descLower.includes('renew')) {
+                transType = 'Renewal';
+            } else if (descLower.includes('plan ') && descLower.includes('assigned')) {
+                transType = 'New Account';
+            }
+
+            // Clean description
+            let desc = trans.description || '-';
+            const macMatch = desc.match(/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/);
+            if (macMatch) {
+                desc = desc.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
+            }
+
+            return [
+                trans.date_gregorian,
+                trans.date_shamsi,
+                transType,
+                trans.mac_address || '-',
+                `${invoice.reseller.currency_symbol}${formatNumber(trans.amount, invoice.reseller.currency)}`,
+                desc
+            ];
+        });
+
+        doc.autoTable({
+            startY: 130,
+            head: [['Date (Gregorian)', 'Date (Shamsi)', 'Type', 'MAC Address', 'Amount', 'Description']],
+            body: tableData,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [102, 126, 234] }
+        });
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 20, doc.internal.pageSize.height - 10);
+        doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+    }
+
+    // Download
+    const filename = `invoice_${invoice.reseller.username}_${invoice.period.year}_${invoice.period.month}.pdf`;
+    doc.save(filename);
+
+    showAlert('PDF exported successfully', 'success');
+}
+
+/**
+ * Export invoice to Excel
+ */
+function exportInvoiceExcel() {
+    if (!currentInvoiceData) {
+        showAlert('No invoice data to export', 'error');
+        return;
+    }
+
+    const invoice = currentInvoiceData;
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Summary sheet
+    const summaryData = [
+        ['Monthly Invoice'],
+        [''],
+        ['Period', invoice.period.display_en],
+        ['Calendar', invoice.period.calendar === 'shamsi' ? 'Persian (Shamsi)' : 'Gregorian'],
+        ['Start Date', invoice.period.start_date],
+        ['End Date', invoice.period.end_date],
+        [''],
+        ['Reseller Information'],
+        ['Name', invoice.reseller.name],
+        ['Username', invoice.reseller.username],
+        ['Currency', invoice.reseller.currency],
+        [''],
+        ['Summary'],
+        ['New Accounts', invoice.summary.new_accounts],
+        ['Renewals', invoice.summary.renewals],
+        ['Total Transactions', invoice.summary.total_transactions],
+        ['Total Sales', `${invoice.reseller.currency_symbol}${invoice.summary.total_sales_formatted}`],
+        [''],
+        ['Amount Owed to System', `${invoice.reseller.currency_symbol}${invoice.summary.amount_owed_formatted}`]
+    ];
+
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    // Transactions sheet
+    const transactionsData = [
+        ['Date (Gregorian)', 'Date (Shamsi)', 'Type', 'MAC Address', 'Amount', 'Currency', 'Description']
+    ];
+
+    invoice.transactions.forEach(trans => {
+        // Determine type
+        const descLower = (trans.description || '').toLowerCase();
+        let transType = '';
+        if (descLower.includes('account renewal') || descLower.includes('renew')) {
+            transType = 'Renewal';
+        } else if (descLower.includes('plan ') && descLower.includes('assigned')) {
+            transType = 'New Account';
+        }
+
+        // Clean description
+        let desc = trans.description || '';
+        const macMatch = desc.match(/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/);
+        if (macMatch) {
+            desc = desc.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
+        }
+
+        transactionsData.push([
+            trans.date_gregorian,
+            trans.date_shamsi,
+            transType,
+            trans.mac_address || '-',
+            trans.amount,
+            invoice.reseller.currency,
+            desc
+        ]);
+    });
+
+    // Add totals row
+    transactionsData.push([]);
+    transactionsData.push(['', '', '', 'TOTAL', invoice.summary.total_sales, invoice.reseller.currency, '']);
+
+    const transWs = XLSX.utils.aoa_to_sheet(transactionsData);
+    XLSX.utils.book_append_sheet(wb, transWs, 'Transactions');
+
+    // Download
+    const filename = `invoice_${invoice.reseller.username}_${invoice.period.year}_${invoice.period.month}.xlsx`;
+    XLSX.writeFile(wb, filename);
+
+    showAlert('Excel exported successfully', 'success');
+}
+
+// Initialize accounting when switching to the tab
+const originalSwitchTab = switchTab;
+switchTab = function(tabName) {
+    originalSwitchTab(tabName);
+
+    if (tabName === 'accounting') {
+        initAccountingTab();
+    }
+};
+
+// ========================================
+// End of Accounting & Monthly Invoices (v1.15.0)
 // ========================================

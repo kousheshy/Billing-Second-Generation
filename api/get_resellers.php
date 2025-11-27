@@ -49,7 +49,7 @@ try {
         exit();
     }
 
-    $stmt = $pdo->prepare('SELECT us.*, cr.name as currency_name FROM _users AS us LEFT OUTER JOIN _currencies AS cr ON us.currency_id=cr.id WHERE us.super_user = 0 ORDER BY us.id DESC');
+    $stmt = $pdo->prepare('SELECT us.*, cr.name as currency_name FROM _users AS us LEFT OUTER JOIN _currencies AS cr ON us.currency_id=cr.id WHERE us.super_user = 0 AND (us.is_observer = 0 OR us.is_observer IS NULL) ORDER BY us.id DESC');
     $stmt->execute([]);
 
     $resellers = $stmt->fetchAll(PDO::FETCH_ASSOC);

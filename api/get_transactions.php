@@ -66,6 +66,30 @@ try {
 
     $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Add MAC address to each transaction
+    foreach ($transactions as &$tx) {
+        $macAddress = '';
+        $details = $tx['details'] ?? '';
+
+        // First try to find MAC address directly in details (format: XX:XX:XX:XX:XX:XX)
+        if (preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $matches)) {
+            $macAddress = strtoupper($matches[1]);
+        }
+        // For renewals, extract username and look up MAC from accounts table
+        elseif (preg_match('/Account renewal:\s*([a-zA-Z0-9]+)\s*-/', $details, $matches)) {
+            $accountUsername = $matches[1];
+            $macStmt = $pdo->prepare('SELECT mac FROM _accounts WHERE username = ? LIMIT 1');
+            $macStmt->execute([$accountUsername]);
+            $accountRow = $macStmt->fetch();
+            if ($accountRow && !empty($accountRow['mac'])) {
+                $macAddress = strtoupper($accountRow['mac']);
+            }
+        }
+
+        $tx['mac_address'] = $macAddress;
+    }
+    unset($tx); // Break the reference
+
     $response['error'] = 0;
     $response['transactions'] = $transactions;
 
