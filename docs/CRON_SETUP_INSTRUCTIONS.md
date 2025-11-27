@@ -394,3 +394,37 @@ MAILTO=admin@yourdomain.com
 Always use absolute paths and log output for debugging
 
 The system is now fully automatic! When users enable the toggle and save, reminders will be sent daily without any manual intervention. 🚀
+
+---
+
+## Auto-Disable Expired Accounts (v1.17.1)
+
+A new cron job automatically disables expired accounts in both the billing database and Stalker Portal server.
+
+### Setup
+
+```bash
+# Add to crontab (runs every hour)
+0 * * * * php /var/www/showbox/cron/cron_disable_expired_accounts.php >> /var/log/showbox-disable-expired.log 2>&1
+```
+
+### Manual Test
+
+```bash
+php /var/www/showbox/cron/cron_disable_expired_accounts.php
+```
+
+### What It Does
+
+1. Finds accounts where `end_date < today` AND `status = 1` (enabled)
+2. Disables each account on Stalker Portal via API
+3. Updates billing database status to 0
+4. Logs action to audit trail
+
+### Configuration
+
+- **Timezone:** Uses Asia/Tehran from config.php
+- **Dry Run:** Set `DRY_RUN = true` in script to test without changes
+- **Dual Server:** Supports both primary and secondary Stalker servers
+
+For full documentation, see [AUTO_DISABLE_EXPIRED_ACCOUNTS.md](AUTO_DISABLE_EXPIRED_ACCOUNTS.md)

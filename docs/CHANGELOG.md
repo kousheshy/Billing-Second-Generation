@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.17.1] - 2025-11-28
+
+### Added - Auto-Disable Expired Accounts & MySQL Timezone Fix
+
+**Status:** Production Release
+
+#### Overview
+
+Automatic disabling of expired accounts in both billing system and Stalker Portal server. Also includes MySQL timezone configuration fix to synchronize with Asia/Tehran timezone.
+
+#### New Features
+
+**Auto-Disable Expired Accounts:**
+- New cron job: `cron/cron_disable_expired_accounts.php`
+- Automatically finds accounts where `end_date < today` AND `status = 1`
+- Disables on Stalker Portal server via API
+- Updates billing database status
+- Logs actions for audit trail
+- Supports dual-server mode
+- Timezone-aware (uses PHP's Asia/Tehran from config.php)
+
+**MySQL Timezone Fix:**
+- Configured MySQL to use Asia/Tehran timezone (+03:30)
+- Added `default-time-zone = "+03:30"` to MySQL config
+- Ensures MySQL NOW() matches server system time
+
+#### New Files
+
+| File | Description |
+|------|-------------|
+| `cron/cron_disable_expired_accounts.php` | Cron job for auto-disabling expired accounts |
+| `docs/AUTO_DISABLE_EXPIRED_ACCOUNTS.md` | Feature documentation |
+
+#### Configuration Changes
+
+**MySQL Configuration (`/etc/mysql/mysql.conf.d/mysqld.cnf`):**
+```ini
+# Timezone setting for Asia/Tehran
+default-time-zone = "+03:30"
+```
+
+#### Cron Setup
+
+```bash
+# Add to crontab (runs every hour)
+0 * * * * php /var/www/showbox/cron/cron_disable_expired_accounts.php >> /var/log/showbox-disable-expired.log 2>&1
+```
+
+#### Testing
+
+```bash
+# Manual execution
+php /var/www/showbox/cron/cron_disable_expired_accounts.php
+```
+
+Expected output:
+```
+[2025-11-28 01:17:49] === Starting Auto-Disable Expired Accounts ===
+[2025-11-28 01:17:49] Server timezone: Asia/Tehran | Today's date: 2025-11-28 01:17:49
+[2025-11-28 01:17:49] Found 2 expired accounts with status=enabled
+[2025-11-28 01:17:49] Processing: Account Name (MAC: XX:XX:XX:XX:XX:XX, Expired: 2025-11-27)
+[2025-11-28 01:17:49]   SUCCESS - Disabled: Account Name
+[2025-11-28 01:17:49] === Completed ===
+[2025-11-28 01:17:49] Total: 2 | Success: 2 | Failed: 0
+```
+
+---
+
 ## [1.17.0] - 2025-11-27
 
 ### Added - Reseller Payments & Balance Tracking System

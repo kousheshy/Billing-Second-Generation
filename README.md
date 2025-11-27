@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.17.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.17.1-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -666,20 +666,28 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Current Version: 1.17.0 - November 2025
+- Current Version: 1.17.1 - November 2025
 - **Lead Developer:** Kambiz Koosheshi
 - **GitHub:** [@kousheshy](https://github.com/kousheshy)
 - **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
-**Version:** 1.17.0
-**Last Updated:** November 27, 2025
+**Version:** 1.17.1
+**Last Updated:** November 28, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.17.1** (Nov 2025) - Auto-Disable Expired Accounts & MySQL Timezone Fix
+  - **Auto-Disable Cron Job**: New `cron/cron_disable_expired_accounts.php` automatically disables expired accounts
+  - **Stalker Portal Sync**: Disabled accounts are updated on both billing DB and Stalker server
+  - **Timezone-Aware**: Uses PHP's Asia/Tehran timezone for accurate date comparisons
+  - **MySQL Timezone Fix**: Configured MySQL to use Asia/Tehran (+03:30) timezone
+  - **Audit Logging**: All auto-disabled accounts logged to `_audit_log`
+  - **Dual Server Support**: Works with both primary and secondary Stalker servers
 
 - **v1.17.0** (Nov 2025) - Reseller Payments & Balance Tracking System
   - **Payment Tracking**: Record reseller payments with date, bank, amount, and reference

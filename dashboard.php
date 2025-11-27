@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.17.0</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.17.1</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>

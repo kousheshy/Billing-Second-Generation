@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.14.0!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.17.1!
 
 ---
 
@@ -202,6 +202,12 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.14.0
 - Development: [INSTALLATION.md#development-environment](INSTALLATION.md#development-environment)
 - Production: [INSTALLATION.md#production-environment](INSTALLATION.md#production-environment)
 - Docker: [INSTALLATION.md#docker-installation](INSTALLATION.md#docker-installation)
+
+### Automation & Cron Jobs
+- **Cron Setup Guide**: [CRON_SETUP_INSTRUCTIONS.md](CRON_SETUP_INSTRUCTIONS.md)
+- **Auto-Disable Expired Accounts**: [AUTO_DISABLE_EXPIRED_ACCOUNTS.md](AUTO_DISABLE_EXPIRED_ACCOUNTS.md) **NEW in v1.17.1**
+- **Push Notifications**: [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md)
+- **Multi-Stage SMS Reminders**: [MULTISTAGE_SMS_GUIDE.md](MULTISTAGE_SMS_GUIDE.md)
 
 ### API Reference
 - Authentication: [API_DOCUMENTATION.md#authentication](API_DOCUMENTATION.md#authentication)
