@@ -2,1073 +2,711 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.11.66
+**Version:** 1.14.0
 **Last Updated:** November 27, 2025
-**Database:** MySQL 5.7+
-**Character Set:** UTF8MB4
+**Database:** MySQL 5.7+ / MariaDB 10.3+
+**Character Set:** utf8mb4
 **Collation:** utf8mb4_unicode_ci
+
+---
+
+## Quick Setup
+
+### For New Installations
+
+Run the complete setup script:
+
+```bash
+cd /path/to/showbox
+php scripts/setup_complete_database.php
+```
+
+This will:
+1. Create the database if it doesn't exist
+2. Create all 18 required tables
+3. Insert default data (currencies, admin user, settings)
+4. Display confirmation and next steps
+
+### Prerequisites
+
+1. **MySQL 5.7+** or **MariaDB 10.3+**
+2. **config.php** properly configured:
+   ```php
+   $ub_db_host = 'localhost';
+   $ub_main_db = 'showboxt_panel';
+   $ub_db_username = 'your_db_user';
+   $ub_db_password = 'your_db_password';
+   ```
+3. Database user with CREATE/ALTER/INSERT privileges
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Entity-Relationship Diagram](#entity-relationship-diagram)
-3. [Tables](#tables)
-4. [Relationships](#relationships)
-5. [Indexes](#indexes)
-6. [Migration History](#migration-history)
+2. [Quick Reference](#quick-reference)
+3. [Core Tables](#core-tables)
+4. [SMS Tables](#sms-tables)
+5. [Security Tables](#security-tables)
+6. [Settings Tables](#settings-tables)
+7. [Entity Relationships](#entity-relationships)
+8. [Migration Scripts](#migration-scripts)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Overview
 
-The ShowBox Billing Panel uses a MySQL relational database with 11 core tables:
+The ShowBox Billing Panel uses **18 tables** organized into functional groups:
 
-| Table | Purpose | Records (Typical) |
-|-------|---------|-------------------|
-| `_users` | Resellers and admins | 10-100 |
-| `_accounts` | Customer IPTV accounts | 1,000-50,000 |
-| `_plans` | Subscription plans | 10-50 |
-| `_transactions` | Financial transactions | 1,000-100,000 |
-| `_currencies` | Currency definitions | 4-10 |
-| `_webauthn_credentials` | Biometric login credentials (v1.11.19) | 10-500 |
-| `_app_settings` | Global application settings (v1.11.20) | 1-10 |
-| `_expiry_reminders` | Sent reminder tracking (v1.7.8) | 1,000-50,000 |
-| `_reminder_settings` | User reminder preferences (v1.7.8) | 10-100 |
-| `_push_subscriptions` | Web push notification subscriptions (v1.11.40) | 10-500 |
-| `_push_expiry_tracking` | Expiry notification tracking (v1.11.48) | 100-5,000 |
+| Group | Tables | Purpose |
+|-------|--------|---------|
+| Core | 6 tables | Users, accounts, plans, transactions, currencies, reminders |
+| SMS | 4 tables | SMS settings, logs, templates, tracking |
+| Security | 3 tables | WebAuthn, login history, audit log |
+| Push | 2 tables | Push subscriptions, expiry tracking |
+| Settings | 3 tables | Reminder settings, Stalker settings, app settings |
 
 **Database Name:** `showboxt_panel`
-**Engine:** InnoDB
+**Engine:** InnoDB (all tables)
 **Transaction Support:** Yes
 
 ---
 
-## Entity-Relationship Diagram
+## Quick Reference
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          _users                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ id (PK, INT, AUTO_INCREMENT)                              │  │
-│  │ username (VARCHAR 255, UNIQUE)                            │  │
-│  │ password (VARCHAR 255) [MD5 hash]                         │  │
-│  │ name (VARCHAR 255)                                        │  │
-│  │ email (VARCHAR 255)                                       │  │
-│  │ balance (DECIMAL 10,2) [default: 0.00]                    │  │
-│  │ currency (VARCHAR 10) [GBP, USD, EUR, IRR]                │  │
-│  │ super_user (TINYINT 1) [0=reseller, 1=admin]              │  │
-│  │ max_users (INT)                                           │  │
-│  │ theme (VARCHAR 50) [light, dark]                          │  │
-│  │ permissions (VARCHAR 255) [can_edit|can_add|is_admin|...]│  │
-│  │ is_observer (TINYINT 1) [0=no, 1=yes]                     │  │
-│  │ timestamp (INT)                                           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-                       │ 1:N
-                       │
-        ┌──────────────┴────────────────┐
-        │                               │
-        ▼                               ▼
-┌──────────────────┐           ┌──────────────────┐
-│  _transactions   │           │    _accounts     │
-├──────────────────┤           ├──────────────────┤
-│ id (PK)          │           │ id (PK)          │
-│ reseller_id (FK) ├───────────┤ reseller (FK)    │
-│ amount           │   N:1     │ username (UNIQUE)│
-│ type             │           │ mac (UNIQUE)     │
-│ description      │           │ email            │
-│ timestamp        │           │ phone_number ★   │
-└──────────────────┘           │ full_name        │
-                               │ tariff_plan      │
-                               │ end_date         │
-                               │ status           │
-                               │ plan (FK)        │
-                               │ timestamp        │
-                               └────────┬─────────┘
-                                        │
-                                        │ N:1
-                                        │
-                                        ▼
-                               ┌──────────────────┐
-                               │     _plans       │
-                               ├──────────────────┤
-                               │ id (PK)          │
-                               │ name             │
-                               │ days             │
-                               │ price            │
-                               │ currency         │
-                               │ tariff_id        │
-                               │ timestamp        │
-                               └──────────────────┘
+### All Tables at a Glance
 
-┌──────────────────┐
-│   _currencies    │
-├──────────────────┤
-│ id (PK)          │
-│ code (UNIQUE)    │
-│ symbol           │
-│ name             │
-└──────────────────┘
-
-★ = New in v1.7.1
-```
+| Table | Purpose | Key Fields | Added |
+|-------|---------|------------|-------|
+| `_users` | Admins & resellers | id, username, password, super_user | Core |
+| `_accounts` | IPTV customer accounts | id, mac, end_date, reseller | Core |
+| `_plans` | Subscription plans | id, name, duration_days, price_* | Core |
+| `_transactions` | Financial transactions | id, for_user, type, amount | Core |
+| `_currencies` | Currency definitions | id, code, symbol | Core |
+| `_expiry_reminders` | STB reminder history | id, mac, end_date, sent_at | Core |
+| `_reminder_settings` | Per-user reminder config | id, user_id, days_before_expiry | v1.7.8 |
+| `_sms_settings` | SMS API configuration | id, user_id, api_token | v1.8.0 |
+| `_sms_logs` | SMS sending history | id, recipient_number, status | v1.8.0 |
+| `_sms_templates` | Message templates | id, user_id, name, template | v1.8.0 |
+| `_sms_reminder_tracking` | Multi-stage SMS tracking | id, account_id, reminder_stage | v1.9.0 |
+| `_stalker_settings` | Stalker Portal config | id, setting_key, setting_value | v1.6.0 |
+| `_webauthn_credentials` | Biometric login | id, user_id, credential_id | v1.11.19 |
+| `_login_history` | Login attempt tracking | id, user_id, login_time, status | v1.12.0 |
+| `_audit_log` | Permanent action log | id, action, target_type | v1.13.0 |
+| `_push_subscriptions` | Web push subscriptions | id, user_id, endpoint | v1.11.40 |
+| `_push_expiry_tracking` | Expiry notification tracking | id, account_id, expiry_date | v1.11.48 |
+| `_app_settings` | Global application settings | id, setting_key, setting_value | v1.11.20 |
 
 ---
 
-## Tables
+## Core Tables
 
 ### 1. _users
 
-**Purpose:** Store resellers and admin users
+**Purpose:** Store admin users and resellers
 
-**Schema:**
 ```sql
 CREATE TABLE `_users` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `username` VARCHAR(255) NOT NULL,
-  `password` VARCHAR(255) NOT NULL COMMENT 'MD5 hash',
-  `name` VARCHAR(255) DEFAULT NULL,
-  `email` VARCHAR(255) DEFAULT NULL,
-  `balance` DECIMAL(10,2) DEFAULT 0.00,
-  `currency` VARCHAR(10) DEFAULT 'GBP' COMMENT 'GBP, USD, EUR, IRR',
-  `super_user` TINYINT(1) DEFAULT 0 COMMENT '0=reseller, 1=admin',
-  `max_users` INT(11) DEFAULT 0,
-  `theme` VARCHAR(50) DEFAULT 'dark' COMMENT 'light or dark',
-  `permissions` VARCHAR(255) DEFAULT '0|0|0|0|0' COMMENT 'can_edit|can_add|is_reseller_admin|can_delete|reserved',
-  `is_observer` TINYINT(1) DEFAULT 0 COMMENT '0=no, 1=yes (read-only mode)',
-  `timestamp` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(100) NOT NULL,
+    `password` VARCHAR(255) NOT NULL,
+    `name` VARCHAR(200) DEFAULT NULL,
+    `full_name` VARCHAR(200) DEFAULT NULL,
+    `email` VARCHAR(200) DEFAULT NULL,
+    `phone` VARCHAR(50) DEFAULT NULL,
+    `super_user` TINYINT(1) DEFAULT 0,
+    `permissions` VARCHAR(255) DEFAULT '0|0|0|0|0|0|0',
+    `is_reseller_admin` TINYINT(1) DEFAULT 0,
+    `is_observer` TINYINT(1) DEFAULT 0,
+    `balance` DECIMAL(10,2) DEFAULT 0.00,
+    `currency` VARCHAR(10) DEFAULT 'GBP',
+    `max_users` INT(11) DEFAULT 0,
+    `theme` VARCHAR(50) DEFAULT 'dark',
+    `timestamp` INT(11) DEFAULT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `username` | VARCHAR(255) | NO | - | Unique username for login |
-| `password` | VARCHAR(255) | NO | - | MD5 hash (upgrade to bcrypt recommended) |
-| `name` | VARCHAR(255) | YES | NULL | Full name or company name |
-| `email` | VARCHAR(255) | YES | NULL | Email address |
-| `balance` | DECIMAL(10,2) | YES | 0.00 | Account balance/credit |
-| `currency` | VARCHAR(10) | YES | GBP | Preferred currency (GBP/USD/EUR/IRR) |
-| `super_user` | TINYINT(1) | YES | 0 | 0=Reseller, 1=Super Admin |
-| `max_users` | INT(11) | YES | 0 | Maximum accounts allowed (0=unlimited) |
-| `theme` | VARCHAR(50) | YES | dark | UI theme preference |
-| `permissions` | VARCHAR(255) | YES | 0\|0\|0\|0\|0 | Pipe-separated permission flags |
-| `is_observer` | TINYINT(1) | YES | 0 | Read-only observer mode |
-| `timestamp` | INT(11) | NO | - | Unix timestamp of creation |
-
-**Permission Format:**
-```
-can_edit|can_add|is_reseller_admin|can_delete|reserved
-   0        0           0              0         0
-```
-
-**User Types:**
-1. **Super Admin** (`super_user=1`): Full system access
-2. **Reseller Admin** (`permissions[2]=1`): Admin features within scope
-3. **Regular Reseller** (`super_user=0, permissions[2]=0`): Limited access
-4. **Observer** (`is_observer=1`): Read-only access
-
-**Default Record:**
-```sql
-INSERT INTO `_users` VALUES (
-  1,
-  'admin',
-  '21232f297a57a5a743894a0e4a801fc3', -- MD5('admin')
-  'Administrator',
-  'admin@showbox.com',
-  1000.00,
-  'GBP',
-  1, -- super_user
-  0, -- max_users (unlimited)
-  'dark',
-  '1|1|1|1|0',
-  0, -- not observer
-  UNIX_TIMESTAMP()
-);
-```
+**Key Fields:**
+| Field | Description |
+|-------|-------------|
+| `super_user` | 1 = Super Admin, 0 = Reseller |
+| `permissions` | Pipe-separated: can_edit\|can_add\|is_reseller_admin\|can_delete\|can_send_stb\|can_view_stb\|reserved |
+| `is_observer` | 1 = Read-only mode |
+| `balance` | Reseller credit balance |
+| `max_users` | Max accounts reseller can create (0 = unlimited) |
 
 ---
 
 ### 2. _accounts
 
-**Purpose:** Store IPTV customer accounts
+**Purpose:** Store IPTV customer accounts (synced from Stalker Portal)
 
-**Schema:**
 ```sql
 CREATE TABLE `_accounts` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `username` VARCHAR(255) NOT NULL,
-  `mac` VARCHAR(17) NOT NULL COMMENT 'Format: 00:1A:79:XX:XX:XX',
-  `email` VARCHAR(255) DEFAULT NULL,
-  `phone_number` VARCHAR(50) DEFAULT NULL COMMENT 'Added in v1.7.1',
-  `full_name` VARCHAR(255) DEFAULT NULL,
-  `tariff_plan` VARCHAR(255) DEFAULT NULL,
-  `end_date` DATETIME DEFAULT NULL COMMENT 'Expiration date',
-  `status` TINYINT(1) DEFAULT 1 COMMENT '0=OFF, 1=ON',
-  `reseller` INT(11) DEFAULT NULL COMMENT 'Foreign key to _users.id',
-  `plan` INT(11) DEFAULT NULL COMMENT 'Foreign key to _plans.id',
-  `timestamp` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `mac` (`mac`),
-  KEY `reseller` (`reseller`),
-  KEY `plan` (`plan`),
-  KEY `end_date` (`end_date`),
-  KEY `status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `mac` VARCHAR(17) NOT NULL,
+    `username` VARCHAR(100) DEFAULT NULL,
+    `password` VARCHAR(255) DEFAULT NULL,
+    `full_name` VARCHAR(200) DEFAULT NULL,
+    `phone` VARCHAR(50) DEFAULT NULL,
+    `email` VARCHAR(200) DEFAULT NULL,
+    `notes` TEXT DEFAULT NULL,
+    `end_date` DATE DEFAULT NULL,
+    `status` TINYINT(1) DEFAULT 1,
+    `reseller` INT(11) DEFAULT NULL,
+    `plan_id` INT(11) DEFAULT NULL,
+    `tariff_plan` VARCHAR(200) DEFAULT NULL,
+    `stb_type` VARCHAR(50) DEFAULT NULL,
+    `server` TINYINT(1) DEFAULT 1,
+    `timestamp` INT(11) DEFAULT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `mac` (`mac`),
+    INDEX `idx_reseller` (`reseller`),
+    INDEX `idx_end_date` (`end_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `username` | VARCHAR(255) | NO | - | Unique username for account |
-| `mac` | VARCHAR(17) | NO | - | MAC address (00:1A:79:XX:XX:XX) |
-| `email` | VARCHAR(255) | YES | NULL | Customer email |
-| `phone_number` | VARCHAR(50) | YES | NULL | Customer phone (v1.7.1) |
-| `full_name` | VARCHAR(255) | YES | NULL | Customer full name |
-| `tariff_plan` | VARCHAR(255) | YES | NULL | Plan name from Stalker Portal |
-| `end_date` | DATETIME | YES | NULL | Subscription expiration date |
-| `status` | TINYINT(1) | YES | 1 | 0=Disabled, 1=Enabled |
-| `reseller` | INT(11) | YES | NULL | FK to _users.id (owner) |
-| `plan` | INT(11) | YES | NULL | FK to _plans.id |
-| `timestamp` | INT(11) | NO | - | Unix timestamp of creation |
-
-**Expiration Logic:**
-- An account is **expired** if `end_date < NOW()`
-- Status field (ON/OFF) is for admin control only, not expiration
-- An account is "not renewed" if `end_date` remains in the past
-
-**Example Record:**
-```sql
-INSERT INTO `_accounts` VALUES (
-  1,
-  'premium_user_001',
-  '00:1A:79:12:34:56',
-  'customer@example.com',
-  '+447712345678', -- phone_number
-  'John Smith',
-  '1 Month Premium',
-  '2025-12-31 23:59:59',
-  1, -- status ON
-  2, -- owned by reseller ID 2
-  1, -- using plan ID 1
-  UNIX_TIMESTAMP()
-);
-```
+**Key Fields:**
+| Field | Description |
+|-------|-------------|
+| `mac` | MAC address in format XX:XX:XX:XX:XX:XX |
+| `end_date` | Subscription expiry date |
+| `status` | 1 = Active, 0 = Inactive |
+| `reseller` | FK to _users.id (owner) |
+| `server` | 1 = Server 1, 2 = Server 2 |
 
 ---
 
 ### 3. _plans
 
-**Purpose:** Store subscription plans with pricing
+**Purpose:** Subscription plan definitions
 
-**Schema:**
 ```sql
 CREATE TABLE `_plans` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL,
-  `days` INT(11) NOT NULL COMMENT 'Duration in days',
-  `price` DECIMAL(10,2) NOT NULL,
-  `currency` VARCHAR(10) NOT NULL COMMENT 'GBP, USD, EUR, IRR',
-  `tariff_id` INT(11) DEFAULT NULL COMMENT 'Reference to Stalker Portal tariff',
-  `timestamp` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `currency` (`currency`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `name` | VARCHAR(255) | NO | - | Plan name (e.g., "1 Month Premium") |
-| `days` | INT(11) | NO | - | Duration in days (30, 90, 365, etc.) |
-| `price` | DECIMAL(10,2) | NO | - | Price in specified currency |
-| `currency` | VARCHAR(10) | NO | - | Currency code (GBP/USD/EUR/IRR) |
-| `tariff_id` | INT(11) | YES | NULL | Stalker Portal tariff ID |
-| `timestamp` | INT(11) | NO | - | Unix timestamp of creation |
-
-**Example Records:**
-```sql
-INSERT INTO `_plans` VALUES
-(1, '1 Month Premium', 30, 10.00, 'GBP', 1, UNIX_TIMESTAMP()),
-(2, '3 Month Premium', 90, 25.00, 'GBP', 2, UNIX_TIMESTAMP()),
-(3, '1 Year Premium', 365, 80.00, 'GBP', 3, UNIX_TIMESTAMP()),
-(4, '1 Month Standard', 30, 6500000.00, 'IRR', 4, UNIX_TIMESTAMP());
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(200) NOT NULL,
+    `tariff_id` INT(11) DEFAULT NULL,
+    `duration_days` INT(11) NOT NULL DEFAULT 30,
+    `price_gbp` DECIMAL(10,2) DEFAULT 0.00,
+    `price_usd` DECIMAL(10,2) DEFAULT 0.00,
+    `price_eur` DECIMAL(10,2) DEFAULT 0.00,
+    `price_irr` DECIMAL(15,2) DEFAULT 0.00,
+    `category` VARCHAR(100) DEFAULT NULL,
+    `is_active` TINYINT(1) DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ---
 
 ### 4. _transactions
 
-**Purpose:** Store financial transaction history
+**Purpose:** Financial transaction history
 
-**Schema:**
 ```sql
 CREATE TABLE `_transactions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `reseller_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
-  `amount` DECIMAL(10,2) NOT NULL,
-  `type` VARCHAR(50) NOT NULL COMMENT 'credit, debit, renewal, etc.',
-  `description` TEXT DEFAULT NULL,
-  `timestamp` INT(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `reseller_id` (`reseller_id`),
-  KEY `type` (`type`),
-  KEY `timestamp` (`timestamp`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `reseller_id` | INT(11) | NO | - | FK to _users.id |
-| `amount` | DECIMAL(10,2) | NO | - | Transaction amount (+ or -) |
-| `type` | VARCHAR(50) | NO | - | Transaction type |
-| `description` | TEXT | YES | NULL | Human-readable description |
-| `timestamp` | INT(11) | NO | - | Unix timestamp of transaction |
-
-**Transaction Types:**
-- `credit` - Balance added
-- `debit` - Balance deducted
-- `renewal` - Account renewed (balance deducted)
-- `adjustment` - Manual adjustment by admin
-
-**Example Record:**
-```sql
-INSERT INTO `_transactions` VALUES (
-  1,
-  2, -- reseller_id
-  -10.00, -- deducted
-  'renewal',
-  'Account renewal: premium_user_001 - Plan: 1 Month Premium',
-  UNIX_TIMESTAMP()
-);
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `for_user` INT(11) NOT NULL,
+    `type` ENUM('credit', 'debit') NOT NULL,
+    `amount` DECIMAL(10,2) NOT NULL,
+    `currency` VARCHAR(10) DEFAULT 'GBP',
+    `description` TEXT,
+    `related_account` INT(11) DEFAULT NULL,
+    `created_by` INT(11) DEFAULT NULL,
+    `timestamp` INT(11) DEFAULT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_for_user` (`for_user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ---
 
 ### 5. _currencies
 
-**Purpose:** Store currency definitions
+**Purpose:** Currency definitions
 
-**Schema:**
 ```sql
 CREATE TABLE `_currencies` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `code` VARCHAR(10) NOT NULL COMMENT 'ISO 4217 code',
-  `symbol` VARCHAR(10) DEFAULT NULL,
-  `name` VARCHAR(100) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `code` (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(10) NOT NULL,
+    `symbol` VARCHAR(10) NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `enabled` TINYINT(1) DEFAULT 1,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Fields:**
+**Default Data:**
+| Code | Symbol | Name |
+|------|--------|------|
+| GBP | £ | British Pound |
+| USD | $ | US Dollar |
+| EUR | € | Euro |
+| IRR | ﷼ | Iranian Rial |
 
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `code` | VARCHAR(10) | NO | - | ISO 4217 currency code |
-| `symbol` | VARCHAR(10) | YES | NULL | Currency symbol |
-| `name` | VARCHAR(100) | NO | - | Full currency name |
+---
 
-**Default Records:**
+### 6. _expiry_reminders
+
+**Purpose:** STB expiry reminder history
+
 ```sql
-INSERT INTO `_currencies` VALUES
-(1, 'GBP', '£', 'British Pound Sterling'),
-(2, 'USD', '$', 'United States Dollar'),
-(3, 'EUR', '€', 'Euro'),
-(4, 'IRR', 'IRR ', 'Iranian Rial');
+CREATE TABLE `_expiry_reminders` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `account_id` INT(11) NOT NULL,
+    `mac` VARCHAR(17) NOT NULL,
+    `username` VARCHAR(100) DEFAULT NULL,
+    `full_name` VARCHAR(200) DEFAULT NULL,
+    `end_date` DATE NOT NULL,
+    `days_before` INT(11) NOT NULL,
+    `reminder_date` DATE NOT NULL,
+    `sent_at` DATETIME NOT NULL,
+    `sent_by` INT(11) NOT NULL,
+    `message` TEXT,
+    `status` ENUM('sent', 'failed') DEFAULT 'sent',
+    `error_message` TEXT,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_reminder` (`mac`, `end_date`, `days_before`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ---
 
-### 6. _webauthn_credentials
+## SMS Tables
 
-**Purpose:** Store WebAuthn biometric credentials for passwordless login
+### 7. _sms_settings
 
-**Version:** Added in v1.11.19
+**Purpose:** Per-user SMS API configuration
 
-**Schema:**
 ```sql
-CREATE TABLE IF NOT EXISTS `_webauthn_credentials` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
-  `credential_id` TEXT NOT NULL COMMENT 'Base64 encoded credential ID',
-  `public_key` TEXT NOT NULL COMMENT 'Base64 encoded public key',
-  `counter` INT(11) DEFAULT 0 COMMENT 'Signature counter for replay protection',
-  `device_name` VARCHAR(255) DEFAULT NULL COMMENT 'User-friendly device name',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `last_used` TIMESTAMP NULL COMMENT 'Last successful authentication',
-  PRIMARY KEY (`id`),
-  INDEX `idx_user_id` (`user_id`)
+CREATE TABLE `_sms_settings` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `user_id` INT(11) NOT NULL,
+    `api_token` VARCHAR(500) DEFAULT NULL,
+    `sender_number` VARCHAR(20) DEFAULT NULL,
+    `base_url` VARCHAR(200) DEFAULT 'https://edge.ippanel.com/v1',
+    `auto_send_enabled` TINYINT(1) DEFAULT 0,
+    `enable_multistage_reminders` TINYINT(1) DEFAULT 1,
+    `days_before_expiry` INT(11) DEFAULT 7,
+    `expiry_template` TEXT,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `user_id` | INT(11) | NO | - | FK to _users.id |
-| `credential_id` | TEXT | NO | - | Base64 WebAuthn credential ID |
-| `public_key` | TEXT | NO | - | Base64 public key for verification |
-| `counter` | INT(11) | YES | 0 | Signature counter (anti-replay) |
-| `device_name` | VARCHAR(255) | YES | NULL | Device name (e.g., "iPhone 15 Pro") |
-| `created_at` | TIMESTAMP | YES | CURRENT | When credential was registered |
-| `last_used` | TIMESTAMP | YES | NULL | Last successful login |
-
-**Usage:**
-- One user can have multiple credentials (multi-device support)
-- Credential ID is unique per device
-- Counter increments with each authentication to prevent replay attacks
-- Device name helps users identify which credentials to manage
-
-**Example Record:**
-```sql
-INSERT INTO `_webauthn_credentials` VALUES (
-  1,
-  1, -- user_id (admin)
-  'base64-encoded-credential-id...',
-  'base64-encoded-public-key...',
-  5, -- counter
-  'iPhone 15 Pro',
-  NOW(),
-  NOW()
-);
 ```
 
 ---
 
-### 7. _app_settings
+### 8. _sms_logs
 
-**Purpose:** Store global application settings (key-value pairs)
+**Purpose:** SMS sending history
 
-**Version:** Added in v1.11.20
-
-**Schema:**
 ```sql
-CREATE TABLE IF NOT EXISTS `_app_settings` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `setting_key` VARCHAR(100) NOT NULL COMMENT 'Unique setting identifier',
-  `setting_value` TEXT COMMENT 'Setting value (can be JSON)',
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `setting_key` (`setting_key`)
+CREATE TABLE `_sms_logs` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `account_id` INT(11) DEFAULT NULL,
+    `mac` VARCHAR(17) DEFAULT NULL,
+    `recipient_name` VARCHAR(200) DEFAULT NULL,
+    `recipient_number` VARCHAR(20) NOT NULL,
+    `message` TEXT NOT NULL,
+    `message_type` ENUM('manual', 'expiry_reminder', 'renewal', 'new_account', 'welcome') DEFAULT 'manual',
+    `sent_by` INT(11) NOT NULL,
+    `sent_at` DATETIME NOT NULL,
+    `status` ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
+    `api_response` TEXT,
+    `bulk_id` VARCHAR(100) DEFAULT NULL,
+    `error_message` TEXT,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_sent_at` (`sent_at`),
+    INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Fields:**
+---
 
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `setting_key` | VARCHAR(100) | NO | - | Unique setting name |
-| `setting_value` | TEXT | YES | NULL | Setting value |
-| `updated_at` | TIMESTAMP | YES | CURRENT | Last update time |
+### 9. _sms_templates
 
-**Current Settings:**
+**Purpose:** Reusable SMS message templates
 
+```sql
+CREATE TABLE `_sms_templates` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `user_id` INT(11) NOT NULL,
+    `name` VARCHAR(200) NOT NULL,
+    `template` TEXT NOT NULL,
+    `description` VARCHAR(500) DEFAULT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Template Variables:**
+- `{name}` - Customer full name
+- `{mac}` - MAC address
+- `{expiry_date}` - Expiration date
+- `{days}` - Days until expiry
+
+---
+
+### 10. _sms_reminder_tracking
+
+**Purpose:** Track multi-stage SMS reminders (7/3/1 day)
+
+```sql
+CREATE TABLE `_sms_reminder_tracking` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `account_id` INT NOT NULL,
+    `mac` VARCHAR(20) DEFAULT NULL,
+    `reminder_stage` ENUM('7days', '3days', '1day', 'expired') NOT NULL,
+    `sent_at` DATETIME NOT NULL,
+    `end_date` DATE NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_reminder` (`account_id`, `reminder_stage`, `end_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+## Security Tables
+
+### 11. _webauthn_credentials
+
+**Purpose:** Store biometric/WebAuthn credentials
+
+```sql
+CREATE TABLE `_webauthn_credentials` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `credential_id` TEXT NOT NULL,
+    `public_key` TEXT NOT NULL,
+    `counter` INT DEFAULT 0,
+    `device_name` VARCHAR(255) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `last_used` TIMESTAMP NULL,
+    INDEX `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+### 12. _login_history
+
+**Purpose:** Track login attempts
+
+```sql
+CREATE TABLE `_login_history` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `user_id` INT(11) NOT NULL,
+    `username` VARCHAR(255) NOT NULL,
+    `login_time` DATETIME NOT NULL,
+    `ip_address` VARCHAR(45) DEFAULT NULL,
+    `user_agent` TEXT DEFAULT NULL,
+    `login_method` VARCHAR(50) DEFAULT 'password',
+    `status` ENUM('success', 'failed') DEFAULT 'success',
+    `failure_reason` VARCHAR(255) DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_login_time` (`login_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Login Methods:**
+- `password` - Standard username/password
+- `biometric` - Face ID / Touch ID (WebAuthn)
+
+---
+
+### 13. _audit_log
+
+**Purpose:** Permanent audit trail (CANNOT BE DELETED)
+
+```sql
+CREATE TABLE `_audit_log` (
+    `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `user_id` INT(11) NOT NULL,
+    `username` VARCHAR(255) NOT NULL,
+    `user_type` VARCHAR(50) DEFAULT NULL,
+    `action` VARCHAR(100) NOT NULL,
+    `target_type` VARCHAR(100) NOT NULL,
+    `target_id` VARCHAR(255) DEFAULT NULL,
+    `target_name` VARCHAR(255) DEFAULT NULL,
+    `old_value` JSON DEFAULT NULL,
+    `new_value` JSON DEFAULT NULL,
+    `ip_address` VARCHAR(45) DEFAULT NULL,
+    `user_agent` TEXT DEFAULT NULL,
+    `details` TEXT DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_timestamp` (`timestamp`),
+    INDEX `idx_action` (`action`),
+    INDEX `idx_target_type` (`target_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Audited Actions (v1.14.0):**
+| Action | Target Type | Description |
+|--------|-------------|-------------|
+| create | account | New account created |
+| update | account | Account modified |
+| delete | account | Account removed |
+| send | stb_message | Message sent to device |
+| create | user | Reseller created |
+| delete | user | Reseller deleted |
+| update | credit | Credit adjusted |
+| update | password | Password changed |
+| update | account_status | Account enabled/disabled |
+
+---
+
+## Settings Tables
+
+### 14. _reminder_settings
+
+**Purpose:** Per-user STB reminder configuration
+
+```sql
+CREATE TABLE `_reminder_settings` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `user_id` INT(11) NOT NULL,
+    `days_before_expiry` INT(11) NOT NULL DEFAULT 7,
+    `message_template` TEXT,
+    `auto_send_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+    `last_sweep_at` DATETIME DEFAULT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+### 15. _stalker_settings
+
+**Purpose:** Stalker Portal connection settings
+
+```sql
+CREATE TABLE `_stalker_settings` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `setting_key` VARCHAR(100) NOT NULL,
+    `setting_value` TEXT,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `updated_by` INT DEFAULT NULL,
+    UNIQUE KEY `setting_key` (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Required Settings:**
+| Key | Description |
+|-----|-------------|
+| server_address | Primary Stalker server URL |
+| server_2_address | Secondary server URL |
+| api_username | Stalker API username |
+| api_password | Stalker API password |
+| api_base_url | Primary API base URL |
+| api_2_base_url | Secondary API base URL |
+
+---
+
+### 16. _app_settings
+
+**Purpose:** Global application settings
+
+```sql
+CREATE TABLE `_app_settings` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `setting_key` VARCHAR(100) NOT NULL,
+    `setting_value` TEXT,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `setting_key` (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**Default Settings:**
 | Key | Default | Description |
 |-----|---------|-------------|
-| `auto_logout_timeout` | 5 | Minutes of inactivity before auto-logout (0 = disabled) |
-
-**Default Record:**
-```sql
-INSERT INTO `_app_settings` (setting_key, setting_value) VALUES
-('auto_logout_timeout', '5');
-```
-
-**Usage:**
-- Used for application-wide settings
-- Super admin can modify via Settings tab
-- Supports any key-value configuration
+| auto_logout_timeout | 5 | Auto-logout after N minutes of inactivity |
 
 ---
 
-### 8. _expiry_reminders
+## Push Notification Tables
 
-**Purpose:** Track sent expiry reminders to prevent duplicates
+### 17. _push_subscriptions
 
-**Version:** Added in v1.7.8
+**Purpose:** Web push notification subscriptions
 
-**Schema:**
 ```sql
-CREATE TABLE IF NOT EXISTS `_expiry_reminders` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `account_id` INT(11) DEFAULT NULL COMMENT 'FK to _accounts.id (nullable for MAC-based tracking)',
-  `mac` VARCHAR(17) NOT NULL COMMENT 'MAC address for deduplication',
-  `expiry_date` DATE NOT NULL COMMENT 'Account expiry date',
-  `reminder_date` DATE NOT NULL COMMENT 'When reminder was sent',
-  `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `sent_by` INT(11) NOT NULL COMMENT 'FK to _users.id',
-  `message` TEXT COMMENT 'Message that was sent',
-  `status` ENUM('sent', 'failed', 'skipped') DEFAULT 'sent',
-  `error_message` TEXT COMMENT 'Error details if failed',
-  PRIMARY KEY (`id`),
-  INDEX `idx_mac_expiry` (`mac`, `expiry_date`),
-  INDEX `idx_reminder_date` (`reminder_date`),
-  INDEX `idx_sent_by` (`sent_by`)
+CREATE TABLE `_push_subscriptions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `endpoint` TEXT NOT NULL,
+    `p256dh` TEXT NOT NULL,
+    `auth` TEXT NOT NULL,
+    `user_agent` TEXT DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `account_id` | INT(11) | YES | NULL | FK to _accounts.id |
-| `mac` | VARCHAR(17) | NO | - | MAC address (dedup key) |
-| `expiry_date` | DATE | NO | - | When account expires |
-| `reminder_date` | DATE | NO | - | When reminder was sent |
-| `sent_at` | TIMESTAMP | YES | CURRENT | Exact timestamp |
-| `sent_by` | INT(11) | NO | - | Who sent it |
-| `message` | TEXT | YES | NULL | Message content |
-| `status` | ENUM | YES | sent | sent/failed/skipped |
-| `error_message` | TEXT | YES | NULL | Error details |
-
 ---
 
-### 9. _reminder_settings
+### 18. _push_expiry_tracking
 
-**Purpose:** Store user-specific reminder preferences
+**Purpose:** Track which expiry notifications have been sent
 
-**Version:** Added in v1.7.8
-
-**Schema:**
 ```sql
-CREATE TABLE IF NOT EXISTS `_reminder_settings` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
-  `days_before_expiry` INT(11) DEFAULT 7,
-  `message_template` TEXT,
-  `auto_send_enabled` TINYINT(1) DEFAULT 0,
-  `last_sweep_at` TIMESTAMP NULL,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `user_id` (`user_id`)
+CREATE TABLE `_push_expiry_tracking` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `account_id` INT(11) NOT NULL,
+    `expiry_date` DATE NOT NULL,
+    `notified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_account_expiry` (`account_id`, `expiry_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `user_id` | INT(11) | NO | - | FK to _users.id |
-| `days_before_expiry` | INT(11) | YES | 7 | Days before to send reminder |
-| `message_template` | TEXT | YES | NULL | Custom message template |
-| `auto_send_enabled` | TINYINT(1) | YES | 0 | Enable auto-send via cron |
-| `last_sweep_at` | TIMESTAMP | YES | NULL | Last auto-send run |
-| `updated_at` | TIMESTAMP | YES | CURRENT | Last settings update |
-
 ---
 
-### 10. _push_subscriptions
+## Entity Relationships
 
-**Purpose:** Store Web Push notification subscriptions for real-time alerts
-
-**Version:** Added in v1.11.40
-
-**Schema:**
-```sql
-CREATE TABLE IF NOT EXISTS `_push_subscriptions` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
-  `endpoint` TEXT NOT NULL COMMENT 'Push service endpoint URL',
-  `p256dh` VARCHAR(255) NOT NULL COMMENT 'Public key for encryption',
-  `auth` VARCHAR(255) NOT NULL COMMENT 'Authentication secret',
-  `user_agent` VARCHAR(500) DEFAULT NULL COMMENT 'Browser/device info',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  INDEX `idx_user_id` (`user_id`),
-  INDEX `idx_endpoint` (`endpoint`(255))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                         _users                               │
+│  id (PK) ◄────────────────────────────────────────────────┐  │
+└──────────┬──────────────────────────────────────────────────┘
+           │
+           │ 1:N (reseller owns accounts)
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        _accounts                             │
+│  id (PK), reseller (FK→_users.id), plan_id (FK→_plans.id)   │
+└──────────┬──────────────────────────────────────────────────┘
+           │
+           │ N:1
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                         _plans                               │
+│  id (PK)                                                     │
+└─────────────────────────────────────────────────────────────┘
 
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `user_id` | INT(11) | NO | - | FK to _users.id |
-| `endpoint` | TEXT | NO | - | Push service URL (FCM, Apple, etc.) |
-| `p256dh` | VARCHAR(255) | NO | - | P-256 Diffie-Hellman public key |
-| `auth` | VARCHAR(255) | NO | - | Auth secret for message encryption |
-| `user_agent` | VARCHAR(500) | YES | NULL | Browser/device identifier |
-| `created_at` | TIMESTAMP | YES | CURRENT | Subscription creation time |
-
-**Usage:**
-- Stores subscriptions from browser Push API
-- Used by `push_helper.php` to send notifications
-- Admin/reseller admins receive alerts when accounts are created/renewed
-- Supports multiple subscriptions per user (multi-device)
-- Uses VAPID authentication for Web Push protocol
-
-**Notification Types:**
-- `new_account` - Reseller created a new account
-- `renewal` - Reseller renewed an account
-
-**Example Record:**
-```sql
-INSERT INTO `_push_subscriptions` VALUES (
-  1,
-  1, -- user_id (admin)
-  'https://fcm.googleapis.com/fcm/send/abc123...', -- endpoint
-  'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XHhWx9LH5yzfO8...', -- p256dh
-  'tBHItJI5svbpez7KI4CCXg==', -- auth
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)...', -- user_agent
-  NOW()
-);
-```
-
-**iOS PWA Requirements:**
-- iOS 16.4+ required for Web Push support
-- App must be installed to home screen (PWA mode)
-- User must grant notification permission
-- VAPID subject must be a valid HTTPS URL (not localhost or .local domains)
-
----
-
-### 11. _push_expiry_tracking
-
-**Purpose:** Track sent expiry push notifications to prevent duplicates
-
-**Version:** Added in v1.11.48
-
-**Schema:**
-```sql
-CREATE TABLE IF NOT EXISTS `_push_expiry_tracking` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `account_id` INT(11) NOT NULL COMMENT 'FK to _accounts.id',
-  `expiry_date` DATE NOT NULL COMMENT 'The expiry date that triggered notification',
-  `notified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When notification was sent',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_account_expiry` (`account_id`, `expiry_date`),
-  INDEX `idx_notified_at` (`notified_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-**Fields:**
-
-| Field | Type | Null | Default | Description |
-|-------|------|------|---------|-------------|
-| `id` | INT(11) | NO | AUTO | Primary key |
-| `account_id` | INT(11) | NO | - | FK to _accounts.id |
-| `expiry_date` | DATE | NO | - | The expiry date that triggered the notification |
-| `notified_at` | TIMESTAMP | YES | CURRENT | When the notification was sent |
-
-**Unique Constraint:**
-- `unique_account_expiry` ensures only ONE notification per account per expiry date
-- If an account expires, gets renewed, then expires again, a new notification is sent
-
-**Usage:**
-- Created automatically by `cron_check_expired.php` cron job
-- Prevents duplicate notifications for the same expiry event
-- Records older than 30 days are automatically cleaned up
-- Used to track which expired accounts have already been notified
-
-**Example Record:**
-```sql
-INSERT INTO `_push_expiry_tracking` VALUES (
-  1,
-  12345, -- account_id
-  '2025-11-26', -- expiry_date
-  '2025-11-26 14:30:00' -- notified_at
-);
-```
-
-**Auto-Cleanup:**
-```sql
--- Run by cron script to remove old records
-DELETE FROM _push_expiry_tracking
-WHERE notified_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+Related tables (FK to _users.id):
+  - _transactions.for_user
+  - _sms_settings.user_id
+  - _sms_templates.user_id
+  - _reminder_settings.user_id
+  - _webauthn_credentials.user_id
+  - _login_history.user_id
+  - _audit_log.user_id
+  - _push_subscriptions.user_id
 ```
 
 ---
 
-## Relationships
+## Migration Scripts
 
-### Foreign Keys
+Located in `/scripts/` directory:
 
-```sql
--- _accounts.reseller → _users.id
-ALTER TABLE `_accounts`
-ADD CONSTRAINT `fk_accounts_reseller`
-FOREIGN KEY (`reseller`)
-REFERENCES `_users`(`id`)
-ON DELETE SET NULL
-ON UPDATE CASCADE;
+| Script | Purpose | Run Order |
+|--------|---------|-----------|
+| `setup_complete_database.php` | **Full setup (new installations)** | 1 |
+| `create_database_schema.php` | Legacy core tables | - |
+| `create_sms_tables.php` | SMS tables | - |
+| `create_login_history_table.php` | Login history | - |
+| `create_audit_log_table.php` | Audit log | - |
+| `create_stalker_settings_table.php` | Stalker settings | - |
+| `upgrade_multistage_reminders.php` | Multi-stage SMS | - |
+| `add_phone_column.php` | Add phone to accounts | - |
+| `initialize_reseller_sms.php` | Init SMS for resellers | - |
 
--- _accounts.plan → _plans.id
-ALTER TABLE `_accounts`
-ADD CONSTRAINT `fk_accounts_plan`
-FOREIGN KEY (`plan`)
-REFERENCES `_plans`(`id`)
-ON DELETE SET NULL
-ON UPDATE CASCADE;
+**For new installations:** Just run `setup_complete_database.php`
 
--- _transactions.reseller_id → _users.id
-ALTER TABLE `_transactions`
-ADD CONSTRAINT `fk_transactions_reseller`
-FOREIGN KEY (`reseller_id`)
-REFERENCES `_users`(`id`)
-ON DELETE CASCADE
-ON UPDATE CASCADE;
-```
-
-**Relationship Rules:**
-1. **_users → _accounts (1:N)**
-   - One reseller can own many accounts
-   - If reseller is deleted, accounts set to NULL (orphaned)
-
-2. **_users → _transactions (1:N)**
-   - One reseller can have many transactions
-   - If reseller is deleted, transactions are deleted (CASCADE)
-
-3. **_plans → _accounts (1:N)**
-   - One plan can be used by many accounts
-   - If plan is deleted, accounts.plan set to NULL
+**For upgrades:** Run individual scripts as needed based on your current version.
 
 ---
 
-## Indexes
+## Troubleshooting
 
-### Primary Keys
-- `_users.id`
-- `_accounts.id`
-- `_plans.id`
-- `_transactions.id`
-- `_currencies.id`
+### Common Issues
 
-### Unique Indexes
-- `_users.username`
-- `_accounts.username`
-- `_accounts.mac`
-- `_currencies.code`
-
-### Performance Indexes
-```sql
--- Frequently queried fields
-CREATE INDEX idx_accounts_reseller ON _accounts(reseller);
-CREATE INDEX idx_accounts_plan ON _accounts(plan);
-CREATE INDEX idx_accounts_end_date ON _accounts(end_date);
-CREATE INDEX idx_accounts_status ON _accounts(status);
-
-CREATE INDEX idx_transactions_reseller ON _transactions(reseller_id);
-CREATE INDEX idx_transactions_type ON _transactions(type);
-CREATE INDEX idx_transactions_timestamp ON _transactions(timestamp);
-
-CREATE INDEX idx_plans_currency ON _plans(currency);
-```
-
----
-
-## Migration History
-
-### v1.11.48 - Push Expiry Tracking (November 2025)
-
-**Changes:**
-```sql
-CREATE TABLE IF NOT EXISTS `_push_expiry_tracking` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `account_id` INT(11) NOT NULL,
-  `expiry_date` DATE NOT NULL,
-  `notified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_account_expiry` (`account_id`, `expiry_date`),
-  INDEX `idx_notified_at` (`notified_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-**Features Added:**
-- Automatic expiry push notifications via cron job
-- Duplicate notification prevention
-- 30-day auto-cleanup of tracking records
-- Resellers and reseller admins notified (not super admin)
-
-**Cron Setup:**
+**1. "Table doesn't exist" errors**
 ```bash
-*/10 * * * * /usr/bin/php /var/www/showbox/api/cron_check_expired.php >> /var/log/showbox_expiry.log 2>&1
+# Run the complete setup script
+php scripts/setup_complete_database.php
 ```
 
-**Rollback:**
+**2. "Access denied" errors**
+- Check `config.php` credentials
+- Verify database user has proper privileges:
 ```sql
-DROP TABLE IF EXISTS _push_expiry_tracking;
+GRANT ALL PRIVILEGES ON showboxt_panel.* TO 'your_user'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
----
+**3. "Unknown column" errors**
+- Your database is outdated. Run migration scripts in order.
+- Or backup data and run fresh setup.
 
-### v1.11.40-v1.11.46 - Push Notifications (November 2025)
-
-**Changes:**
+**4. Character encoding issues**
 ```sql
-CREATE TABLE IF NOT EXISTS `_push_subscriptions` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_id` INT NOT NULL,
-  `endpoint` TEXT NOT NULL,
-  `p256dh` VARCHAR(255) NOT NULL,
-  `auth` VARCHAR(255) NOT NULL,
-  `user_agent` VARCHAR(500) DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX `idx_user_id` (`user_id`),
-  INDEX `idx_endpoint` (`endpoint`(255))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER DATABASE showboxt_panel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-**Features Added:**
-- Web Push notifications for iOS PWA (iOS 16.4+)
-- Admin alerts when resellers create/renew accounts
-- VAPID authentication with minishlink/web-push library
-- Multi-device subscription support
+### Verify Database Structure
 
-**Rollback:**
-```sql
-DROP TABLE IF EXISTS _push_subscriptions;
-```
-
----
-
-### v1.11.22 - Auto-Logout Fix (November 2025)
-
-**Changes:** No schema changes (bug fixes only)
-
-**Enhancement:** Fixed timeout comparison operator (`>=` instead of `>`)
-
----
-
-### v1.11.20 - Auto-Logout Feature (November 2025)
-
-**Changes:**
-```sql
-CREATE TABLE IF NOT EXISTS `_app_settings` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `setting_key` VARCHAR(100) UNIQUE NOT NULL,
-  `setting_value` TEXT,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT INTO _app_settings (setting_key, setting_value) VALUES ('auto_logout_timeout', '5');
-```
-
-**Rollback:**
-```sql
-DROP TABLE IF EXISTS _app_settings;
-```
-
----
-
-### v1.11.19 - WebAuthn Biometric Login (November 2025)
-
-**Changes:**
-```sql
-CREATE TABLE IF NOT EXISTS `_webauthn_credentials` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_id` INT NOT NULL,
-  `credential_id` TEXT NOT NULL,
-  `public_key` TEXT NOT NULL,
-  `counter` INT DEFAULT 0,
-  `device_name` VARCHAR(255),
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `last_used` TIMESTAMP NULL,
-  INDEX (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-**Rollback:**
-```sql
-DROP TABLE IF EXISTS _webauthn_credentials;
-```
-
----
-
-### v1.7.8 - Expiry Reminders (November 2025)
-
-**Changes:**
-```sql
-CREATE TABLE IF NOT EXISTS `_expiry_reminders` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `account_id` INT DEFAULT NULL,
-  `mac` VARCHAR(17) NOT NULL,
-  `expiry_date` DATE NOT NULL,
-  `reminder_date` DATE NOT NULL,
-  `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `sent_by` INT NOT NULL,
-  `message` TEXT,
-  `status` ENUM('sent', 'failed', 'skipped') DEFAULT 'sent',
-  `error_message` TEXT,
-  INDEX (`mac`, `expiry_date`),
-  INDEX (`reminder_date`),
-  INDEX (`sent_by`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `_reminder_settings` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_id` INT NOT NULL UNIQUE,
-  `days_before_expiry` INT DEFAULT 7,
-  `message_template` TEXT,
-  `auto_send_enabled` TINYINT(1) DEFAULT 0,
-  `last_sweep_at` TIMESTAMP NULL,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-**Rollback:**
-```sql
-DROP TABLE IF EXISTS _expiry_reminders;
-DROP TABLE IF EXISTS _reminder_settings;
-```
-
----
-
-### v1.7.1 - Phone Number Support (November 2025)
-
-**Migration Script:** `add_phone_column.php`
-
-**Changes:**
-```sql
-ALTER TABLE `_accounts`
-ADD COLUMN `phone_number` VARCHAR(50) DEFAULT NULL
-AFTER `email`;
-```
-
-**Verification:**
-```sql
-SHOW COLUMNS FROM _accounts LIKE 'phone_number';
-```
-
-**Rollback:**
-```sql
-ALTER TABLE `_accounts` DROP COLUMN `phone_number`;
-```
-
----
-
-### v1.7.0 - Reseller Assignment (November 2025)
-
-**Changes:** No schema changes (used existing `reseller` column)
-
-**Enhancement:** Added UI and API for account-to-reseller assignment
-
----
-
-### v1.6.5 - Observer Mode (November 2025)
-
-**Changes:**
-```sql
-ALTER TABLE `_users`
-ADD COLUMN `is_observer` TINYINT(1) DEFAULT 0
-COMMENT 'Read-only observer mode';
-```
-
----
-
-### v1.6.0 - Permission System (November 2025)
-
-**Changes:**
-```sql
-ALTER TABLE `_users`
-ADD COLUMN `permissions` VARCHAR(255) DEFAULT '0|0|0|0|0'
-COMMENT 'can_edit|can_add|is_reseller_admin|can_delete|reserved';
-```
-
----
-
-### v1.0.0 - Initial Schema (January 2025)
-
-**Created All Tables:**
-- `_users`
-- `_accounts`
-- `_plans`
-- `_transactions`
-- `_currencies`
-
----
-
-## Backup & Restore
-
-### Backup Command
 ```bash
-mysqldump -u root -p showboxt_panel > backup_$(date +%Y%m%d).sql
+# Connect to MySQL
+mysql -u root -p showboxt_panel
+
+# List all tables
+SHOW TABLES;
+
+# Check table structure
+DESCRIBE _users;
+DESCRIBE _accounts;
 ```
 
-### Backup with Compression
-```bash
-mysqldump -u root -p showboxt_panel | gzip > backup_$(date +%Y%m%d).sql.gz
+### Reset Database (DANGER!)
+
+Only use if you want to start fresh:
+
+```sql
+DROP DATABASE showboxt_panel;
+CREATE DATABASE showboxt_panel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### Restore Command
-```bash
-mysql -u root -p showboxt_panel < backup_20251122.sql
-```
+Then run: `php scripts/setup_complete_database.php`
 
 ---
 
-## Database Size Estimates
+## Version History
 
-**Typical Installation:**
-- 100 resellers × 5 KB = 500 KB
-- 10,000 accounts × 2 KB = 20 MB
-- 50 plans × 1 KB = 50 KB
-- 100,000 transactions × 1 KB = 100 MB
-- **Total:** ~120 MB
-
-**Large Installation:**
-- 1,000 resellers × 5 KB = 5 MB
-- 100,000 accounts × 2 KB = 200 MB
-- 200 plans × 1 KB = 200 KB
-- 1,000,000 transactions × 1 KB = 1 GB
-- **Total:** ~1.2 GB
-
----
-
-## Maintenance
-
-### Optimize Tables
-```sql
-OPTIMIZE TABLE _users, _accounts, _plans, _transactions, _currencies;
-```
-
-### Analyze Tables
-```sql
-ANALYZE TABLE _users, _accounts, _plans, _transactions, _currencies;
-```
-
-### Check Table Integrity
-```sql
-CHECK TABLE _users, _accounts, _plans, _transactions, _currencies;
-```
-
-### Repair Tables (if needed)
-```sql
-REPAIR TABLE _users, _accounts, _plans, _transactions, _currencies;
-```
-
----
-
-## Support
-
-For database support:
-- **WhatsApp**: +447736932888
-- **Instagram**: @ShowBoxAdmin
-- **Documentation**: README.md
-
----
-
-**Document Version:** 1.11.66
-**Last Updated:** November 27, 2025
-**Maintained by:** ShowBox Development Team
-**Developer:** Kambiz Koosheshi
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.14.0 | 2025-11-27 | Added complete setup script, comprehensive documentation |
+| 1.13.0 | 2025-11-27 | Added _audit_log table |
+| 1.12.0 | 2025-11-27 | Added _login_history table |
+| 1.11.40 | 2025-11-25 | Added _push_subscriptions table |
+| 1.11.20 | 2025-11-25 | Added _app_settings table |
+| 1.11.19 | 2025-11-25 | Added _webauthn_credentials table |
+| 1.9.0 | 2025-11-23 | Added _sms_reminder_tracking table |
+| 1.8.0 | 2025-11-22 | Added SMS tables |
+| 1.7.8 | 2025-11-21 | Added reminder tables |
+| 1.6.0 | 2025-11-20 | Added _stalker_settings table |
