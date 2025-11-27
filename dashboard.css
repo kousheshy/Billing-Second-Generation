@@ -5314,3 +5314,371 @@ body.pwa-mode .push-prompt-content {
 /* ========================================
    End of Accounting Tab Styles (v1.15.0)
    ======================================== */
+
+/* ========================================
+   Reseller Payments Section (v1.17.0)
+   ======================================== */
+
+/* Section Divider */
+.section-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border-color, #333), transparent);
+    margin: 40px 0;
+}
+
+/* Payments Section Header */
+.payments-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.payments-section-header h2 {
+    margin: 0;
+}
+
+/* Payments Filters */
+.payments-filters {
+    background: var(--card-bg, #1e1e2e);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color, #333);
+}
+
+.payments-filters .filter-row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.payments-filters .filter-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.payments-filters .filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--text-secondary, #888);
+}
+
+.payments-filters .filter-group input,
+.payments-filters .filter-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #333);
+    background: var(--bg-secondary, #16161e);
+    color: var(--text-color, #fff);
+}
+
+/* Balance Summary Grid */
+.balance-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.balance-card {
+    background: var(--card-bg, #1e1e2e);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid var(--border-color, #333);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.balance-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.balance-card.debtor {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), transparent);
+}
+
+.balance-card.creditor {
+    border-color: #28a745;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), transparent);
+}
+
+.balance-card.settled {
+    border-color: #6c757d;
+}
+
+.balance-icon {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.balance-content {
+    flex: 1;
+}
+
+.balance-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary, #888);
+    margin-bottom: 4px;
+}
+
+.balance-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+}
+
+/* Payments Table Container */
+.payments-table-container {
+    background: var(--card-bg, #1e1e2e);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color, #333);
+}
+
+.payments-table-container h4 {
+    margin: 0 0 15px 0;
+    color: var(--text-color, #fff);
+}
+
+/* Payments Table */
+#payments-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#payments-table th {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary, #888);
+    border-bottom: 1px solid var(--border-color, #333);
+}
+
+#payments-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color, #333);
+    color: var(--text-color, #fff);
+}
+
+#payments-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#payments-table tr.cancelled-row {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background: rgba(40, 167, 69, 0.2);
+    color: #4ade80;
+}
+
+.status-badge.cancelled {
+    background: rgba(220, 53, 69, 0.2);
+    color: #ff6b6b;
+}
+
+/* Small Buttons */
+.btn-small {
+    padding: 5px 12px;
+    font-size: 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-small.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-small.btn-danger:hover {
+    background: #c82333;
+}
+
+/* Danger Button for Modal */
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background: var(--bg-secondary, #2d2d3d);
+    color: var(--text-color, #fff);
+    border: 1px solid var(--border-color, #444);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: var(--bg-hover, #3d3d4d);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .payments-filters .filter-row {
+        flex-direction: column;
+    }
+
+    .payments-filters .filter-group {
+        width: 100%;
+    }
+
+    .balance-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #payments-table {
+        font-size: 12px;
+    }
+
+    #payments-table th:nth-child(5),
+    #payments-table td:nth-child(5),
+    #payments-table th:nth-child(6),
+    #payments-table td:nth-child(6) {
+        display: none;
+    }
+}
+
+/* Dark mode adjustments for payments */
+[data-theme="dark"] .balance-card {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .payments-table-container {
+    background: var(--bg-secondary);
+}
+
+/* ========================================
+   Shamsi Calendar Inputs (v1.17.0)
+   ======================================== */
+
+.shamsi-inputs {
+    display: flex;
+    gap: 8px;
+}
+
+.shamsi-inputs select {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #333);
+    background: var(--bg-primary, #12121a);
+    color: var(--text-color, #fff);
+    font-size: 13px;
+}
+
+/* Year dropdown - needs space for 4 digits */
+.shamsi-inputs select:nth-child(1) {
+    min-width: 80px;
+}
+
+/* Month dropdown - just numbers 1-12 */
+.shamsi-inputs select:nth-child(2) {
+    min-width: 55px;
+}
+
+/* Day dropdown - needs space for 2 digits */
+.shamsi-inputs select:nth-child(3) {
+    min-width: 55px;
+}
+
+.shamsi-inputs select:focus {
+    outline: none;
+    border-color: var(--primary-color, #4CAF50);
+}
+
+.shamsi-date-group .shamsi-inputs {
+    margin-top: 4px;
+}
+
+/* Payments filter row adjustments for calendar */
+.payments-filters .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px 20px;
+    align-items: flex-end;
+}
+
+.payments-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: fit-content;
+}
+
+.payments-filters .filter-group label {
+    font-size: 12px;
+    color: var(--text-secondary, #888);
+    white-space: nowrap;
+}
+
+/* Shamsi date groups - compact with numeric months */
+.payments-filters .shamsi-date-group {
+    min-width: 220px;
+}
+
+.payments-filters .shamsi-date-group .shamsi-inputs {
+    display: flex;
+    gap: 6px;
+}
+
+/* Compact Refresh button in payments filter */
+.payments-filters .btn-secondary {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* Modal Shamsi date styling */
+#modal-shamsi-date .shamsi-inputs select {
+    height: 42px;
+}
+
+/* RTL support for Shamsi labels */
+.shamsi-date-group label {
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+/* ========================================
+   End of Reseller Payments Styles (v1.17.0)
+   ======================================== */

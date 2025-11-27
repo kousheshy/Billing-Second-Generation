@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.17.0] - 2025-11-27
+
+### Added - Reseller Payments & Balance Tracking System
+
+**Status:** Production Release
+
+#### Overview
+
+A comprehensive system for tracking reseller payments/deposits and calculating their running balance. Supports Iranian banks, Shamsi calendar, and integrates with the existing transaction system.
+
+#### New Features
+
+**Payment Recording:**
+- Record payments with amount, currency, date, bank, and reference number
+- Support for multiple currencies (IRR, GBP, USD, EUR)
+- Optional receipt image upload (JPG, PNG, PDF)
+- Description/notes field for additional information
+
+**Balance Calculation:**
+- Automatic calculation: Balance = Total Sales - Total Payments
+- Opening and closing balance for period reports
+- Status indicators: بدهکار (debtor), طلبکار (creditor), تسویه (settled)
+- Supports monthly and yearly period filtering
+
+**Iranian Banks:**
+- Complete list of 39 Iranian banks
+- State-owned banks (Melli, Sepah, Maskan, etc.)
+- Private banks (Parsian, Pasargad, Mellat, etc.)
+- Other payment methods (Cash, Cheque, Wire Transfer)
+
+**UI Features:**
+- New section in Accounting tab: "💳 Reseller Payments & Balance"
+- Balance summary cards with visual status indicators
+- Payments table with filtering (reseller, date range, status)
+- Add Payment modal with bank dropdown and amount formatting
+- Cancel Payment modal with mandatory reason
+
+#### Permission Matrix
+
+| Role | View | Add | Cancel |
+|------|------|-----|--------|
+| Super Admin | All | Yes | Yes |
+| Reseller Admin | All | Yes | Yes |
+| Reseller | Own | No | No |
+| Observer | All | No | No |
+
+#### Database Changes
+
+**New Table: `_reseller_payments`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INT | Primary key |
+| `reseller_id` | INT | FK to _users |
+| `amount` | DECIMAL(15,2) | Payment amount |
+| `currency` | VARCHAR(10) | Currency code |
+| `payment_date` | DATE | Date of payment |
+| `bank_name` | VARCHAR(100) | Bank name |
+| `reference_number` | VARCHAR(100) | Bank reference |
+| `receipt_path` | VARCHAR(255) | Uploaded receipt |
+| `description` | TEXT | Notes |
+| `recorded_by` | INT | Who recorded |
+| `status` | ENUM | active/cancelled |
+
+**New Table: `_iranian_banks`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `code` | VARCHAR(20) | Bank code |
+| `name_fa` | VARCHAR(100) | Persian name |
+| `name_en` | VARCHAR(100) | English name |
+
+**Migration:** `scripts/create_reseller_payments_table.php`
+
+#### New API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `add_reseller_payment.php` | POST | Record new payment |
+| `get_reseller_payments.php` | GET | List payments with filters |
+| `get_reseller_balance.php` | GET | Calculate balance |
+| `cancel_reseller_payment.php` | POST | Cancel payment |
+| `get_iranian_banks.php` | GET | List banks |
+
+---
+
 ## [1.16.3] - 2025-11-27
 
 ### Fixed - Expiration Date Logic Bug

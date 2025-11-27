@@ -261,4 +261,74 @@ function notifyAccountExpired($pdo, $resellerId, $accountName, $accountUsername,
         return ['sent' => 0, 'failed' => 0, 'error' => $e->getMessage()];
     }
 }
+
+/**
+ * Notify a reseller that a payment has been recorded for them (v1.17.0)
+ *
+ * @param PDO $pdo - Database connection
+ * @param int $resellerId - The reseller who made the payment
+ * @param string $amount - Formatted amount with currency
+ * @param string $paymentDate - Date of payment
+ * @return array - Results with sent/failed counts
+ */
+function notifyResellerPaymentRecorded($pdo, $resellerId, $amount, $paymentDate) {
+    try {
+        // Get subscriptions for this reseller only
+        $stmt = $pdo->prepare("
+            SELECT ps.*, u.username
+            FROM _push_subscriptions ps
+            JOIN _users u ON ps.user_id = u.id
+            WHERE u.id = :reseller_id
+        ");
+        $stmt->execute(['reseller_id' => $resellerId]);
+        $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        error_log("[Push-Payment] Found " . count($subscriptions) . " subscriptions for reseller $resellerId");
+
+        if (count($subscriptions) === 0) {
+            return ['sent' => 0, 'failed' => 0];
+        }
+
+        $title = '💰 Payment Recorded';
+        $body = "Your payment of $amount on $paymentDate has been recorded.";
+
+        $payload = [
+            'title' => $title,
+            'body' => $body,
+            'icon' => '/assets/icons/icon-192x192.png',
+            'badge' => '/assets/icons/icon-72x72.png',
+            'data' => [
+                'type' => 'payment',
+                'amount' => $amount,
+                'date' => $paymentDate,
+                'url' => '/dashboard.php?tab=accounting'
+            ],
+            'timestamp' => time() * 1000
+        ];
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($subscriptions as $sub) {
+            $success = sendPushNotification([
+                'endpoint' => $sub['endpoint'],
+                'p256dh' => $sub['p256dh'],
+                'auth' => $sub['auth']
+            ], $payload);
+
+            if ($success) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        error_log("[Push-Payment] Notified reseller $resellerId: sent=$sent, failed=$failed");
+        return ['sent' => $sent, 'failed' => $failed];
+
+    } catch (Exception $e) {
+        error_log('[Push-Payment] Error: ' . $e->getMessage());
+        return ['sent' => 0, 'failed' => 0, 'error' => $e->getMessage()];
+    }
+}
 ?>

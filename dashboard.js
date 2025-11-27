@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.16.3
+// ShowBox Dashboard v1.17.0
 // ========================================
 
 // ========================================
@@ -2544,7 +2544,8 @@ function openEditTransactionModal(transactionId) {
     document.getElementById('edit-transaction-id').value = tx.id;
 
     const originalAmount = parseFloat(tx.amount) || 0;
-    const currency = tx.currency || '';
+    // Get currency from transaction or fall back to current invoice's reseller currency
+    const currency = tx.currency || (currentInvoiceData && currentInvoiceData.reseller ? currentInvoiceData.reseller.currency : '') || '';
     document.getElementById('edit-transaction-original-amount').value = formatBalance(originalAmount, currency) + ' ' + currency;
 
     // Show currency in correction label
@@ -2557,9 +2558,19 @@ function openEditTransactionModal(transactionId) {
     const correctionInput = document.getElementById('edit-transaction-correction');
     const correctionRaw = document.getElementById('edit-transaction-correction-raw');
     if (tx.correction_amount !== null && tx.correction_amount !== undefined) {
-        const formatted = formatCorrectionInput(tx.correction_amount);
+        // For IRR/IRT, remove decimal places
+        let correctionValue = tx.correction_amount;
+        const isIRR = currency === 'IRR' || currency === 'IRT';
+        if (isIRR) {
+            correctionValue = Math.round(parseFloat(correctionValue));
+        }
+        let formatted = formatCorrectionInput(correctionValue);
+        // Strip .00 from formatted result for IRR/IRT or large amounts (likely IRR)
+        if (formatted.endsWith('.00') && (isIRR || Math.abs(parseFloat(correctionValue)) >= 1000)) {
+            formatted = formatted.slice(0, -3);
+        }
         correctionInput.value = formatted;
-        if (correctionRaw) correctionRaw.value = tx.correction_amount;
+        if (correctionRaw) correctionRaw.value = correctionValue;
     } else {
         correctionInput.value = '';
         if (correctionRaw) correctionRaw.value = '';
@@ -8496,6 +8507,15 @@ function initAccountingTab() {
     console.log('[Accounting] Initializing accounting tab');
     populateAccountingResellers();
     updateCalendarOptions();
+
+    // v1.17.0: Initialize Reseller Payments section
+    console.log('[Accounting] About to check initResellerPayments, typeof:', typeof initResellerPayments);
+    if (typeof initResellerPayments === 'function') {
+        console.log('[Accounting] Calling initResellerPayments()');
+        initResellerPayments();
+    } else {
+        console.log('[Accounting] initResellerPayments not found!');
+    }
 }
 
 /**
@@ -8546,6 +8566,12 @@ async function populateAccountingResellers() {
             opt.selected = true;
             select.appendChild(opt);
         }
+    }
+
+    // v1.17.0: Initialize Reseller Payments after loading resellers
+    if (typeof initResellerPayments === 'function') {
+        console.log('[Accounting] Calling initResellerPayments from populateAccountingResellers');
+        initResellerPayments();
     }
 }
 
@@ -8920,10 +8946,10 @@ function exportInvoicePDF() {
     doc.text(`Total Transactions: ${invoice.summary.total_transactions}`, 20, 99);
     doc.text(`Total Sales: ${invoice.reseller.currency_symbol}${invoice.summary.total_sales_formatted}`, 20, 106);
 
-    // Amount Owed
+    // Total Sales
     doc.setFontSize(14);
     doc.setTextColor(220, 53, 69);
-    doc.text(`Amount Owed to System: ${invoice.reseller.currency_symbol}${invoice.summary.amount_owed_formatted}`, 20, 120);
+    doc.text(`Total Sales: ${invoice.reseller.currency_symbol}${invoice.summary.amount_owed_formatted}`, 20, 120);
     doc.setTextColor(0, 0, 0);
 
     // Transaction table
@@ -9050,7 +9076,7 @@ function exportInvoiceExcel() {
         ['Total Transactions', invoice.summary.total_transactions],
         ['Total Sales', `${invoice.reseller.currency_symbol}${invoice.summary.total_sales_formatted}`],
         [''],
-        ['Amount Owed to System', `${invoice.reseller.currency_symbol}${invoice.summary.amount_owed_formatted}`]
+        ['Total Sales (Net)', `${invoice.reseller.currency_symbol}${invoice.summary.amount_owed_formatted}`]
     ];
 
     const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
@@ -9134,4 +9160,798 @@ switchTab = function(tabName) {
 
 // ========================================
 // End of Accounting & Monthly Invoices (v1.15.0)
+// ========================================
+
+// ========================================
+// Reseller Payments & Balance (v1.17.0)
+// ========================================
+
+let iranianBanks = [];
+let paymentsData = [];
+let canEditPayments = false;
+let paymentsCurrentPage = 1;
+let paymentsPerPage = 10;
+
+/**
+ * Convert Gregorian date to Shamsi (Jalali)
+ */
+function gregorianToShamsi(gy, gm, gd) {
+    const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let jy = (gy <= 1600) ? 0 : 979;
+    gy -= (gy <= 1600) ? 621 : 1600;
+    const gy2 = (gm > 2) ? (gy + 1) : gy;
+    let days = (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+    jy += 33 * Math.floor(days / 12053);
+    days %= 12053;
+    jy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    jy += Math.floor((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    const jm = (days < 186) ? 1 + Math.floor(days / 31) : 7 + Math.floor((days - 186) / 30);
+    const jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+    return { year: jy, month: jm, day: jd };
+}
+
+/**
+ * Convert Shamsi (Jalali) date to Gregorian
+ */
+function shamsiToGregorian(jy, jm, jd) {
+    let gy = (jy <= 979) ? 621 : 1600;
+    jy -= (jy <= 979) ? 0 : 979;
+    const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+    let days = (365 * jy) + (Math.floor(jy / 33) * 8) + Math.floor(((jy % 33) + 3) / 4) + 78 + jd + ((jm < 7) ? ((jm - 1) * 31) : (((jm - 7) * 30) + 186));
+    gy += 400 * Math.floor(days / 146097);
+    days %= 146097;
+    if (days > 36524) {
+        gy += 100 * Math.floor(--days / 36524);
+        days %= 36524;
+        if (days >= 365) days++;
+    }
+    gy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    gy += Math.floor((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    const gDaysInMonth = [0, 31, 28 + (((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 1 : 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0;
+    for (gm = 0; gm < 13 && days >= gDaysInMonth[gm]; gm++) {
+        days -= gDaysInMonth[gm];
+    }
+    const gd = days + 1;
+    return { year: gy, month: gm, day: gd };
+}
+
+/**
+ * Populate Shamsi year/month/day dropdowns
+ */
+function populateShamsiDropdowns(yearId, monthId, dayId, defaultYear = null, defaultMonth = null, defaultDay = null) {
+    const yearSelect = document.getElementById(yearId);
+    const monthSelect = document.getElementById(monthId);
+    const daySelect = document.getElementById(dayId);
+
+    if (!yearSelect || !monthSelect || !daySelect) return;
+
+    // Get current Shamsi date
+    const today = new Date();
+    const shamsiToday = gregorianToShamsi(today.getFullYear(), today.getMonth() + 1, today.getDate());
+
+    // Populate years (current year ± 5)
+    yearSelect.innerHTML = '';
+    for (let y = shamsiToday.year - 5; y <= shamsiToday.year + 1; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === (defaultYear || shamsiToday.year)) opt.selected = true;
+        yearSelect.appendChild(opt);
+    }
+
+    // Populate months (numbers only for compact display)
+    monthSelect.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === (defaultMonth || shamsiToday.month)) opt.selected = true;
+        monthSelect.appendChild(opt);
+    }
+
+    // Populate days based on month
+    updateShamsiDays(yearId, monthId, dayId, defaultDay || shamsiToday.day);
+}
+
+/**
+ * Update days dropdown based on selected month
+ */
+function updateShamsiDays(yearId, monthId, dayId, selectedDay = 1) {
+    const monthSelect = document.getElementById(monthId);
+    const daySelect = document.getElementById(dayId);
+
+    if (!monthSelect || !daySelect) return;
+
+    const month = parseInt(monthSelect.value);
+    const daysInMonth = (month <= 6) ? 31 : (month <= 11) ? 30 : 29;
+
+    daySelect.innerHTML = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        if (d === selectedDay) opt.selected = true;
+        daySelect.appendChild(opt);
+    }
+}
+
+/**
+ * Toggle between Shamsi and Miladi calendar for payments filter
+ */
+function togglePaymentsCalendar() {
+    const calendarType = document.getElementById('payments-calendar-type').value;
+    const miladiStart = document.getElementById('payments-miladi-dates');
+    const miladiEnd = document.getElementById('payments-miladi-dates-end');
+    const shamsiStart = document.getElementById('payments-shamsi-dates');
+    const shamsiEnd = document.getElementById('payments-shamsi-dates-end');
+
+    if (calendarType === 'shamsi') {
+        miladiStart.style.display = 'none';
+        miladiEnd.style.display = 'none';
+        shamsiStart.style.display = 'block';
+        shamsiEnd.style.display = 'block';
+
+        // Initialize Shamsi dropdowns with current values
+        initPaymentsShamsiFromMiladi();
+    } else {
+        miladiStart.style.display = 'block';
+        miladiEnd.style.display = 'block';
+        shamsiStart.style.display = 'none';
+        shamsiEnd.style.display = 'none';
+    }
+}
+
+/**
+ * Initialize Shamsi dropdowns from current Miladi dates
+ */
+function initPaymentsShamsiFromMiladi() {
+    // Start date
+    const startDate = document.getElementById('payments-start-date').value;
+    if (startDate) {
+        const [y, m, d] = startDate.split('-').map(Number);
+        const shamsi = gregorianToShamsi(y, m, d);
+        populateShamsiDropdowns('payments-shamsi-start-year', 'payments-shamsi-start-month', 'payments-shamsi-start-day', shamsi.year, shamsi.month, shamsi.day);
+    } else {
+        populateShamsiDropdowns('payments-shamsi-start-year', 'payments-shamsi-start-month', 'payments-shamsi-start-day');
+    }
+
+    // End date
+    const endDate = document.getElementById('payments-end-date').value;
+    if (endDate) {
+        const [y, m, d] = endDate.split('-').map(Number);
+        const shamsi = gregorianToShamsi(y, m, d);
+        populateShamsiDropdowns('payments-shamsi-end-year', 'payments-shamsi-end-month', 'payments-shamsi-end-day', shamsi.year, shamsi.month, shamsi.day);
+    } else {
+        populateShamsiDropdowns('payments-shamsi-end-year', 'payments-shamsi-end-month', 'payments-shamsi-end-day');
+    }
+}
+
+/**
+ * Update Miladi date from Shamsi selection for payments filter
+ */
+function updatePaymentsShamsiDate(type) {
+    const prefix = type === 'start' ? 'payments-shamsi-start' : 'payments-shamsi-end';
+    const miladiField = type === 'start' ? 'payments-start-date' : 'payments-end-date';
+
+    const year = parseInt(document.getElementById(`${prefix}-year`).value);
+    const month = parseInt(document.getElementById(`${prefix}-month`).value);
+    const day = parseInt(document.getElementById(`${prefix}-day`).value);
+
+    // Update days dropdown if month changed
+    updateShamsiDays(`${prefix}-year`, `${prefix}-month`, `${prefix}-day`, day);
+
+    // Convert to Gregorian
+    const gregorian = shamsiToGregorian(year, month, day);
+    const dateStr = `${gregorian.year}-${String(gregorian.month).padStart(2, '0')}-${String(gregorian.day).padStart(2, '0')}`;
+
+    document.getElementById(miladiField).value = dateStr;
+    loadResellerPayments();
+}
+
+/**
+ * Toggle between Shamsi and Miladi calendar for modal
+ */
+function toggleModalCalendar() {
+    const calendarType = document.getElementById('modal-calendar-type').value;
+    const miladiDiv = document.getElementById('modal-miladi-date');
+    const shamsiDiv = document.getElementById('modal-shamsi-date');
+
+    if (calendarType === 'shamsi') {
+        miladiDiv.style.display = 'none';
+        shamsiDiv.style.display = 'block';
+
+        // Initialize from current Miladi date
+        const miladiDate = document.getElementById('payment-date').value;
+        if (miladiDate) {
+            const [y, m, d] = miladiDate.split('-').map(Number);
+            const shamsi = gregorianToShamsi(y, m, d);
+            populateShamsiDropdowns('modal-shamsi-year', 'modal-shamsi-month', 'modal-shamsi-day', shamsi.year, shamsi.month, shamsi.day);
+        } else {
+            populateShamsiDropdowns('modal-shamsi-year', 'modal-shamsi-month', 'modal-shamsi-day');
+            updateModalShamsiDate(); // Set initial Miladi value
+        }
+    } else {
+        miladiDiv.style.display = 'block';
+        shamsiDiv.style.display = 'none';
+    }
+}
+
+/**
+ * Update Miladi date from Shamsi selection in modal
+ */
+function updateModalShamsiDate() {
+    const year = parseInt(document.getElementById('modal-shamsi-year').value);
+    const month = parseInt(document.getElementById('modal-shamsi-month').value);
+    const day = parseInt(document.getElementById('modal-shamsi-day').value);
+
+    // Update days dropdown
+    updateShamsiDays('modal-shamsi-year', 'modal-shamsi-month', 'modal-shamsi-day', day);
+
+    // Convert to Gregorian
+    const gregorian = shamsiToGregorian(year, month, day);
+    const dateStr = `${gregorian.year}-${String(gregorian.month).padStart(2, '0')}-${String(gregorian.day).padStart(2, '0')}`;
+
+    document.getElementById('payment-date').value = dateStr;
+}
+
+/**
+ * Initialize Reseller Payments section
+ */
+function initResellerPayments() {
+    console.log('[Payments] Initializing reseller payments section');
+    console.log('[Payments] currentUser:', currentUser);
+
+    // Load Iranian banks
+    loadIranianBanks();
+
+    // Populate reseller dropdown
+    populatePaymentsResellerDropdown();
+
+    // Set default dates (current month)
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('payments-start-date').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('payments-end-date').value = today.toISOString().split('T')[0];
+
+    // Check permissions and show/hide add button
+    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1' || currentUser.is_reseller_admin == 1);
+    const isSuperAdmin = currentUser && (currentUser.super_user === true || currentUser.super_user === '1' || currentUser.super_user == 1);
+
+    console.log('[Payments] isSuperAdmin:', isSuperAdmin, 'isResellerAdmin:', isResellerAdmin);
+
+    const addBtn = document.getElementById('add-payment-btn');
+    if (addBtn && (isSuperAdmin || isResellerAdmin)) {
+        addBtn.style.display = 'inline-block';
+        canEditPayments = true;
+        console.log('[Payments] Add button now visible');
+    } else if (addBtn) {
+        addBtn.style.display = 'none';
+        canEditPayments = false;
+        console.log('[Payments] Add button hidden - no permission');
+    }
+
+    // Load payments
+    loadResellerPayments();
+}
+
+/**
+ * Load Iranian banks list
+ */
+async function loadIranianBanks() {
+    try {
+        const response = await fetch('api/get_iranian_banks.php');
+        const data = await response.json();
+
+        if (data.error === 0 && data.banks) {
+            iranianBanks = data.banks;
+            populateBankDropdown();
+        }
+    } catch (error) {
+        console.error('[Payments] Error loading banks:', error);
+    }
+}
+
+/**
+ * Populate bank dropdown in Add Payment modal
+ */
+function populateBankDropdown() {
+    const select = document.getElementById('payment-bank');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- انتخاب بانک --</option>';
+
+    iranianBanks.forEach(bank => {
+        const option = document.createElement('option');
+        option.value = bank.name_fa;
+        option.textContent = `${bank.name_fa} (${bank.name_en})`;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Populate reseller dropdown for payments filter
+ */
+function populatePaymentsResellerDropdown() {
+    const select = document.getElementById('payments-reseller');
+    const modalSelect = document.getElementById('payment-reseller');
+    if (!select) return;
+
+    // Clear existing options
+    select.innerHTML = '<option value="">-- All Resellers --</option>';
+    if (modalSelect) {
+        modalSelect.innerHTML = '<option value="">-- Select Reseller --</option>';
+    }
+
+    // Check if user is reseller admin
+    const isResellerAdmin = currentUser && (currentUser.is_reseller_admin === true || currentUser.is_reseller_admin === '1');
+
+    // If regular reseller, they can only see their own
+    if (currentUser && currentUser.super_user != 1 && !isResellerAdmin) {
+        const option = document.createElement('option');
+        option.value = currentUser.id;
+        option.textContent = currentUser.name || currentUser.username;
+        option.selected = true;
+        select.appendChild(option);
+        select.disabled = true;
+        return;
+    }
+
+    // Admin/Reseller Admin: show all resellers
+    if (window.resellersList && window.resellersList.length > 0) {
+        window.resellersList.forEach(reseller => {
+            if (reseller.super_user != 1 && reseller.is_observer != 1) {
+                const option = document.createElement('option');
+                option.value = reseller.id;
+                option.textContent = `${reseller.name} (${reseller.username})`;
+                select.appendChild(option);
+
+                if (modalSelect) {
+                    const modalOption = document.createElement('option');
+                    modalOption.value = reseller.id;
+                    modalOption.textContent = `${reseller.name} (${reseller.username})`;
+                    // v1.17.0: Store reseller currency for auto-selection
+                    modalOption.dataset.currency = reseller.currency_id || reseller.currency || 'IRR';
+                    modalSelect.appendChild(modalOption);
+                }
+            }
+        });
+
+        // v1.17.0: Add change listener to auto-set currency based on reseller
+        if (modalSelect && !modalSelect.hasAttribute('data-currency-listener')) {
+            modalSelect.setAttribute('data-currency-listener', 'true');
+            modalSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const currencySelect = document.getElementById('payment-currency');
+                if (currencySelect && selectedOption && selectedOption.dataset.currency) {
+                    currencySelect.value = selectedOption.dataset.currency;
+                    currencySelect.disabled = true; // Lock to reseller's currency
+                } else if (currencySelect) {
+                    currencySelect.disabled = false; // Re-enable if no reseller selected
+                }
+            });
+        }
+    } else {
+        // Fetch resellers if not loaded
+        fetch('api/get_resellers.php')
+            .then(r => r.json())
+            .then(data => {
+                if (data.error === 0 && data.resellers) {
+                    window.resellersList = data.resellers;
+                    populatePaymentsResellerDropdown();
+                }
+            })
+            .catch(err => console.error('[Payments] Error loading resellers:', err));
+    }
+}
+
+/**
+ * Load reseller payments from API
+ */
+async function loadResellerPayments() {
+    const resellerId = document.getElementById('payments-reseller')?.value || '';
+    const startDate = document.getElementById('payments-start-date')?.value || '';
+    const endDate = document.getElementById('payments-end-date')?.value || '';
+    const status = document.getElementById('payments-status')?.value || 'active';
+
+    let url = `api/get_reseller_payments.php?status=${status}`;
+    if (resellerId) url += `&reseller_id=${resellerId}`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error === 0) {
+            paymentsData = data.payments || [];
+            canEditPayments = data.can_edit || false;
+            paymentsCurrentPage = 1; // Reset to first page on new data
+            renderPaymentsTable();
+            loadBalanceSummary(resellerId);
+
+            // Show/hide empty state
+            document.getElementById('payments-empty-state').style.display =
+                paymentsData.length === 0 ? 'block' : 'none';
+        } else {
+            showAlert(data.message || 'Error loading payments', 'error');
+        }
+    } catch (error) {
+        console.error('[Payments] Error:', error);
+        showAlert('Failed to load payments', 'error');
+    }
+}
+
+/**
+ * Load balance summary
+ */
+async function loadBalanceSummary(resellerId) {
+    let url = 'api/get_reseller_balance.php';
+    if (resellerId) url += `?reseller_id=${resellerId}`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error === 0) {
+            renderBalanceSummary(data.balances || [], data.grand_totals);
+        }
+    } catch (error) {
+        console.error('[Payments] Error loading balance:', error);
+    }
+}
+
+/**
+ * Render balance summary cards
+ */
+function renderBalanceSummary(balances, grandTotals) {
+    const container = document.getElementById('balance-summary-container');
+    if (!container) return;
+
+    // If single reseller selected, show their detailed balance
+    if (balances.length === 1) {
+        const b = balances[0];
+        const statusClass = b.status === 'debtor' ? 'debtor' : (b.status === 'creditor' ? 'creditor' : 'settled');
+        const statusText = b.status === 'debtor' ? 'بدهکار' : (b.status === 'creditor' ? 'طلبکار' : 'تسویه');
+
+        container.innerHTML = `
+            <div class="balance-card">
+                <div class="balance-icon">🛒</div>
+                <div class="balance-content">
+                    <span class="balance-label">Total Sales</span>
+                    <span class="balance-value">${formatNumber(b.total_sales)} ${b.currency}</span>
+                </div>
+            </div>
+            <div class="balance-card">
+                <div class="balance-icon">💳</div>
+                <div class="balance-content">
+                    <span class="balance-label">Total Payments</span>
+                    <span class="balance-value">${formatNumber(b.total_payments)} ${b.currency}</span>
+                </div>
+            </div>
+            <div class="balance-card ${statusClass}">
+                <div class="balance-icon">💰</div>
+                <div class="balance-content">
+                    <span class="balance-label">Balance (${statusText})</span>
+                    <span class="balance-value">${formatNumber(Math.abs(b.balance))} ${b.currency}</span>
+                </div>
+            </div>
+        `;
+    } else if (grandTotals) {
+        // Show grand totals
+        container.innerHTML = `
+            <div class="balance-card">
+                <div class="balance-icon">📊</div>
+                <div class="balance-content">
+                    <span class="balance-label">Resellers with Balance</span>
+                    <span class="balance-value">${balances.filter(b => b.balance !== 0).length}</span>
+                </div>
+            </div>
+            <div class="balance-card">
+                <div class="balance-icon">🛒</div>
+                <div class="balance-content">
+                    <span class="balance-label">Total Sales (All)</span>
+                    <span class="balance-value">${formatNumber(grandTotals.total_sales)}</span>
+                </div>
+            </div>
+            <div class="balance-card">
+                <div class="balance-icon">💳</div>
+                <div class="balance-content">
+                    <span class="balance-label">Total Payments (All)</span>
+                    <span class="balance-value">${formatNumber(grandTotals.total_payments)}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = '';
+    }
+}
+
+/**
+ * Render payments table with pagination
+ */
+function renderPaymentsTable() {
+    const tbody = document.getElementById('payments-tbody');
+    if (!tbody) return;
+
+    if (paymentsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999">No payments found</td></tr>';
+        updatePaymentsPagination();
+        return;
+    }
+
+    // Calculate pagination
+    const totalItems = paymentsData.length;
+    const totalPages = Math.ceil(totalItems / paymentsPerPage);
+    const startIndex = (paymentsCurrentPage - 1) * paymentsPerPage;
+    const endIndex = Math.min(startIndex + paymentsPerPage, totalItems);
+    const pageData = paymentsData.slice(startIndex, endIndex);
+
+    tbody.innerHTML = pageData.map(p => {
+        const statusBadge = p.status === 'active'
+            ? '<span class="status-badge active">Active</span>'
+            : '<span class="status-badge cancelled">Cancelled</span>';
+
+        const actions = canEditPayments && p.status === 'active'
+            ? `<button class="btn-small btn-danger" onclick="openCancelPaymentModal(${p.id}, '${escapeHtml(p.reseller_name)}', ${p.amount}, '${p.currency}')">Cancel</button>`
+            : (p.status === 'cancelled' ? `<span style="color:#999;font-size:11px;" title="${escapeHtml(p.cancellation_reason || '')}">Cancelled</span>` : '');
+
+        return `
+            <tr class="${p.status === 'cancelled' ? 'cancelled-row' : ''}">
+                <td>${p.payment_date_shamsi || p.payment_date}</td>
+                <td>${escapeHtml(p.reseller_name || '')}</td>
+                <td style="font-weight:500;color:#4ade80;">${formatNumber(p.amount)} ${p.currency}</td>
+                <td>${escapeHtml(p.bank_name || '')}</td>
+                <td>${escapeHtml(p.reference_number || '-')}</td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(p.description || '')}">${escapeHtml(p.description || '-')}</td>
+                <td>${escapeHtml(p.recorded_by_username || '')}</td>
+                <td>${statusBadge}</td>
+                <td>${actions}</td>
+            </tr>
+        `;
+    }).join('');
+
+    updatePaymentsPagination();
+}
+
+/**
+ * Update payments pagination controls
+ */
+function updatePaymentsPagination() {
+    const totalItems = paymentsData.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / paymentsPerPage));
+    const startIndex = totalItems === 0 ? 0 : (paymentsCurrentPage - 1) * paymentsPerPage + 1;
+    const endIndex = Math.min(paymentsCurrentPage * paymentsPerPage, totalItems);
+
+    // Update showing info
+    const showingInfo = document.getElementById('payments-showing-info');
+    if (showingInfo) {
+        showingInfo.textContent = `Showing ${startIndex}-${endIndex} of ${totalItems}`;
+    }
+
+    // Update page info
+    const pageInfo = document.getElementById('payments-page-info');
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${paymentsCurrentPage} of ${totalPages}`;
+    }
+
+    // Update buttons
+    const prevBtn = document.getElementById('payments-prev-btn');
+    const nextBtn = document.getElementById('payments-next-btn');
+    if (prevBtn) prevBtn.disabled = paymentsCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = paymentsCurrentPage >= totalPages;
+}
+
+/**
+ * Change payments per page
+ */
+function changePaymentsPerPage() {
+    const select = document.getElementById('payments-per-page');
+    if (select) {
+        paymentsPerPage = parseInt(select.value) || 10;
+        paymentsCurrentPage = 1;
+        renderPaymentsTable();
+    }
+}
+
+/**
+ * Go to previous page of payments
+ */
+function paymentsPrevPage() {
+    if (paymentsCurrentPage > 1) {
+        paymentsCurrentPage--;
+        renderPaymentsTable();
+    }
+}
+
+/**
+ * Go to next page of payments
+ */
+function paymentsNextPage() {
+    const totalPages = Math.ceil(paymentsData.length / paymentsPerPage);
+    if (paymentsCurrentPage < totalPages) {
+        paymentsCurrentPage++;
+        renderPaymentsTable();
+    }
+}
+
+/**
+ * Open Add Payment Modal
+ */
+function openAddPaymentModal() {
+    // Reset form
+    document.getElementById('addPaymentForm').reset();
+
+    // Set default date to today
+    document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+
+    // v1.17.0: Reset currency dropdown to enabled (will be set when reseller is selected)
+    const currencySelect = document.getElementById('payment-currency');
+    if (currencySelect) {
+        currencySelect.disabled = false;
+        currencySelect.value = 'IRR'; // Default
+    }
+
+    // Populate reseller dropdown if needed
+    populatePaymentsResellerDropdown();
+
+    // Show modal
+    document.getElementById('addPaymentModal').style.display = 'flex';
+}
+
+/**
+ * Close Add Payment Modal
+ */
+function closeAddPaymentModal() {
+    document.getElementById('addPaymentModal').style.display = 'none';
+}
+
+/**
+ * Submit new payment
+ */
+async function submitPayment(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('addPaymentForm');
+    const formData = new FormData(form);
+
+    // Parse amount (remove thousand separators)
+    const amountInput = document.getElementById('payment-amount').value;
+    const amount = parseFloat(amountInput.replace(/,/g, ''));
+    if (isNaN(amount) || amount <= 0) {
+        showAlert('Please enter a valid amount', 'error');
+        return false;
+    }
+    formData.set('amount', amount);
+
+    try {
+        const response = await fetch('api/add_reseller_payment.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error === 0) {
+            showAlert('Payment recorded successfully', 'success');
+
+            // v1.17.0: Keep filter on the same reseller after adding payment
+            const selectedResellerId = document.getElementById('payment-reseller').value;
+            const filterDropdown = document.getElementById('payments-reseller');
+            if (filterDropdown && selectedResellerId) {
+                filterDropdown.value = selectedResellerId;
+            }
+
+            closeAddPaymentModal();
+            loadResellerPayments();
+        } else {
+            showAlert(data.message || 'Error recording payment', 'error');
+        }
+    } catch (error) {
+        console.error('[Payments] Error:', error);
+        showAlert('Failed to record payment', 'error');
+    }
+
+    return false;
+}
+
+/**
+ * Open Cancel Payment Modal
+ */
+function openCancelPaymentModal(paymentId, resellerName, amount, currency) {
+    document.getElementById('cancel-payment-id').value = paymentId;
+    document.getElementById('cancel-reason').value = '';
+
+    document.getElementById('cancel-payment-info').innerHTML = `
+        <p><strong>Reseller:</strong> ${escapeHtml(resellerName)}</p>
+        <p><strong>Amount:</strong> ${formatNumber(amount)} ${currency}</p>
+    `;
+
+    document.getElementById('cancelPaymentModal').style.display = 'flex';
+}
+
+/**
+ * Close Cancel Payment Modal
+ */
+function closeCancelPaymentModal() {
+    document.getElementById('cancelPaymentModal').style.display = 'none';
+}
+
+/**
+ * Submit payment cancellation
+ */
+async function submitCancelPayment(event) {
+    event.preventDefault();
+
+    const paymentId = document.getElementById('cancel-payment-id').value;
+    const reason = document.getElementById('cancel-reason').value.trim();
+
+    if (!reason) {
+        showAlert('Cancellation reason is required', 'error');
+        return false;
+    }
+
+    try {
+        const response = await fetch('api/cancel_reseller_payment.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `payment_id=${paymentId}&reason=${encodeURIComponent(reason)}`
+        });
+
+        const data = await response.json();
+
+        if (data.error === 0) {
+            showAlert('Payment cancelled successfully', 'success');
+            closeCancelPaymentModal();
+            loadResellerPayments();
+        } else {
+            showAlert(data.message || 'Error cancelling payment', 'error');
+        }
+    } catch (error) {
+        console.error('[Payments] Error:', error);
+        showAlert('Failed to cancel payment', 'error');
+    }
+
+    return false;
+}
+
+/**
+ * Format number with thousand separators
+ */
+function formatNumber(num) {
+    if (num === null || num === undefined) return '0';
+    return Number(num).toLocaleString('en-US');
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Add thousand separator formatting to payment amount input
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.getElementById('payment-amount');
+    if (amountInput) {
+        amountInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/,/g, '');
+            if (!isNaN(value) && value !== '') {
+                e.target.value = Number(value).toLocaleString('en-US');
+            }
+        });
+    }
+});
+
+// Note: initResellerPayments is now called directly from initAccountingTab()
+
+// ========================================
+// End of Reseller Payments (v1.17.0)
 // ========================================

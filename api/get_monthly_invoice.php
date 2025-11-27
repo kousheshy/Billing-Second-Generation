@@ -308,24 +308,33 @@ try {
         }
 
         // v1.16.0: Calculate net amount with corrections
-        $originalAmount = floatval($trans['amount']);
+        // v1.17.0: Negate amounts - stored as negative but displayed as positive
+        $originalAmountRaw = floatval($trans['amount']);
         $correctionAmount = isset($trans['correction_amount']) ? floatval($trans['correction_amount']) : null;
         $status = $trans['status'] ?? 'active';
 
-        // Calculate net amount based on status
+        // Calculate net amount based on status, then negate for display
+        // (amounts stored as negative represent positive sales)
         if ($status === 'voided') {
-            $netAmount = 0;
+            $netAmountRaw = 0;
         } elseif ($correctionAmount !== null) {
-            $netAmount = $originalAmount + $correctionAmount;
+            $netAmountRaw = $originalAmountRaw + $correctionAmount;
         } else {
-            $netAmount = $originalAmount;
+            $netAmountRaw = $originalAmountRaw;
         }
+
+        // Negate to convert negative stored amounts to positive display amounts
+        $originalAmount = -1 * $originalAmountRaw;
+        $netAmount = -1 * $netAmountRaw;
 
         // Use net amount for totals
         $totalSales += $netAmount;
 
         // Mark if transaction has correction
         $hasCorrection = ($status === 'corrected' || $status === 'voided' || $correctionAmount !== null);
+
+        // Negate correction for display consistency (positive original - negative correction = positive net)
+        $correctionAmountDisplay = ($correctionAmount !== null) ? -1 * $correctionAmount : null;
 
         $processedTransactions[] = [
             'id' => $trans['id'],
@@ -334,7 +343,7 @@ try {
             'time' => $trans['time'],
             'mac_address' => $macAddress,
             'original_amount' => $originalAmount,
-            'correction_amount' => $correctionAmount,
+            'correction_amount' => $correctionAmountDisplay,
             'net_amount' => $netAmount,
             'amount' => $netAmount, // For backward compatibility
             'currency' => $trans['currency'] ?? $reseller['currency_id'],

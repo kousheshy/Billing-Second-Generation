@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.16.3</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.17.0</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -414,9 +414,9 @@ try {
                         </div>
                     </div>
 
-                    <!-- Amount Owed Section -->
+                    <!-- Total Sales Section -->
                     <div class="amount-owed-section">
-                        <h4>Amount Owed to System</h4>
+                        <h4>Total Sales</h4>
                         <div id="invoice-amount-owed" class="amount-owed-value">0</div>
                     </div>
 
@@ -428,9 +428,9 @@ try {
                             <div class="pagination-options">
                                 <label>Per page:</label>
                                 <select id="invoice-per-page" onchange="changeInvoicePerPage()">
-                                    <option value="25" selected>25</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="25">25</option>
                                     <option value="50">50</option>
-                                    <option value="100">100</option>
                                 </select>
                             </div>
                         </div>
@@ -482,6 +482,120 @@ try {
                     <div class="empty-icon">📊</div>
                     <h3>Select Filters to Generate Invoice</h3>
                     <p>Choose a reseller and time period to view their monthly invoice and sales summary.</p>
+                </div>
+
+                <!-- Reseller Payments Section (v1.17.0) -->
+                <div class="section-divider"></div>
+
+                <div class="section-header payments-section-header">
+                    <h2>💳 Reseller Payments & Balance</h2>
+                    <button class="btn-primary" id="add-payment-btn" onclick="openAddPaymentModal()" style="display: none;">+ Add Payment</button>
+                </div>
+
+                <!-- Payments Filters -->
+                <div class="payments-filters">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>Reseller:</label>
+                            <select id="payments-reseller" onchange="loadResellerPayments()">
+                                <option value="">-- All Resellers --</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Calendar:</label>
+                            <select id="payments-calendar-type" onchange="togglePaymentsCalendar()">
+                                <option value="miladi">Gregorian (میلادی)</option>
+                                <option value="shamsi">Persian (شمسی)</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" id="payments-miladi-dates">
+                            <label>From Date:</label>
+                            <input type="date" id="payments-start-date" onchange="loadResellerPayments()">
+                        </div>
+                        <div class="filter-group" id="payments-miladi-dates-end">
+                            <label>To Date:</label>
+                            <input type="date" id="payments-end-date" onchange="loadResellerPayments()">
+                        </div>
+                        <div class="filter-group shamsi-date-group" id="payments-shamsi-dates" style="display: none;">
+                            <label>From Date:</label>
+                            <div class="shamsi-inputs">
+                                <select id="payments-shamsi-start-year" onchange="updatePaymentsShamsiDate('start')"></select>
+                                <select id="payments-shamsi-start-month" onchange="updatePaymentsShamsiDate('start')"></select>
+                                <select id="payments-shamsi-start-day" onchange="updatePaymentsShamsiDate('start')"></select>
+                            </div>
+                        </div>
+                        <div class="filter-group shamsi-date-group" id="payments-shamsi-dates-end" style="display: none;">
+                            <label>To Date:</label>
+                            <div class="shamsi-inputs">
+                                <select id="payments-shamsi-end-year" onchange="updatePaymentsShamsiDate('end')"></select>
+                                <select id="payments-shamsi-end-month" onchange="updatePaymentsShamsiDate('end')"></select>
+                                <select id="payments-shamsi-end-day" onchange="updatePaymentsShamsiDate('end')"></select>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <label>Status:</label>
+                            <select id="payments-status" onchange="loadResellerPayments()">
+                                <option value="active">Active</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn-secondary" onclick="loadResellerPayments()">🔄 Refresh</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Balance Summary Cards -->
+                <div id="balance-summary-container" class="balance-summary-grid">
+                    <!-- Will be populated dynamically -->
+                </div>
+
+                <!-- Payments Table -->
+                <div class="payments-table-container">
+                    <div class="payments-table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0;">Payment History</h4>
+                        <div class="pagination-options" style="display: flex; align-items: center; gap: 10px;">
+                            <span id="payments-showing-info" style="color: #888; font-size: 13px;">Showing 0-0 of 0</span>
+                            <label style="color: #888; font-size: 13px;">Per page:</label>
+                            <select id="payments-per-page" onchange="changePaymentsPerPage()" style="padding: 5px 10px; border-radius: 5px; background: var(--input-bg, #2a2a3e); color: var(--text-color, #fff); border: 1px solid var(--border-color, #3a3a4e);">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table id="payments-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Reseller</th>
+                                <th>Amount</th>
+                                <th>Bank</th>
+                                <th>Reference</th>
+                                <th>Description</th>
+                                <th>Recorded By</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-tbody">
+                            <tr><td colspan="9" style="text-align:center;padding:20px;color:#999">Loading payments...</td></tr>
+                        </tbody>
+                    </table>
+                    <!-- Pagination Controls -->
+                    <div class="payments-pagination" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; padding: 10px 0;">
+                        <button type="button" id="payments-prev-btn" onclick="paymentsPrevPage()" disabled style="padding: 8px 16px; border-radius: 5px; background: var(--btn-secondary-bg, #3a3a4e); color: var(--text-color, #fff); border: none; cursor: pointer;">Previous</button>
+                        <span id="payments-page-info" style="color: #888; font-size: 13px;">Page 1 of 1</span>
+                        <button type="button" id="payments-next-btn" onclick="paymentsNextPage()" disabled style="padding: 8px 16px; border-radius: 5px; background: var(--btn-secondary-bg, #3a3a4e); color: var(--text-color, #fff); border: none; cursor: pointer;">Next</button>
+                    </div>
+                </div>
+
+                <!-- Payments Empty State -->
+                <div id="payments-empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon">💳</div>
+                    <h3>No Payments Found</h3>
+                    <p>No payment records match the current filters.</p>
                 </div>
             </div>
 
@@ -2516,6 +2630,122 @@ try {
                 <div class="form-buttons">
                     <button type="button" class="btn-secondary" onclick="closeEditTransactionModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Save Correction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Reseller Payment Modal (v1.17.0) -->
+    <div id="addPaymentModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center;">
+        <div class="modal-content" style="max-width: 550px; margin: auto; position: relative; top: 50%; transform: translateY(-50%); background: var(--card-bg, #1e1e2e); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="modal-header">
+                <h3>💳 Record Payment</h3>
+                <span class="close" onclick="closeAddPaymentModal()">&times;</span>
+            </div>
+            <form id="addPaymentForm" onsubmit="return submitPayment(event)" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="payment-reseller">Reseller <span style="color: red;">*</span></label>
+                    <select id="payment-reseller" name="reseller_id" required>
+                        <option value="">-- Select Reseller --</option>
+                    </select>
+                </div>
+
+                <div class="form-row" style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="payment-amount">Amount <span style="color: red;">*</span></label>
+                        <input type="text" id="payment-amount" name="amount" required placeholder="e.g., 10,000,000">
+                        <input type="hidden" id="payment-amount-raw" name="amount_raw">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="payment-currency">Currency</label>
+                        <select id="payment-currency" name="currency">
+                            <option value="IRR">IRR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Calendar Type</label>
+                    <select id="modal-calendar-type" onchange="toggleModalCalendar()">
+                        <option value="miladi">Gregorian (میلادی)</option>
+                        <option value="shamsi">Persian (شمسی)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="modal-miladi-date">
+                    <label for="payment-date">Payment Date <span style="color: red;">*</span></label>
+                    <input type="date" id="payment-date" name="payment_date" required>
+                </div>
+
+                <div class="form-group" id="modal-shamsi-date" style="display: none;">
+                    <label>Payment Date <span style="color: red;">*</span></label>
+                    <div class="shamsi-inputs" style="display: flex; gap: 10px;">
+                        <select id="modal-shamsi-year" onchange="updateModalShamsiDate()" style="flex: 1;"></select>
+                        <select id="modal-shamsi-month" onchange="updateModalShamsiDate()" style="flex: 1;"></select>
+                        <select id="modal-shamsi-day" onchange="updateModalShamsiDate()" style="flex: 1;"></select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="payment-bank">Bank <span style="color: red;">*</span></label>
+                    <select id="payment-bank" name="bank_name" required>
+                        <option value="">-- Select Bank --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="payment-reference">Reference Number</label>
+                    <input type="text" id="payment-reference" name="reference_number" placeholder="Bank tracking/reference number">
+                </div>
+
+                <div class="form-group">
+                    <label for="payment-receipt">Receipt (optional)</label>
+                    <input type="file" id="payment-receipt" name="receipt" accept="image/*,.pdf">
+                    <small style="color: #888;">Upload receipt image (JPG, PNG, PDF)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="payment-description">Description / Notes</label>
+                    <textarea id="payment-description" name="description" rows="2" placeholder="Additional notes about this payment..."></textarea>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="button" class="btn-secondary" onclick="closeAddPaymentModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cancel Payment Modal (v1.17.0) -->
+    <div id="cancelPaymentModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10001; justify-content: center; align-items: center;">
+        <div class="modal-content" style="max-width: 450px; margin: auto; position: relative; top: 50%; transform: translateY(-50%); background: var(--card-bg, #1e1e2e); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="modal-header" style="background: #dc3545; color: white;">
+                <h3>❌ Cancel Payment</h3>
+                <span class="close" onclick="closeCancelPaymentModal()" style="color: white;">&times;</span>
+            </div>
+            <form id="cancelPaymentForm" onsubmit="return submitCancelPayment(event)">
+                <input type="hidden" id="cancel-payment-id" name="payment_id">
+
+                <div style="padding: 15px; background: #fff3cd; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="color: #856404; margin: 0;"><strong>Warning:</strong> You are about to cancel this payment. This action cannot be undone.</p>
+                </div>
+
+                <div id="cancel-payment-info" style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px;">
+                    <!-- Payment details will be shown here -->
+                </div>
+
+                <div class="form-group">
+                    <label for="cancel-reason">Reason for Cancellation <span style="color: red;">*</span></label>
+                    <textarea id="cancel-reason" name="reason" rows="3" required placeholder="REQUIRED: Explain why this payment is being cancelled..."></textarea>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="button" class="btn-secondary" onclick="closeCancelPaymentModal()">Keep Payment</button>
+                    <button type="submit" class="btn-danger">Cancel Payment</button>
                 </div>
             </form>
         </div>

@@ -2,7 +2,7 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.16.3
+**Version:** 1.17.0
 **Last Updated:** November 27, 2025
 **Database:** MySQL 5.7+ / MariaDB 10.3+
 **Character Set:** utf8mb4
@@ -23,8 +23,8 @@ php scripts/setup_complete_database.php
 
 This will:
 1. Create the database if it doesn't exist
-2. Create all 18 required tables
-3. Insert default data (currencies, admin user, settings)
+2. Create all 20 required tables
+3. Insert default data (currencies, admin user, settings, Iranian banks)
 4. Display confirmation and next steps
 
 ### Prerequisites
@@ -57,7 +57,7 @@ This will:
 
 ## Overview
 
-The ShowBox Billing Panel uses **18 tables** organized into functional groups:
+The ShowBox Billing Panel uses **20 tables** organized into functional groups:
 
 | Group | Tables | Purpose |
 |-------|--------|---------|
@@ -66,6 +66,7 @@ The ShowBox Billing Panel uses **18 tables** organized into functional groups:
 | Security | 3 tables | WebAuthn, login history, audit log |
 | Push | 2 tables | Push subscriptions, expiry tracking |
 | Settings | 3 tables | Reminder settings, Stalker settings, app settings |
+| Accounting | 2 tables | Reseller payments, Iranian banks (v1.17.0) |
 
 **Database Name:** `showboxt_panel`
 **Engine:** InnoDB (all tables)
@@ -97,6 +98,8 @@ The ShowBox Billing Panel uses **18 tables** organized into functional groups:
 | `_push_subscriptions` | Web push subscriptions | id, user_id, endpoint | v1.11.40 |
 | `_push_expiry_tracking` | Expiry notification tracking | id, account_id, expiry_date | v1.11.48 |
 | `_app_settings` | Global application settings | id, setting_key, setting_value | v1.11.20 |
+| `_reseller_payments` | Reseller payment tracking | id, reseller_id, amount, payment_date | v1.17.0 |
+| `_iranian_banks` | Iranian banks reference | id, code, name_fa, name_en | v1.17.0 |
 
 ---
 
@@ -611,6 +614,92 @@ CREATE TABLE `_push_expiry_tracking` (
 
 ---
 
+## Accounting Tables (v1.17.0)
+
+### 19. _reseller_payments
+
+**Purpose:** Track reseller payments/deposits for balance calculation
+
+```sql
+CREATE TABLE `_reseller_payments` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `reseller_id` INT(11) NOT NULL COMMENT 'FK to _users.id',
+    `amount` DECIMAL(15,2) NOT NULL COMMENT 'Payment amount (positive value)',
+    `currency` VARCHAR(10) NOT NULL DEFAULT 'IRR' COMMENT 'Currency code',
+    `payment_date` DATE NOT NULL COMMENT 'Date payment was made',
+    `bank_name` VARCHAR(100) NOT NULL COMMENT 'Bank name from predefined list',
+    `reference_number` VARCHAR(100) NULL COMMENT 'Bank reference/tracking number',
+    `receipt_path` VARCHAR(255) NULL COMMENT 'Path to uploaded receipt image',
+    `description` TEXT NULL COMMENT 'Notes/comments about the payment',
+    `recorded_by` INT(11) NOT NULL COMMENT 'User ID who recorded this payment',
+    `recorded_by_username` VARCHAR(100) NOT NULL COMMENT 'Username for display',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    `status` ENUM('active', 'cancelled') DEFAULT 'active',
+    `cancelled_by` INT(11) NULL COMMENT 'User who cancelled (if applicable)',
+    `cancelled_at` DATETIME NULL,
+    `cancellation_reason` TEXT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_reseller_id` (`reseller_id`),
+    INDEX `idx_payment_date` (`payment_date`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_bank_name` (`bank_name`),
+    INDEX `idx_currency` (`currency`),
+    CONSTRAINT `fk_payment_reseller` FOREIGN KEY (`reseller_id`)
+        REFERENCES `_users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Reseller payment/deposit tracking for balance calculation (v1.17.0)';
+```
+
+**Key Fields:**
+| Field | Description |
+|-------|-------------|
+| `reseller_id` | FK to _users.id (the reseller who paid) |
+| `amount` | Payment amount (always positive) |
+| `currency` | Currency code (IRR, GBP, USD, EUR) |
+| `payment_date` | Date the payment was made |
+| `bank_name` | Bank name from _iranian_banks or free text |
+| `reference_number` | Bank reference/tracking number |
+| `status` | `active` or `cancelled` |
+| `cancelled_by` | Who cancelled the payment |
+| `cancellation_reason` | **MANDATORY** reason when cancelling |
+
+**Balance Calculation:**
+- `Balance = Total Sales (from _transactions) - Total Payments (from _reseller_payments)`
+- Positive balance = Reseller owes money (بدهکار)
+- Negative balance = Reseller has credit (طلبکار)
+
+---
+
+### 20. _iranian_banks
+
+**Purpose:** Reference table for Iranian banks dropdown
+
+```sql
+CREATE TABLE `_iranian_banks` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(20) NOT NULL COMMENT 'Bank code',
+    `name_fa` VARCHAR(100) NOT NULL COMMENT 'Persian name',
+    `name_en` VARCHAR(100) NOT NULL COMMENT 'English name',
+    `is_active` TINYINT(1) DEFAULT 1,
+    `sort_order` INT DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`),
+    INDEX `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Reference table for Iranian banks';
+```
+
+**Default Data:** 39 banks including:
+- State-owned banks (بانک ملی، سپه، مسکن، کشاورزی, etc.)
+- Private banks (پارسیان، پاسارگاد، سامان، ملت, etc.)
+- Credit institutions
+- Other payment methods (Cash, Cheque, Wire Transfer)
+
+**Migration Script:** `scripts/create_reseller_payments_table.php`
+
+---
+
 ## Entity Relationships
 
 ```
@@ -644,6 +733,7 @@ Related tables (FK to _users.id):
   - _login_history.user_id
   - _audit_log.user_id
   - _push_subscriptions.user_id
+  - _reseller_payments.reseller_id (v1.17.0)
 ```
 
 ---
@@ -663,6 +753,8 @@ Located in `/scripts/` directory:
 | `upgrade_multistage_reminders.php` | Multi-stage SMS | - |
 | `add_phone_column.php` | Add phone to accounts | - |
 | `initialize_reseller_sms.php` | Init SMS for resellers | - |
+| `add_transaction_corrections.php` | Transaction corrections (v1.16.0) | - |
+| `create_reseller_payments_table.php` | Reseller payments & Iranian banks (v1.17.0) | - |
 
 **For new installations:** Just run `setup_complete_database.php`
 
@@ -728,6 +820,7 @@ Then run: `php scripts/setup_complete_database.php`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.17.0 | 2025-11-27 | Added _reseller_payments and _iranian_banks tables for payment tracking and balance calculation |
 | 1.16.0 | 2025-11-27 | Added transaction correction columns (correction_amount, correction_note, corrected_by, corrected_by_username, corrected_at, status) with indexes |
 | 1.15.3 | 2025-11-27 | Account deletion with balance refund (superseded by v1.16.0 immutable records) |
 | 1.15.2 | 2025-11-27 | Documentation sync (no schema changes) |

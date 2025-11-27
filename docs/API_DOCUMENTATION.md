@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.16.3
+**Version:** 1.17.0
 **Last Updated:** November 27, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -16,16 +16,17 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 4. [Account Management](#account-management)
 5. [Reseller Management](#reseller-management)
 6. [Plan Management](#plan-management)
-7. [Transaction Management](#transaction-management)
-8. [Accounting & Monthly Invoices](#accounting--monthly-invoices) **NEW in v1.15.0**
-9. [User Management](#user-management)
-9. [Stalker Portal Integration](#stalker-portal-integration)
-10. [STB Device Control](#stb-device-control)
-11. [Theme Management](#theme-management)
-12. [Push Notifications](#push-notifications)
-13. [Audit Log](#audit-log) **NEW in v1.13.0**
-14. [Login History](#login-history) **NEW in v1.11.22**
-15. [Error Codes](#error-codes)
+7. [Reseller Payments & Balance](#reseller-payments--balance) **NEW in v1.17.0**
+8. [Transaction Management](#transaction-management)
+9. [Accounting & Monthly Invoices](#accounting--monthly-invoices)
+10. [User Management](#user-management)
+11. [Stalker Portal Integration](#stalker-portal-integration)
+12. [STB Device Control](#stb-device-control)
+13. [Theme Management](#theme-management)
+14. [Push Notifications](#push-notifications)
+15. [Audit Log](#audit-log)
+16. [Login History](#login-history)
+17. [Error Codes](#error-codes)
 
 ---
 
@@ -970,6 +971,202 @@ The `permissions` field is a pipe-delimited string with 7 fields:
 {
   "error": 0,
   "err_msg": "Plan deleted successfully"
+}
+```
+
+---
+
+## Reseller Payments & Balance
+
+**Added in v1.17.0** - Track reseller payments and calculate running balance.
+
+### Add Reseller Payment
+**Endpoint:** `POST /api/add_reseller_payment.php`
+
+**Description:** Record a new payment from a reseller. Only Admin and Reseller Admin can add payments.
+
+**Request Body (multipart/form-data):**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| reseller_id | int | Yes | ID of the reseller who made the payment |
+| amount | decimal | Yes | Payment amount (positive number) |
+| currency | string | Yes | Currency code: IRR, GBP, USD, EUR |
+| payment_date | string | Yes | Date in YYYY-MM-DD format |
+| bank_name | string | Yes | Bank name (from Iranian banks list) |
+| reference_number | string | No | Bank reference/tracking number |
+| description | string | No | Notes about the payment |
+| receipt | file | No | Receipt image (JPG, PNG, GIF, PDF) |
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Payment recorded successfully",
+  "payment_id": 123,
+  "payment": {
+    "id": 123,
+    "reseller_id": 5,
+    "reseller_name": "John Reseller",
+    "amount": 5000000,
+    "currency": "IRR",
+    "payment_date": "2025-11-27",
+    "bank_name": "بانک ملت",
+    "reference_number": "123456789",
+    "receipt_path": "uploads/receipts/receipt_5_20251127.jpg",
+    "recorded_by": "admin",
+    "status": "active"
+  }
+}
+```
+
+---
+
+### Get Reseller Payments
+**Endpoint:** `GET /api/get_reseller_payments.php`
+
+**Description:** Retrieve payment history. Admin sees all; resellers see only their own.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| reseller_id | int | No | Filter by specific reseller |
+| start_date | string | No | Filter from date (YYYY-MM-DD) |
+| end_date | string | No | Filter to date (YYYY-MM-DD) |
+| status | string | No | Filter by status: active, cancelled, all |
+| limit | int | No | Number of records (default: 100, max: 500) |
+
+**Response:**
+```json
+{
+  "error": 0,
+  "payments": [
+    {
+      "id": 123,
+      "reseller_id": 5,
+      "reseller_name": "John Reseller",
+      "amount": "5000000.00",
+      "currency": "IRR",
+      "payment_date": "2025-11-27",
+      "payment_date_shamsi": "1404/09/07",
+      "bank_name": "بانک ملت",
+      "reference_number": "123456789",
+      "status": "active",
+      "recorded_by": "admin"
+    }
+  ],
+  "summary": {
+    "total_active": 5000000,
+    "total_cancelled": 0,
+    "count_active": 1,
+    "count_cancelled": 0
+  },
+  "can_edit": true,
+  "can_view_all": true
+}
+```
+
+---
+
+### Get Reseller Balance
+**Endpoint:** `GET /api/get_reseller_balance.php`
+
+**Description:** Calculate running balance for reseller(s).
+
+**Formula:** `Balance = Total Sales - Total Payments`
+- Positive = Reseller owes money (بدهکار)
+- Negative = Reseller has credit (طلبکار)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| reseller_id | int | No | Specific reseller (or all if admin) |
+| year | int | No | Filter by year for yearly report |
+| month | int | No | Filter by month for monthly report |
+
+**Response:**
+```json
+{
+  "error": 0,
+  "balances": [
+    {
+      "reseller_id": 5,
+      "reseller_name": "John Reseller",
+      "reseller_username": "john",
+      "currency": "IRR",
+      "opening_balance": 0,
+      "total_sales": 10000000,
+      "total_payments": 5000000,
+      "balance": 5000000,
+      "closing_balance": 5000000,
+      "transaction_count": 15,
+      "payment_count": 1,
+      "status": "debtor"
+    }
+  ],
+  "grand_totals": {
+    "total_sales": 10000000,
+    "total_payments": 5000000,
+    "balance": 5000000
+  },
+  "period": {
+    "year": null,
+    "month": null,
+    "type": "all_time"
+  }
+}
+```
+
+---
+
+### Cancel Reseller Payment
+**Endpoint:** `POST /api/cancel_reseller_payment.php`
+
+**Description:** Cancel (soft delete) a payment. Requires mandatory reason. Only Admin and Reseller Admin can cancel.
+
+**Request Body:**
+```json
+{
+  "payment_id": 123,
+  "reason": "Duplicate entry - payment was recorded twice"
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Payment cancelled successfully",
+  "payment_id": 123
+}
+```
+
+**Error Response (reason missing):**
+```json
+{
+  "error": 1,
+  "message": "Cancellation reason is MANDATORY"
+}
+```
+
+---
+
+### Get Iranian Banks
+**Endpoint:** `GET /api/get_iranian_banks.php`
+
+**Description:** Get list of Iranian banks for the payment form dropdown.
+
+**Response:**
+```json
+{
+  "error": 0,
+  "banks": [
+    {"code": "BMELLI", "name_fa": "بانک ملی ایران", "name_en": "Bank Melli Iran"},
+    {"code": "BSEPAH", "name_fa": "بانک سپه", "name_en": "Bank Sepah"},
+    {"code": "BMELLAT", "name_fa": "بانک ملت", "name_en": "Bank Mellat"},
+    {"code": "CASH", "name_fa": "نقدی", "name_en": "Cash"},
+    {"code": "OTHER", "name_fa": "سایر", "name_en": "Other"}
+  ],
+  "source": "database"
 }
 ```
 

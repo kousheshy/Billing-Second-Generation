@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.16.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.17.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -666,20 +666,32 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Current Version: 1.16.3 - November 2025
+- Current Version: 1.17.0 - November 2025
 - **Lead Developer:** Kambiz Koosheshi
 - **GitHub:** [@kousheshy](https://github.com/kousheshy)
 - **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
-**Version:** 1.16.3
+**Version:** 1.17.0
 **Last Updated:** November 27, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.17.0** (Nov 2025) - Reseller Payments & Balance Tracking System
+  - **Payment Tracking**: Record reseller payments with date, bank, amount, and reference
+  - **Balance Calculation**: Automatic balance = Total Sales - Total Payments
+  - **Iranian Banks**: Complete list of 39 Iranian banks in dropdown
+  - **Shamsi Calendar**: Display payment dates in Persian calendar
+  - **Balance Status**: Show بدهکار (debtor) or طلبکار (creditor) status
+  - **Permission Matrix**: Admin/Reseller Admin can add/cancel payments; Resellers read-only
+  - **Push Notifications**: Reseller receives notification when payment is recorded
+  - **Cancel Payments**: Soft delete with mandatory reason (immutable records)
+  - **New Database Tables**: `_reseller_payments`, `_iranian_banks`
+  - **New APIs**: `add_reseller_payment.php`, `get_reseller_payments.php`, `get_reseller_balance.php`, `cancel_reseller_payment.php`, `get_iranian_banks.php`
 
 - **v1.16.3** (Nov 2025) - Expiration Date Logic Fix
   - **Critical Bug Fix**: Accounts expiring TODAY were incorrectly shown as "EXPIRED"
@@ -1192,4 +1204,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.16.3**
+**ShowBox Billing System v1.17.0**
