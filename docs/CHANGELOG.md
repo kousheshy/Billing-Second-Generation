@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.16.3] - 2025-11-27
+
+### Fixed - Expiration Date Logic Bug
+
+**Status:** Production Release
+
+#### Critical Bug Fix
+
+Accounts expiring on the current date were incorrectly shown as "EXPIRED" when they should remain valid through the entire expiration day.
+
+#### Root Cause
+
+JavaScript `new Date('2025-11-27')` creates a date at **00:00:00** (midnight). When compared to `now` at any time during the day (e.g., 15:30:00), the expiration date appeared to be in the past, causing incorrect "EXPIRED" status.
+
+#### Solution Applied
+
+Added `setHours(23, 59, 59, 999)` to all date comparison instances so that expiration dates are treated as valid through **23:59:59.999** on the expiration day.
+
+#### Files Modified
+
+**dashboard.js** (18 instances fixed):
+
+| Function | Lines | Description |
+|----------|-------|-------------|
+| `isExpired()` | 216-226 | Core expiration check function |
+| `isExpiringSoon()` | 199-212 | Check if account expires within 2 weeks |
+| `updateExpiringSoonCount()` | ~560 | Update "Expiring Soon" report card count |
+| `updateExpiredLastMonthCount()` | ~590 | Update "Expired Last Month" report card count |
+| `updateReportCardCounts()` | ~635 | Update dynamic report card counts |
+| `updateDynamicReports()` | ~2850 | Update dynamic report calculations |
+| Filter functions (block 1) | ~550-635 | Account filtering for report views |
+| Filter functions (block 2) | ~4182-4263 | Additional filter functions |
+
+**api/cron_check_expired.php**:
+- Changed SQL query from `WHERE a.end_date < NOW()` to `WHERE DATE(a.end_date) < DATE(NOW())`
+- Uses DATE() function for date-only comparison (ignores time component)
+
+#### Behavior Change
+
+| Before | After |
+|--------|-------|
+| Account expiring Nov 27 shown as "EXPIRED" on Nov 27 at 15:30 | Account expiring Nov 27 valid until Nov 27 at 23:59:59 |
+| Incorrect report card counts | Accurate report card counts |
+| Premature expiry notifications | Correct timing for expiry notifications |
+
+#### Testing Checklist
+
+- [x] Account expiring today shows as valid
+- [x] Account expiring tomorrow shows in "Expiring Soon"
+- [x] "Expiring Soon" card count is accurate
+- [x] "Expired Last Month" card count is accurate
+- [x] Cron job sends notifications at correct time
+- [x] All 18 instances in dashboard.js fixed
+- [x] Service worker cache updated to v1.16.3
+
+---
+
 ## [1.16.0] - 2025-11-27
 
 ### Added - Immutable Transaction Correction System

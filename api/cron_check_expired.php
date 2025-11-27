@@ -103,10 +103,11 @@ function cleanupOldRecords($pdo) {
  */
 function getExpiredAccounts($pdo) {
     // Get accounts that:
-    // 1. Have expired (end_date < NOW())
+    // 1. Have expired (end_date < today's date - account valid through entire expiration day)
     // 2. Expired within the check window (not too old)
     // 3. Have a reseller assigned
     // 4. Haven't been notified yet for this expiry date
+    // v1.16.3: Fixed to use DATE() comparison so accounts are valid through entire expiration day
     $stmt = $pdo->prepare("
         SELECT
             a.id,
@@ -117,7 +118,7 @@ function getExpiredAccounts($pdo) {
             a.reseller,
             DATE(a.end_date) as expiry_date
         FROM _accounts a
-        WHERE a.end_date < NOW()
+        WHERE DATE(a.end_date) < DATE(NOW())
           AND a.end_date > DATE_SUB(NOW(), INTERVAL :hours HOUR)
           AND a.reseller IS NOT NULL
           AND a.reseller > 0

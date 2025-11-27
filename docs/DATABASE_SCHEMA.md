@@ -2,7 +2,7 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.16.0
+**Version:** 1.16.3
 **Last Updated:** November 27, 2025
 **Database:** MySQL 5.7+ / MariaDB 10.3+
 **Character Set:** utf8mb4

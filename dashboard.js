@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.16.0
+// ShowBox Dashboard v1.16.3
 // ========================================
 
 // ========================================
@@ -195,7 +195,7 @@ function initTheme() {
     }
 }
 
-// Check if account is expiring soon (within 2 weeks)
+// Check if account is expiring soon (within 2 weeks, but not yet expired)
 function isExpiringSoon(endDate) {
     if (!endDate) return false;
 
@@ -204,17 +204,25 @@ function isExpiringSoon(endDate) {
     const twoWeeksFromNow = new Date();
     twoWeeksFromNow.setDate(now.getDate() + 14);
 
-    return expirationDate >= now && expirationDate <= twoWeeksFromNow;
+    // Set expiration to end of day for consistent comparison
+    expirationDate.setHours(23, 59, 59, 999);
+
+    // Account is "expiring soon" if it hasn't expired yet AND expires within 2 weeks
+    return now <= expirationDate && expirationDate <= twoWeeksFromNow;
 }
 
 // Check if account is expired
+// Account is valid through the ENTIRE expiration day (expires at midnight going into the next day)
 function isExpired(endDate) {
     if (!endDate) return false;
 
     const now = new Date();
     const expirationDate = new Date(endDate);
 
-    return expirationDate < now;
+    // Set expiration to end of day (23:59:59.999) so account is valid through the entire expiration date
+    expirationDate.setHours(23, 59, 59, 999);
+
+    return now > expirationDate;
 }
 
 // Check authentication
@@ -542,7 +550,8 @@ function showReportAccountsList(reportType) {
         accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= startDate && expirationDate < now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return expirationDate >= startDate && now > expirationDate;
         });
         accountsPagination.searchTerm = `expired-dynamic-${days}d`;
 
@@ -561,7 +570,8 @@ function showReportAccountsList(reportType) {
         accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= now && expirationDate <= endDate;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now <= expirationDate && expirationDate <= endDate;
         });
         accountsPagination.searchTerm = `expiring-dynamic-${days}d`;
 
@@ -570,7 +580,8 @@ function showReportAccountsList(reportType) {
         accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate < now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now > expirationDate;
         });
         accountsPagination.searchTerm = 'expired-all';
 
@@ -582,7 +593,8 @@ function showReportAccountsList(reportType) {
         accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= now && expirationDate <= twoWeeksFromNow;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now <= expirationDate && expirationDate <= twoWeeksFromNow;
         });
         accountsPagination.searchTerm = 'expiring-soon-2weeks';
 
@@ -596,7 +608,8 @@ function showReportAccountsList(reportType) {
         accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
             if (!account.end_date) return true; // Unlimited plans are active
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now <= expirationDate;
         });
         accountsPagination.searchTerm = 'active-accounts';
 
@@ -615,7 +628,8 @@ function showReportAccountsList(reportType) {
         accountsPagination.filteredAccounts = accountsPagination.allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= oneMonthAgo && expirationDate < now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return expirationDate >= oneMonthAgo && now > expirationDate;
         });
         accountsPagination.searchTerm = 'expired-last-month-static';
     }
@@ -1275,9 +1289,11 @@ function updateExpiringSoonCount(accounts) {
     accounts.forEach(account => {
         if(account.end_date) {
             const expirationDate = new Date(account.end_date);
+            // Set to end of day so account is valid through entire expiration date
+            expirationDate.setHours(23, 59, 59, 999);
 
             // Check if expiration date is between now and 2 weeks from now
-            if(expirationDate >= now && expirationDate <= twoWeeksFromNow) {
+            if(now <= expirationDate && expirationDate <= twoWeeksFromNow) {
                 expiringSoonCount++;
             }
         }
@@ -1297,9 +1313,11 @@ function updateExpiredLastMonthCount(accounts) {
     accounts.forEach(account => {
         if(account.end_date) {
             const expirationDate = new Date(account.end_date);
+            // Set to end of day so account is valid through entire expiration date
+            expirationDate.setHours(23, 59, 59, 999);
 
-            // Check if expired between 1 month ago and now
-            if(expirationDate >= oneMonthAgo && expirationDate < now) {
+            // Check if expired between 1 month ago and now (after end of expiration day)
+            if(expirationDate >= oneMonthAgo && now > expirationDate) {
                 expiredLastMonthCount++;
             }
         }
@@ -1330,17 +1348,19 @@ function generateReports(accounts) {
             activeAccounts++; // Unlimited is considered active
         } else {
             const expirationDate = new Date(account.end_date);
+            // Set to end of day so account is valid through entire expiration date
+            expirationDate.setHours(23, 59, 59, 999);
 
-            if(expirationDate < now) {
-                // Already expired
+            if(now > expirationDate) {
+                // Already expired (after end of expiration day)
                 expiredAccounts++;
 
                 // Check if expired in last month
                 if(expirationDate >= oneMonthAgo) {
                     expiredLastMonthCount++;
                 }
-            } else if(expirationDate >= now && expirationDate <= twoWeeksFromNow) {
-                // Expiring soon
+            } else if(now <= expirationDate && expirationDate <= twoWeeksFromNow) {
+                // Expiring soon (not expired yet, within 2 weeks)
                 expiringSoonCount++;
                 activeAccounts++; // Still active but expiring soon
             } else {
@@ -1439,17 +1459,19 @@ function updateDynamicReports() {
     accounts.forEach(account => {
         if(account.end_date) {
             const expirationDate = new Date(account.end_date);
+            // Set to end of day so account is valid through entire expiration date
+            expirationDate.setHours(23, 59, 59, 999);
 
             // Count expired and NOT renewed (still expired today)
             // An account is "not renewed" if it expired in the period AND is still expired now
             // (meaning the end_date was not updated to a future date)
-            if(expirationDate >= expiredStartDate && expirationDate < now) {
+            if(expirationDate >= expiredStartDate && now > expirationDate) {
                 // This account expired in the selected period and is still expired (not renewed)
                 expiredNotRenewedCount++;
             }
 
-            // Count expiring in selected period
-            if(expirationDate >= now && expirationDate <= expiringEndDate) {
+            // Count expiring in selected period (not expired yet)
+            if(now <= expirationDate && expirationDate <= expiringEndDate) {
                 expiringInPeriodCount++;
             }
         }
@@ -4171,7 +4193,8 @@ function getFilteredAccountsForReport(reportType) {
         return allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= startDate && expirationDate < now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return expirationDate >= startDate && now > expirationDate;
         });
 
     } else if (reportType === 'expiring-dynamic') {
@@ -4188,14 +4211,16 @@ function getFilteredAccountsForReport(reportType) {
         return allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= now && expirationDate <= endDate;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now <= expirationDate && expirationDate <= endDate;
         });
 
     } else if (reportType === 'expired-all') {
         return allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate < now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now > expirationDate;
         });
 
     } else if (reportType === 'expiring-soon') {
@@ -4205,7 +4230,8 @@ function getFilteredAccountsForReport(reportType) {
         return allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= now && expirationDate <= twoWeeksFromNow;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now <= expirationDate && expirationDate <= twoWeeksFromNow;
         });
 
     } else if (reportType === 'all-accounts') {
@@ -4215,7 +4241,8 @@ function getFilteredAccountsForReport(reportType) {
         return allAccounts.filter(account => {
             if (!account.end_date) return true;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return now <= expirationDate;
         });
 
     } else if (reportType === 'unlimited-plans') {
@@ -4230,7 +4257,8 @@ function getFilteredAccountsForReport(reportType) {
         return allAccounts.filter(account => {
             if (!account.end_date) return false;
             const expirationDate = new Date(account.end_date);
-            return expirationDate >= oneMonthAgo && expirationDate < now;
+            expirationDate.setHours(23, 59, 59, 999); // Valid through entire expiration day
+            return expirationDate >= oneMonthAgo && now > expirationDate;
         });
     }
 

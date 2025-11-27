@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.16.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.16.3-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -666,20 +666,29 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Current Version: 1.9.1 - November 2025
+- Current Version: 1.16.3 - November 2025
 - **Lead Developer:** Kambiz Koosheshi
 - **GitHub:** [@kousheshy](https://github.com/kousheshy)
 - **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
-**Version:** 1.16.0
+**Version:** 1.16.3
 **Last Updated:** November 27, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.16.3** (Nov 2025) - Expiration Date Logic Fix
+  - **Critical Bug Fix**: Accounts expiring TODAY were incorrectly shown as "EXPIRED"
+  - **Root Cause**: JavaScript date comparison used midnight (00:00:00) instead of end of day (23:59:59)
+  - **Fix Applied**: Added `setHours(23, 59, 59, 999)` to all 18 date comparison instances in dashboard.js
+  - **PHP Fix**: Updated `cron_check_expired.php` to use `DATE()` function for date-only comparison
+  - **Functions Fixed**: `isExpired()`, `isExpiringSoon()`, `updateExpiringSoonCount()`, `updateExpiredLastMonthCount()`, `updateReportCardCounts()`, `updateDynamicReports()`, and filter functions
+  - **Behavior**: Accounts are now valid through the ENTIRE expiration day (expire at 23:59:59)
+  - **Files Modified**: `dashboard.js` (18 instances), `api/cron_check_expired.php`
 
 - **v1.16.0** (Nov 2025) - Immutable Transaction Correction System
   - **Immutable Financial Records**: Transactions are NEVER deleted - only corrected with mandatory comments
@@ -1183,4 +1192,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.16.0**
+**ShowBox Billing System v1.16.3**
