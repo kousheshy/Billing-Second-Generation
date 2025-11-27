@@ -7,6 +7,138 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.16.0] - 2025-11-27
+
+### Added - Immutable Transaction Correction System
+
+**Status:** Production Release
+
+#### Philosophy Change
+
+Transactions are now **IMMUTABLE** - they can never be deleted. Instead, corrections can be applied with mandatory explanatory notes. This ensures:
+- Complete financial audit trail
+- Accounting compliance
+- Historical record preservation
+- Transparency in all financial adjustments
+
+#### New Transaction Correction Feature
+
+**Edit Transaction Modal:**
+- New modal in Transactions tab for editing transactions
+- Live amount preview showing: `ORIGINAL → NEW AMOUNT`
+- Thousand separator formatting in correction input
+- Currency symbol displayed in label
+- "Void Transaction" checkbox for nullifying transactions
+- Auto-determined status based on user actions
+
+**Permission Matrix:**
+| Role | Access |
+|------|--------|
+| Super Admin | Full edit access |
+| Reseller Admin | Full edit access |
+| Reseller | READ-ONLY |
+| Observer | READ-ONLY |
+
+**Correction Display:**
+- CORRECTED badge (yellow) for transactions with corrections
+- VOIDED badge (red) for nullified transactions
+- Strikethrough on original amount when corrected
+- Net amount displayed prominently
+
+#### Database Changes
+
+**New columns added to `_transactions` table:**
+| Column | Type | Description |
+|--------|------|-------------|
+| `correction_amount` | DECIMAL(10,2) | Amount to add/subtract |
+| `correction_note` | TEXT | **Mandatory** explanation |
+| `corrected_by` | INT | User ID who made correction |
+| `corrected_by_username` | VARCHAR(100) | Username for display |
+| `corrected_at` | DATETIME | Timestamp of correction |
+| `status` | ENUM | `active`, `corrected`, `voided` |
+
+**New indexes:**
+- `idx_status` - For filtering by transaction status
+- `idx_corrected_at` - For querying recent corrections
+
+**Migration:** `scripts/add_transaction_corrections.php`
+
+#### Export Updates
+
+**Accounting Tab - Transaction Details:**
+- Added Status column with correction badges
+- Shows net amount with strikethrough on original
+
+**PDF Export:**
+- Added Status column with color coding (red for VOIDED, amber for CORRECTED)
+- Simplified amount display (shows net amount)
+- Added separate Currency column
+- Proper column widths for readability
+
+**Excel Export:**
+- Added Original Amount column
+- Added Net Amount column
+- Added Status column
+- Added Correction Note column
+
+#### API Changes
+
+**New Endpoint:** `POST /api/edit_transaction.php`
+- Applies corrections to existing transactions
+- Requires mandatory `correction_note`
+- Supports `correction_amount` and `status` parameters
+- Returns full transaction details with net amount calculation
+
+**Updated Endpoints:**
+- `GET /api/get_transactions.php` - Returns correction fields and net amount
+- `GET /api/get_monthly_invoice.php` - Uses net amounts for totals, includes correction info
+
+**Behavior Changes:**
+- `api/remove_account.php` - No longer deletes transactions (preserved)
+- `api/sync_accounts.php` - Orphaned accounts logged, transactions preserved
+
+#### Files Modified
+
+**New Files:**
+- `api/edit_transaction.php` - Transaction correction API
+- `scripts/add_transaction_corrections.php` - Database migration script
+
+**Backend Files:**
+- `api/get_transactions.php` - Added correction fields and net amount calculation
+- `api/get_monthly_invoice.php` - Added correction display in invoice data
+- `api/remove_account.php` - Removed transaction deletion (now preserved)
+- `api/sync_accounts.php` - Orphan detection logs only (no transaction deletion)
+
+**Frontend Files:**
+- `dashboard.php` - Added Edit Transaction modal with live preview
+- `dashboard.js` - Added correction display, formatting functions, PDF/Excel export updates
+- `dashboard.css` - Added correction badge styles (minimal changes)
+
+#### Version Updates
+
+- `dashboard.php`: v1.16.0
+- `dashboard.js`: v1.16.0
+- `index.html`: v1.16.0
+- `service-worker.js`: v1.16.0
+
+---
+
+## [1.15.3] - 2025-11-27
+
+### Enhanced - Account Deletion with Balance Refund (SUPERSEDED by v1.16.0)
+
+**Status:** Superseded - Transaction deletion replaced by immutable correction system
+
+**Note:** The transaction deletion behavior from v1.15.3 has been replaced by the immutable transaction system in v1.16.0. Transactions are no longer deleted; instead, they can be corrected or voided while preserving the original record.
+
+#### Original Changes (Now Superseded)
+
+- Transactions are now PRESERVED when accounts are deleted
+- Corrections can be made through `edit_transaction.php` API
+- Audit log still records all account deletion events
+
+---
+
 ## [1.15.2] - 2025-11-27
 
 ### Enhanced - Accounting Tab UX & PDF Export Improvements

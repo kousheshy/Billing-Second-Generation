@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.15.2
+**Version:** 1.16.0
 **Last Updated:** November 27, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -1025,6 +1025,122 @@ The `permissions` field is a pipe-delimited string with 7 fields:
   "transaction_id": 10
 }
 ```
+
+---
+
+### Edit Transaction (Correction)
+**Endpoint:** `POST /api/edit_transaction.php`
+
+**Version:** Added in v1.16.0
+
+**Description:** Add corrections to existing transactions. Transactions are NEVER deleted - only corrected with mandatory comments. This implements immutable financial records for accounting compliance.
+
+**Permissions:**
+| Role | Access |
+|------|--------|
+| Super Admin | Full edit access |
+| Reseller Admin | Full edit access |
+| Reseller | READ-ONLY (cannot edit) |
+| Observer | READ-ONLY (cannot edit) |
+
+**Request Body:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `transaction_id` | int | Yes | ID of the transaction to correct |
+| `correction_amount` | decimal | No | Amount to add/subtract (positive=increase, negative=decrease) |
+| `correction_note` | string | **Yes** | Mandatory explanation for the correction |
+| `status` | string | No | `active`, `corrected`, or `voided` (default: auto-determined) |
+
+**Example Request - Add Correction:**
+```json
+{
+  "transaction_id": 42,
+  "correction_amount": -50000,
+  "correction_note": "Refund for service issue on customer request"
+}
+```
+
+**Example Request - Void Transaction:**
+```json
+{
+  "transaction_id": 42,
+  "correction_note": "Transaction voided - duplicate entry",
+  "status": "voided"
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Transaction corrected successfully",
+  "transaction": {
+    "id": 42,
+    "original_amount": -90000000,
+    "correction_amount": -50000,
+    "net_amount": -90050000,
+    "status": "corrected",
+    "correction_note": "Refund for service issue on customer request",
+    "corrected_by": "admin",
+    "corrected_at": "2025-11-27 14:30:00"
+  }
+}
+```
+
+**Net Amount Calculation:**
+- `net_amount = original_amount + correction_amount`
+- If `status = 'voided'`: `net_amount = 0`
+- If no correction: `net_amount = original_amount`
+
+**Error Responses:**
+
+*Not logged in:*
+```json
+{
+  "error": 1,
+  "message": "Not logged in"
+}
+```
+
+*Permission denied:*
+```json
+{
+  "error": 1,
+  "message": "Permission denied. Only Admin or Reseller Admin can edit transactions."
+}
+```
+
+*Observer attempting edit:*
+```json
+{
+  "error": 1,
+  "message": "Observers cannot edit transactions. This is a read-only account."
+}
+```
+
+*Missing correction note:*
+```json
+{
+  "error": 1,
+  "message": "Correction note is MANDATORY. Please explain why this correction is being made."
+}
+```
+
+*Transaction not found:*
+```json
+{
+  "error": 1,
+  "message": "Transaction not found"
+}
+```
+
+**Audit Trail:**
+All corrections are automatically logged to `_audit_log` table with:
+- Action type: `update`
+- Target type: `transaction`
+- Old values (before correction)
+- New values (after correction)
+- Details including correction note
 
 ---
 

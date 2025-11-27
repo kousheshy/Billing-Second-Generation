@@ -36,10 +36,14 @@ try {
     $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $is_observer = $user_info['is_observer'] == 1;
+    $is_super_admin = $user_info['super_user'] == 1;
 
     // Parse permissions to check if user is reseller admin
     $permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0|0|0');
     $is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+    // Determine if user can edit transactions (only super admin and reseller admin)
+    $can_edit_transactions = $is_super_admin || $is_reseller_admin;
 
     // Get view mode preference from request (only for reseller admins)
     $viewAllAccounts = isset($_GET['viewAllAccounts']) ? $_GET['viewAllAccounts'] === 'true' : false;
@@ -104,6 +108,14 @@ try {
                 $macAddress = !empty($accountRow['mac']) ? strtoupper($accountRow['mac']) : '';
                 $fullName = $accountRow['full_name'] ?? '';
             }
+
+            // Fallback: Extract MAC and full_name directly from details if not found in DB
+            if (empty($macAddress) && preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $macMatches)) {
+                $macAddress = strtoupper($macMatches[1]);
+            }
+            if (empty($fullName) && preg_match('/,\s*([^,]+)\s*,\s*[0-9A-Fa-f]{2}:/', $details, $nameMatches)) {
+                $fullName = trim($nameMatches[1]);
+            }
         }
         elseif (preg_match('/Plan\s+([^\s]+)\s+assigned\s+to\s+([0-9A-Fa-f:]+)/i', $details, $matches)) {
             // New account transaction: Plan Name assigned to MAC
@@ -139,11 +151,29 @@ try {
             // Keep original details if can't parse
             $tx['formatted_description'] = $details;
         }
+
+        // v1.16.0: Calculate net amount with corrections
+        $originalAmount = floatval($tx['amount'] ?? 0);
+        $correctionAmount = isset($tx['correction_amount']) ? floatval($tx['correction_amount']) : null;
+        $status = $tx['status'] ?? 'active';
+
+        // Calculate net amount based on status
+        if ($status === 'voided') {
+            $tx['net_amount'] = 0;
+        } elseif ($correctionAmount !== null) {
+            $tx['net_amount'] = $originalAmount + $correctionAmount;
+        } else {
+            $tx['net_amount'] = $originalAmount;
+        }
+
+        // Mark if transaction has correction
+        $tx['has_correction'] = ($status === 'corrected' || $status === 'voided' || $correctionAmount !== null);
     }
     unset($tx); // Break the reference
 
     $response['error'] = 0;
     $response['transactions'] = $transactions;
+    $response['can_edit_transactions'] = $can_edit_transactions;
 
 } catch(PDOException $e) {
     $response['error'] = 1;

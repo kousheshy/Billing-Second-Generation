@@ -260,6 +260,14 @@ try {
                 $macAddress = !empty($accountRow['mac']) ? strtoupper($accountRow['mac']) : '';
                 $fullName = $accountRow['full_name'] ?? '';
             }
+
+            // Fallback: Extract MAC and full_name directly from details if not found in DB
+            if (empty($macAddress) && preg_match('/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/', $details, $macMatches)) {
+                $macAddress = strtoupper($macMatches[1]);
+            }
+            if (empty($fullName) && preg_match('/,\s*([^,]+)\s*,\s*[0-9A-Fa-f]{2}:/', $details, $nameMatches)) {
+                $fullName = trim($nameMatches[1]);
+            }
         }
         elseif (preg_match('/Plan\s+([^\s]+)\s+assigned\s+to\s+([0-9A-Fa-f:]+)/i', $details, $matches)) {
             // New account transaction: Plan Name assigned to MAC
@@ -299,7 +307,25 @@ try {
             }
         }
 
-        $totalSales += floatval($trans['amount']);
+        // v1.16.0: Calculate net amount with corrections
+        $originalAmount = floatval($trans['amount']);
+        $correctionAmount = isset($trans['correction_amount']) ? floatval($trans['correction_amount']) : null;
+        $status = $trans['status'] ?? 'active';
+
+        // Calculate net amount based on status
+        if ($status === 'voided') {
+            $netAmount = 0;
+        } elseif ($correctionAmount !== null) {
+            $netAmount = $originalAmount + $correctionAmount;
+        } else {
+            $netAmount = $originalAmount;
+        }
+
+        // Use net amount for totals
+        $totalSales += $netAmount;
+
+        // Mark if transaction has correction
+        $hasCorrection = ($status === 'corrected' || $status === 'voided' || $correctionAmount !== null);
 
         $processedTransactions[] = [
             'id' => $trans['id'],
@@ -307,9 +333,17 @@ try {
             'date_shamsi' => $shamsiDateStr,
             'time' => $trans['time'],
             'mac_address' => $macAddress,
-            'amount' => floatval($trans['amount']),
+            'original_amount' => $originalAmount,
+            'correction_amount' => $correctionAmount,
+            'net_amount' => $netAmount,
+            'amount' => $netAmount, // For backward compatibility
             'currency' => $trans['currency'] ?? $reseller['currency_id'],
-            'description' => $formattedDescription
+            'description' => $formattedDescription,
+            'status' => $status,
+            'has_correction' => $hasCorrection,
+            'correction_note' => $trans['correction_note'] ?? null,
+            'corrected_by' => $trans['corrected_by_username'] ?? null,
+            'corrected_at' => $trans['corrected_at'] ?? null
         ];
     }
 

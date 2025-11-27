@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.15.2
+// ShowBox Dashboard v1.16.0
 // ========================================
 
 // ========================================
@@ -2166,6 +2166,9 @@ function populateThemeDropdowns() {
     }
 }
 
+// v1.16.0: Store whether user can edit transactions
+let canEditTransactions = false;
+
 // Load Transactions
 async function loadTransactions() {
     try {
@@ -2179,6 +2182,9 @@ async function loadTransactions() {
             transactionsPagination.allTransactions = result.transactions;
             transactionsPagination.totalItems = result.transactions.length;
 
+            // v1.16.0: Store edit permission
+            canEditTransactions = result.can_edit_transactions || false;
+
             // Sort transactions by default (newest first)
             sortTransactionsData();
 
@@ -2187,6 +2193,7 @@ async function loadTransactions() {
         } else {
             transactionsPagination.allTransactions = [];
             transactionsPagination.totalItems = 0;
+            canEditTransactions = false;
             renderTransactionsPage();
         }
     } catch(error) {
@@ -2268,6 +2275,12 @@ function renderTransactionsPage() {
         resellerHeader.style.display = showResellerColumn ? '' : 'none';
     }
 
+    // v1.16.0: Show/hide actions column header based on edit permission
+    const actionsHeader = document.getElementById('actions-column-header');
+    if(actionsHeader) {
+        actionsHeader.style.display = canEditTransactions ? '' : 'none';
+    }
+
     if(totalItems > 0) {
         tbody.innerHTML = '';
 
@@ -2279,7 +2292,31 @@ function renderTransactionsPage() {
         pageTransactions.forEach(tx => {
             const tr = document.createElement('tr');
             const currencySymbol = getCurrencySymbol(tx.currency);
-            const formattedAmount = formatBalance(tx.amount, tx.currency);
+
+            // v1.16.0: Handle corrections - show net amount
+            const hasCorrection = tx.has_correction || false;
+            const status = tx.status || 'active';
+            const netAmount = tx.net_amount !== undefined ? tx.net_amount : tx.amount;
+            const originalAmount = tx.amount;
+            const correctionAmount = tx.correction_amount;
+
+            // Format amounts
+            const formattedNetAmount = formatBalance(netAmount, tx.currency);
+            const formattedOriginalAmount = formatBalance(originalAmount, tx.currency);
+
+            // Build amount display with correction indicator
+            let amountDisplay = '';
+            if (hasCorrection) {
+                if (status === 'voided') {
+                    amountDisplay = `<span style="text-decoration: line-through; color: #999;">${formattedOriginalAmount}</span> <span style="color: #dc3545;">VOIDED</span>`;
+                } else if (correctionAmount !== null && correctionAmount !== undefined) {
+                    amountDisplay = `<span style="text-decoration: line-through; color: #999;">${formattedOriginalAmount}</span> <span style="color: #28a745; font-weight: bold;">${formattedNetAmount}</span>`;
+                } else {
+                    amountDisplay = formattedNetAmount;
+                }
+            } else {
+                amountDisplay = formattedNetAmount;
+            }
 
             // Determine transaction type from details
             let details = tx.details || '';
@@ -2305,21 +2342,40 @@ function renderTransactionsPage() {
             const macAddress = tx.mac_address || '-';
 
             // Use formatted description from API if available
-            const displayDescription = tx.formatted_description || details;
+            let displayDescription = tx.formatted_description || details;
+
+            // v1.16.0: Add correction badge and note to description
+            if (hasCorrection) {
+                const correctionBadge = status === 'voided'
+                    ? '<span class="badge" style="background: #dc3545; color: white; font-size: 9px; padding: 2px 6px; margin-left: 5px;">VOIDED</span>'
+                    : '<span class="badge" style="background: #ffc107; color: #212529; font-size: 9px; padding: 2px 6px; margin-left: 5px;">CORRECTED</span>';
+                displayDescription += correctionBadge;
+
+                // Show correction note on hover
+                if (tx.correction_note) {
+                    displayDescription += `<br><small style="color: #666; font-style: italic;" title="Corrected by ${tx.corrected_by_username || 'Unknown'} at ${tx.corrected_at || ''}">Note: ${tx.correction_note}</small>`;
+                }
+            }
 
             // Build reseller column if needed
             const resellerColumn = showResellerColumn
                 ? `<td>${tx.reseller_name || tx.reseller_username || 'N/A'}</td>`
                 : '';
 
+            // v1.16.0: Build actions column (edit button) for users with permission
+            const actionsColumn = canEditTransactions
+                ? `<td style="text-align: center;"><button onclick="openEditTransactionModal(${tx.id})" title="Edit Transaction" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.2)';"><i class="fas fa-edit"></i> Edit</button></td>`
+                : '';
+
             tr.innerHTML = `
                 <td>${new Date(tx.timestamp * 1000).toLocaleDateString()}</td>
-                <td>${formattedAmount}</td>
+                <td>${amountDisplay}</td>
                 <td>${tx.currency || currencySymbol.trim() || ''}</td>
                 <td><span class="badge ${typeClass}" style="font-size: 10px; padding: 4px 8px;">${type}</span></td>
                 <td><code style="font-size: 13px;">${macAddress}</code></td>
                 ${resellerColumn}
                 <td>${displayDescription}</td>
+                ${actionsColumn}
             `;
             tbody.appendChild(tr);
         });
@@ -2331,7 +2387,10 @@ function renderTransactionsPage() {
         // Render pagination buttons
         renderTransactionsPagination();
     } else {
-        const colspan = showResellerColumn ? '7' : '6';
+        // v1.16.0: Adjust colspan for actions column
+        let colspan = 6;
+        if (showResellerColumn) colspan++;
+        if (canEditTransactions) colspan++;
         tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:40px;color:#999">No transactions found</td></tr>`;
         document.getElementById('transactions-pagination-info').textContent = '';
         document.getElementById('transactions-pagination').innerHTML = '';
@@ -2408,6 +2467,237 @@ function changeTransactionsPerPage() {
     transactionsPagination.perPage = parseInt(select.value);
     transactionsPagination.currentPage = 1; // Reset to first page
     renderTransactionsPage();
+}
+
+// v1.16.0: Store current transaction being edited
+let editingTransaction = null;
+
+// v1.16.0: Format number with thousand separators (for correction input)
+function formatCorrectionInput(value) {
+    if (!value) return '';
+    // Remove all non-numeric except minus and decimal
+    let cleaned = String(value).replace(/[^\d.-]/g, '');
+
+    // Handle negative sign
+    let isNegative = cleaned.startsWith('-');
+    cleaned = cleaned.replace(/-/g, '');
+
+    // Handle decimal
+    let parts = cleaned.split('.');
+    let intPart = parts[0] || '';
+    let decPart = parts.length > 1 ? parts[1] : '';
+
+    // Add thousand separators to integer part
+    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    // Reconstruct
+    let result = isNegative ? '-' : '';
+    result += intPart;
+    if (parts.length > 1) {
+        result += '.' + decPart;
+    }
+
+    return result;
+}
+
+// v1.16.0: Parse formatted number back to raw value
+function parseCorrectionInput(formatted) {
+    if (!formatted) return '';
+    // Remove commas, keep minus and decimal
+    return formatted.replace(/,/g, '');
+}
+
+// v1.16.0: Open edit transaction modal
+function openEditTransactionModal(transactionId) {
+    // Find transaction in loaded data
+    const tx = transactionsPagination.allTransactions.find(t => t.id == transactionId);
+    if (!tx) {
+        showAlert('Transaction not found', 'error');
+        return;
+    }
+
+    editingTransaction = tx;
+
+    // Populate form
+    document.getElementById('edit-transaction-id').value = tx.id;
+
+    const originalAmount = parseFloat(tx.amount) || 0;
+    const currency = tx.currency || '';
+    document.getElementById('edit-transaction-original-amount').value = formatBalance(originalAmount, currency) + ' ' + currency;
+
+    // Show currency in correction label
+    const currencyLabel = document.getElementById('edit-correction-currency');
+    if (currencyLabel) {
+        currencyLabel.textContent = currency ? `(${currency})` : '';
+    }
+
+    // Set correction amount if exists (formatted with thousand separators)
+    const correctionInput = document.getElementById('edit-transaction-correction');
+    const correctionRaw = document.getElementById('edit-transaction-correction-raw');
+    if (tx.correction_amount !== null && tx.correction_amount !== undefined) {
+        const formatted = formatCorrectionInput(tx.correction_amount);
+        correctionInput.value = formatted;
+        if (correctionRaw) correctionRaw.value = tx.correction_amount;
+    } else {
+        correctionInput.value = '';
+        if (correctionRaw) correctionRaw.value = '';
+    }
+
+    // Set void checkbox based on current status
+    const voidCheckbox = document.getElementById('edit-transaction-void');
+    voidCheckbox.checked = (tx.status === 'voided');
+
+    // Set existing note if any
+    document.getElementById('edit-transaction-note').value = tx.correction_note || '';
+
+    // Calculate and show net amount preview
+    updateNetAmountPreview();
+
+    // Add event listener for formatting correction input as user types
+    correctionInput.oninput = function(e) {
+        const cursorPos = e.target.selectionStart;
+        const oldLength = e.target.value.length;
+        const formatted = formatCorrectionInput(e.target.value);
+        e.target.value = formatted;
+        // Update raw hidden value
+        if (correctionRaw) correctionRaw.value = parseCorrectionInput(formatted);
+        // Adjust cursor position after formatting
+        const newLength = formatted.length;
+        const newPos = Math.max(0, cursorPos + (newLength - oldLength));
+        e.target.setSelectionRange(newPos, newPos);
+        updateNetAmountPreview();
+    };
+    voidCheckbox.onchange = updateNetAmountPreview;
+
+    // Show modal
+    document.getElementById('editTransactionModal').style.display = 'block';
+}
+
+// v1.16.0: Update net amount preview (simplified - uses void checkbox)
+function updateNetAmountPreview() {
+    if (!editingTransaction) return;
+
+    const originalAmount = parseFloat(editingTransaction.amount) || 0;
+    const correctionInput = document.getElementById('edit-transaction-correction');
+    const voidCheckbox = document.getElementById('edit-transaction-void');
+    const netAmountInput = document.getElementById('edit-transaction-net-amount');
+    const correctionRaw = document.getElementById('edit-transaction-correction-raw');
+
+    // Parse the formatted value (remove commas) for calculation
+    const rawValue = parseCorrectionInput(correctionInput.value);
+    const correction = parseFloat(rawValue) || 0;
+    const isVoided = voidCheckbox.checked;
+    const currency = editingTransaction.currency || '';
+
+    let netAmount;
+    if (isVoided) {
+        netAmount = 0;
+        // Disable correction input when voiding
+        correctionInput.disabled = true;
+        correctionInput.style.opacity = '0.5';
+    } else {
+        netAmount = originalAmount + correction;
+        // Enable correction input
+        correctionInput.disabled = false;
+        correctionInput.style.opacity = '1';
+    }
+
+    // Update hidden raw value for form submission
+    if (netAmountInput) netAmountInput.value = netAmount;
+    if (correctionRaw) correctionRaw.value = rawValue;
+
+    // Update live preview elements
+    const previewOriginal = document.getElementById('preview-original-amount');
+    const previewNew = document.getElementById('preview-new-amount');
+    const previewIndicator = document.getElementById('preview-change-indicator');
+
+    if (previewOriginal && previewNew) {
+        previewOriginal.textContent = formatBalance(originalAmount, currency) + ' ' + currency;
+        previewNew.textContent = formatBalance(netAmount, currency) + ' ' + currency;
+
+        // Update colors based on change
+        if (isVoided) {
+            previewNew.style.color = '#f87171'; // Red for voided
+            previewIndicator.innerHTML = `⚠️ <span style="color: #f87171;">Transaction will be VOIDED (amount = 0 ${currency})</span>`;
+        } else if (correction !== 0) {
+            const changeAmount = correction;
+            const changeSign = changeAmount > 0 ? '+' : '';
+            previewNew.style.color = changeAmount > 0 ? '#4ade80' : '#fbbf24'; // Green for increase, yellow for decrease
+            previewIndicator.innerHTML = `📝 Change: <span style="color: ${changeAmount > 0 ? '#4ade80' : '#fbbf24'}; font-weight: bold;">${changeSign}${formatBalance(changeAmount, currency)} ${currency}</span>`;
+        } else {
+            previewNew.style.color = '#4ade80'; // Default green
+            previewIndicator.innerHTML = '<span style="color: #888;">No changes</span>';
+        }
+    }
+}
+
+// v1.16.0: Close edit transaction modal
+function closeEditTransactionModal() {
+    document.getElementById('editTransactionModal').style.display = 'none';
+    document.getElementById('editTransactionForm').reset();
+    // Re-enable correction input (in case it was disabled by void checkbox)
+    const correctionInput = document.getElementById('edit-transaction-correction');
+    correctionInput.disabled = false;
+    correctionInput.style.opacity = '1';
+    editingTransaction = null;
+}
+
+// v1.16.0: Save transaction correction (auto-determines status)
+async function saveTransactionCorrection(e) {
+    e.preventDefault();
+
+    const form = document.getElementById('editTransactionForm');
+    const formData = new FormData(form);
+
+    // Validate that note is provided
+    const note = formData.get('correction_note').trim();
+    if (!note) {
+        showAlert('Correction note is MANDATORY. Please explain why this correction is being made.', 'error');
+        return false;
+    }
+
+    // Auto-determine status based on user actions
+    const voidCheckbox = document.getElementById('edit-transaction-void');
+    // Use raw value (without commas) from hidden field
+    const correctionRaw = document.getElementById('edit-transaction-correction-raw');
+    const correctionAmount = correctionRaw ? correctionRaw.value : parseCorrectionInput(document.getElementById('edit-transaction-correction').value);
+
+    let status;
+    if (voidCheckbox.checked) {
+        status = 'voided';
+    } else if (correctionAmount && parseFloat(correctionAmount) !== 0) {
+        status = 'corrected';
+    } else {
+        status = 'active';
+    }
+
+    // Set the auto-determined status in the form
+    formData.set('status', status);
+    // Ensure correction_amount uses raw value (no commas)
+    formData.set('correction_amount', correctionAmount);
+
+    try {
+        const response = await fetch('api/edit_transaction.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.error === 0) {
+            showAlert('Transaction corrected successfully', 'success');
+            closeEditTransactionModal();
+            // Reload transactions to show updated data
+            await loadTransactions();
+        } else {
+            showAlert(result.message || 'Failed to save correction', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving transaction correction:', error);
+        showAlert('Error saving correction', 'error');
+    }
+
+    return false;
 }
 
 // Add Account
@@ -8430,12 +8720,23 @@ function renderInvoiceTable() {
                 description = description.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
             }
 
+            // v1.16.0: Build correction badge if transaction has correction
+            let correctionBadge = '';
+            let priceDisplay = `${invoice.reseller.currency_symbol}${formatNumber(trans.amount, invoice.reseller.currency)}`;
+            if (trans.status === 'voided') {
+                correctionBadge = '<span class="badge" style="background: #dc3545; color: white; font-size: 9px; padding: 2px 6px; margin-left: 5px;">VOIDED</span>';
+                priceDisplay = `<span style="text-decoration: line-through; color: #999;">${invoice.reseller.currency_symbol}${formatNumber(trans.original_amount || trans.amount, invoice.reseller.currency)}</span> <span style="color: #dc3545; font-weight: bold;">0</span>`;
+            } else if (trans.has_correction) {
+                correctionBadge = '<span class="badge" style="background: #ffc107; color: #333; font-size: 9px; padding: 2px 6px; margin-left: 5px;">CORRECTED</span>';
+                priceDisplay = `<span style="text-decoration: line-through; color: #999;">${invoice.reseller.currency_symbol}${formatNumber(trans.original_amount, invoice.reseller.currency)}</span> <span style="color: #28a745; font-weight: bold;">${invoice.reseller.currency_symbol}${formatNumber(trans.net_amount || trans.amount, invoice.reseller.currency)}</span>`;
+            }
+
             tr.innerHTML = `
                 <td>${trans.date_gregorian}</td>
                 <td dir="rtl">${trans.date_shamsi}</td>
-                <td><span class="badge ${typeClass}" style="font-size: 10px; padding: 4px 8px;">${transType}</span></td>
+                <td><span class="badge ${typeClass}" style="font-size: 10px; padding: 4px 8px;">${transType}</span>${correctionBadge}</td>
                 <td><code style="font-size: 13px;">${trans.mac_address || '-'}</code></td>
-                <td>${invoice.reseller.currency_symbol}${formatNumber(trans.amount, invoice.reseller.currency)}</td>
+                <td>${priceDisplay}</td>
                 <td>${description}</td>
             `;
             tbody.appendChild(tr);
@@ -8616,22 +8917,57 @@ function exportInvoicePDF() {
                 desc = desc.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
             }
 
+            // v1.16.0: Handle correction status in PDF - simplified format
+            let netAmount = trans.amount;
+            let status = '';
+            if (trans.status === 'voided') {
+                status = 'VOIDED';
+                netAmount = 0;
+            } else if (trans.has_correction) {
+                status = 'CORRECTED';
+                netAmount = trans.net_amount || trans.amount;
+            }
+
             return [
                 trans.date_gregorian,
                 trans.date_shamsi,
                 transType,
                 trans.mac_address || '-',
-                `${invoice.reseller.currency_symbol}${formatNumber(trans.amount, invoice.reseller.currency)}`,
+                formatNumber(netAmount, invoice.reseller.currency),
+                invoice.reseller.currency,
+                status,
                 desc
             ];
         });
 
         doc.autoTable({
             startY: 130,
-            head: [['Date (Gregorian)', 'Date (Shamsi)', 'Type', 'MAC Address', 'Amount', 'Description']],
+            head: [['Date', 'Shamsi', 'Type', 'MAC', 'Amount', 'Cur', 'Status', 'Description']],
             body: tableData,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [102, 126, 234] }
+            styles: { fontSize: 7, cellPadding: 2 },
+            headStyles: { fillColor: [102, 126, 234], fontSize: 7 },
+            columnStyles: {
+                0: { cellWidth: 22 },
+                1: { cellWidth: 22 },
+                2: { cellWidth: 18 },
+                3: { cellWidth: 32 },
+                4: { cellWidth: 22, halign: 'right' },
+                5: { cellWidth: 12 },
+                6: { cellWidth: 20, fontStyle: 'bold' },
+                7: { cellWidth: 'auto' }
+            },
+            didParseCell: function(data) {
+                // Color the Status column based on value
+                if (data.section === 'body' && data.column.index === 6) {
+                    if (data.cell.raw === 'VOIDED') {
+                        data.cell.styles.textColor = [220, 53, 69];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (data.cell.raw === 'CORRECTED') {
+                        data.cell.styles.textColor = [200, 150, 0];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            }
         });
     }
 
@@ -8692,9 +9028,9 @@ function exportInvoiceExcel() {
     const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
 
-    // Transactions sheet
+    // Transactions sheet - v1.16.0: Added Status and Correction Note columns
     const transactionsData = [
-        ['Date (Gregorian)', 'Date (Shamsi)', 'Type', 'MAC Address', 'Amount', 'Currency', 'Description']
+        ['Date (Gregorian)', 'Date (Shamsi)', 'Type', 'MAC Address', 'Original Amount', 'Net Amount', 'Currency', 'Status', 'Correction Note', 'Description']
     ];
 
     invoice.transactions.forEach(trans => {
@@ -8714,20 +9050,39 @@ function exportInvoiceExcel() {
             desc = desc.replace(macMatch[1], '').replace(/\s*,\s*,/g, ',').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
         }
 
+        // v1.16.0: Handle correction status
+        let status = '';
+        let originalAmount = trans.original_amount || trans.amount;
+        let netAmount = trans.amount;
+        let correctionNote = '';
+
+        if (trans.status === 'voided') {
+            status = 'VOIDED';
+            netAmount = 0;
+            correctionNote = trans.correction_note || '';
+        } else if (trans.has_correction) {
+            status = 'CORRECTED';
+            netAmount = trans.net_amount || trans.amount;
+            correctionNote = trans.correction_note || '';
+        }
+
         transactionsData.push([
             trans.date_gregorian,
             trans.date_shamsi,
             transType,
             trans.mac_address || '-',
-            trans.amount,
+            originalAmount,
+            netAmount,
             invoice.reseller.currency,
+            status,
+            correctionNote,
             desc
         ]);
     });
 
     // Add totals row
     transactionsData.push([]);
-    transactionsData.push(['', '', '', 'TOTAL', invoice.summary.total_sales, invoice.reseller.currency, '']);
+    transactionsData.push(['', '', '', 'TOTAL', '', invoice.summary.total_sales, invoice.reseller.currency, '', '', '']);
 
     const transWs = XLSX.utils.aoa_to_sheet(transactionsData);
     XLSX.utils.book_append_sheet(wb, transWs, 'Transactions');

@@ -2,7 +2,7 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.15.2
+**Version:** 1.16.0
 **Last Updated:** November 27, 2025
 **Database:** MySQL 5.7+ / MariaDB 10.3+
 **Character Set:** utf8mb4
@@ -210,7 +210,7 @@ CREATE TABLE `_plans` (
 
 ### 4. _transactions
 
-**Purpose:** Financial transaction history
+**Purpose:** Financial transaction history with immutable correction support (v1.16.0)
 
 ```sql
 CREATE TABLE `_transactions` (
@@ -220,14 +220,42 @@ CREATE TABLE `_transactions` (
     `amount` DECIMAL(10,2) NOT NULL,
     `currency` VARCHAR(10) DEFAULT 'GBP',
     `description` TEXT,
+    `details` TEXT DEFAULT NULL,
     `related_account` INT(11) DEFAULT NULL,
     `created_by` INT(11) DEFAULT NULL,
     `timestamp` INT(11) DEFAULT NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- v1.16.0: Correction columns for immutable financial records
+    `correction_amount` DECIMAL(10,2) DEFAULT NULL COMMENT 'Correction amount (positive=increase, negative=decrease)',
+    `correction_note` TEXT DEFAULT NULL COMMENT 'Mandatory note explaining the correction',
+    `corrected_by` INT(11) DEFAULT NULL COMMENT 'User ID who made the correction',
+    `corrected_by_username` VARCHAR(100) DEFAULT NULL COMMENT 'Username who made the correction',
+    `corrected_at` DATETIME DEFAULT NULL COMMENT 'When the correction was made',
+    `status` ENUM('active','corrected','voided') DEFAULT 'active' COMMENT 'Transaction status',
     PRIMARY KEY (`id`),
-    INDEX `idx_for_user` (`for_user`)
+    INDEX `idx_for_user` (`for_user`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_corrected_at` (`corrected_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
+
+**Key Fields:**
+| Field | Description |
+|-------|-------------|
+| `amount` | Original transaction amount |
+| `correction_amount` | Amount to add/subtract (positive=increase, negative=decrease) |
+| `correction_note` | **MANDATORY** explanation for correction |
+| `corrected_by` | User ID who made the correction |
+| `corrected_by_username` | Username for display purposes |
+| `corrected_at` | Timestamp when correction was made |
+| `status` | `active` (normal), `corrected` (has correction), `voided` (nullified) |
+
+**Net Amount Calculation:**
+- `net_amount = amount + correction_amount`
+- If `status = 'voided'`, net amount should be treated as 0
+- Original `amount` is NEVER modified (immutable)
+
+**Migration Script:** `scripts/add_transaction_corrections.php`
 
 ---
 
@@ -700,6 +728,8 @@ Then run: `php scripts/setup_complete_database.php`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.16.0 | 2025-11-27 | Added transaction correction columns (correction_amount, correction_note, corrected_by, corrected_by_username, corrected_at, status) with indexes |
+| 1.15.3 | 2025-11-27 | Account deletion with balance refund (superseded by v1.16.0 immutable records) |
 | 1.15.2 | 2025-11-27 | Documentation sync (no schema changes) |
 | 1.15.1 | 2025-11-27 | Documentation sync (no schema changes) |
 | 1.14.0 | 2025-11-27 | Added complete setup script, comprehensive documentation |

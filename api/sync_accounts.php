@@ -7,6 +7,7 @@ error_reporting(0);
 
 include(__DIR__ . '/../config.php');
 include('api.php');
+include('audit_helper.php'); // For logging orphaned account cleanup
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1)
 {
@@ -49,6 +50,15 @@ try {
 
     // PERSISTENT BACKUP: Save to file to survive multiple sync cycles
     $backup_file = __DIR__ . '/reseller_assignments_backup.json';
+
+    // v1.15.3: Save ALL account data for orphan detection (accounts deleted on Stalker)
+    $existing_accounts = [];
+    $stmt = $pdo->prepare('SELECT id, username, mac, full_name, reseller FROM _accounts');
+    $stmt->execute();
+    $all_accounts_before_sync = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach($all_accounts_before_sync as $acct) {
+        $existing_accounts[$acct['mac']] = $acct;
+    }
 
     $existing_resellers = [];
     $stmt = $pdo->prepare('SELECT username, mac, reseller FROM _accounts WHERE reseller IS NOT NULL');
@@ -231,11 +241,61 @@ try {
     $stmt->execute();
     $total_result = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // v1.16.0: Detect orphaned accounts (deleted on Stalker server)
+    // Transactions are PRESERVED - only logging for awareness
+    $orphan_cleanup_count = 0;
+    $previous_account_count = count($existing_accounts);
+    $current_account_count = $total_result['total'];
+
+    // Get current synced MAC addresses
+    $stmt = $pdo->prepare('SELECT mac FROM _accounts');
+    $stmt->execute();
+    $current_macs = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'mac');
+    $current_macs_set = array_flip($current_macs);
+
+    // Find orphaned accounts (existed before but not after sync)
+    $orphaned_accounts = [];
+    foreach($existing_accounts as $mac => $account_data) {
+        if(!isset($current_macs_set[$mac])) {
+            $orphaned_accounts[$mac] = $account_data;
+        }
+    }
+    $orphan_count = count($orphaned_accounts);
+
+    // v1.16.0: Transactions are PRESERVED (immutable financial records)
+    // We only LOG orphaned accounts for awareness, but do NOT delete transactions or refund
+    // Corrections can be made through edit_transaction.php API by admin/reseller_admin
+
+    if($orphan_count > 0) {
+        error_log("[SYNC] Detected $orphan_count orphaned accounts (deleted on Stalker) - transactions preserved");
+
+        foreach($orphaned_accounts as $mac => $orphan) {
+            $orphan_mac = $orphan['mac'];
+            $orphan_username = $orphan['username'];
+            $orphan_name = $orphan['full_name'] ?? '';
+
+            // Log account deletion to audit (transactions are preserved)
+            try {
+                logAuditEvent($pdo, 'delete', 'account', $orphan['id'] ?? null, $orphan_mac,
+                    $orphan,
+                    ['note' => 'Transactions preserved for historical records'],
+                    'Account deleted externally on Stalker Portal (detected during sync)');
+            } catch(Exception $e) {
+                error_log("[SYNC] Audit log failed for orphan detection: " . $e->getMessage());
+            }
+
+            $orphan_cleanup_count++;
+            error_log("[SYNC] Detected orphan: $orphan_username ($orphan_mac) - Transactions preserved");
+        }
+    }
+
     $response['error'] = 0;
     $response['err_msg'] = '';
     $response['synced'] = $synced_count;
     $response['skipped'] = $skipped_count;
     $response['total_accounts'] = $total_result['total'];
+    $response['orphans_detected'] = $orphan_cleanup_count;
+    $response['transactions_preserved'] = true;
 
 } catch(Exception $e) {
     $response['error'] = 1;

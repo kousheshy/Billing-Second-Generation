@@ -142,6 +142,14 @@ if($decoded->status == 'OK')
     $stmt->execute([$id]);
     $account_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // v1.16.0: Transactions are PRESERVED when accounts are deleted (immutable financial records)
+    // Corrections can be made through the edit_transaction.php API by admin/reseller_admin
+    // This ensures historical financial data is never lost
+
+    $reseller_id = $account_data['reseller'] ?? null;
+    $account_mac = $account_data['mac'] ?? $mac;
+    $account_username = $account_data['username'] ?? $id;
+
     $stmt = $pdo->prepare('DELETE FROM _accounts WHERE username = ?');
     $stmt->execute([$id]);
 
@@ -149,13 +157,14 @@ if($decoded->status == 'OK')
     try {
         if ($account_data) {
             $audit_data = [
-                'mac' => $account_data['mac'] ?? $mac,
-                'username' => $account_data['username'] ?? $id,
+                'mac' => $account_mac,
+                'username' => $account_username,
                 'name' => $account_data['full_name'] ?? '',
                 'expiry' => $account_data['end_date'] ?? '',
-                'reseller_id' => $account_data['reseller'] ?? null
+                'reseller_id' => $reseller_id,
+                'note' => 'Transactions preserved for historical records'
             ];
-            auditAccountDeleted($pdo, $account_data['id'] ?? null, $mac, $audit_data);
+            auditAccountDeleted($pdo, $account_data['id'] ?? null, $account_mac, $audit_data);
         }
     } catch (Exception $e) {
         error_log("Audit log failed: " . $e->getMessage());
@@ -163,6 +172,7 @@ if($decoded->status == 'OK')
 
     $response['error'] = 0;
     $response['err_msg'] = '';
+    $response['transactions_preserved'] = true;
 
     echo json_encode($response);
 }

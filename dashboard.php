@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.15.2</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.16.0</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -295,6 +295,7 @@ try {
                             <th>MAC Address</th>
                             <th id="reseller-column-header">Reseller</th>
                             <th>Details</th>
+                            <th id="actions-column-header" style="display: none;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transactions-tbody">
@@ -2455,6 +2456,68 @@ try {
                 <button id="push-prompt-enable" class="btn-primary">Enable</button>
                 <button id="push-prompt-later" class="btn-secondary">Maybe Later</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Transaction Modal (v1.16.0) -->
+    <div id="editTransactionModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center;">
+        <div class="modal-content" style="max-width: 500px; margin: auto; position: relative; top: 50%; transform: translateY(-50%); background: var(--card-bg, #1e1e2e); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="modal-header">
+                <h3>Edit Transaction</h3>
+                <span class="close" onclick="closeEditTransactionModal()">&times;</span>
+            </div>
+            <form id="editTransactionForm" onsubmit="return saveTransactionCorrection(event)">
+                <input type="hidden" id="edit-transaction-id" name="transaction_id">
+
+                <div class="form-group">
+                    <label>Original Amount</label>
+                    <input type="text" id="edit-transaction-original-amount" readonly style="background: #f5f5f5;">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-transaction-correction">Correction Amount <span id="edit-correction-currency" style="color: #8ab4f8; font-weight: normal;"></span></label>
+                    <input type="text" id="edit-transaction-correction" placeholder="e.g., -5,000 to reduce, +5,000 to increase" style="font-size: 16px; font-weight: 500;">
+                    <input type="hidden" id="edit-transaction-correction-raw" name="correction_amount">
+                    <small style="color: #666;">Leave empty to keep original amount. Use negative to reduce, positive to increase.</small>
+                </div>
+
+                <!-- Live Amount Preview Box -->
+                <div id="live-amount-preview" class="form-group" style="margin-top: 15px; padding: 16px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; border: 2px solid #4a90d9;">
+                    <label style="color: #8ab4f8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block;">Live Amount Preview</label>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                        <div style="text-align: center;">
+                            <div style="color: #888; font-size: 11px; margin-bottom: 4px;">ORIGINAL</div>
+                            <div id="preview-original-amount" style="font-size: 20px; font-weight: bold; color: #ff6b6b;">-90,000,000</div>
+                        </div>
+                        <div style="font-size: 24px; color: #4a90d9;">→</div>
+                        <div style="text-align: center;">
+                            <div style="color: #888; font-size: 11px; margin-bottom: 4px;">NEW AMOUNT</div>
+                            <div id="preview-new-amount" style="font-size: 24px; font-weight: bold; color: #4ade80;">-90,000,000</div>
+                        </div>
+                    </div>
+                    <div id="preview-change-indicator" style="text-align: center; margin-top: 10px; font-size: 12px; color: #888;"></div>
+                </div>
+                <input type="hidden" id="edit-transaction-net-amount">
+
+                <div class="form-group" style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffc107;">
+                    <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
+                        <input type="checkbox" id="edit-transaction-void" style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
+                        <span style="color: #856404; font-weight: 500;">Void this transaction (amount becomes 0)</span>
+                    </label>
+                </div>
+                <input type="hidden" id="edit-transaction-status" name="status" value="active">
+
+                <div class="form-group">
+                    <label for="edit-transaction-note">Correction Note <span style="color: red;">*</span></label>
+                    <textarea id="edit-transaction-note" name="correction_note" rows="3" required placeholder="REQUIRED: Explain why this correction is being made..."></textarea>
+                    <small style="color: #dc3545;">This note is mandatory and will be recorded in the audit log.</small>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="button" class="btn-secondary" onclick="closeEditTransactionModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Correction</button>
+                </div>
+            </form>
         </div>
     </div>
 

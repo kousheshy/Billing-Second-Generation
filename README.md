@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.15.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.16.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -673,13 +673,29 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.15.2
+**Version:** 1.16.0
 **Last Updated:** November 27, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.16.0** (Nov 2025) - Immutable Transaction Correction System
+  - **Immutable Financial Records**: Transactions are NEVER deleted - only corrected with mandatory comments
+  - **Transaction Corrections**: Admins and Reseller Admins can add corrections with mandatory notes
+  - **Void Transactions**: Option to void transactions (net amount becomes 0)
+  - **Live Amount Preview**: Real-time preview showing original → new amount with thousand separators
+  - **Correction Badges**: Visual indicators (CORRECTED/VOIDED) in Transactions tab, Accounting tab, PDF & Excel exports
+  - **Permission Matrix**: Only Super Admin and Reseller Admin can edit; Resellers and Observers are read-only
+  - **Audit Trail**: All corrections logged with timestamp, user, and mandatory explanation
+  - **Database Changes**: Added 6 new columns to `_transactions` table (correction_amount, correction_note, corrected_by, corrected_by_username, corrected_at, status)
+  - **New API**: `api/edit_transaction.php` for transaction corrections
+  - **Migration Script**: `scripts/add_transaction_corrections.php`
+
+- **v1.15.3** (Nov 2025) - Account Deletion with Balance Refund (SUPERSEDED by v1.16.0)
+  - **Note**: Transaction deletion behavior replaced by immutable correction system in v1.16.0
+  - **Audit Trail**: Full details logged to `_audit_log` (preserved permanently)
 
 - **v1.15.2** (Nov 2025) - Accounting Tab UX & PDF Export Improvements
   - **Price Column**: Renamed "Amount" to "Price" for clarity
@@ -1167,4 +1183,4 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**ShowBox Billing System v1.15.2**
+**ShowBox Billing System v1.16.0**
