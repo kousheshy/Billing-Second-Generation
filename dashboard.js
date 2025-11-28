@@ -67,6 +67,33 @@ function parseFormattedNumber(formattedNum) {
 }
 
 /**
+ * Auto-scale balance font size based on text length (v1.17.3)
+ * Ensures large balance numbers fit within the stat card
+ */
+function adjustBalanceFontSize() {
+    const balanceElement = document.getElementById('balance-display');
+    if (!balanceElement) return;
+
+    const textLength = balanceElement.textContent.length;
+    let fontSize;
+
+    // Scale font size based on character count
+    if (textLength > 22) {
+        fontSize = '20px';
+    } else if (textLength > 18) {
+        fontSize = '22px';
+    } else if (textLength > 14) {
+        fontSize = '24px';
+    } else if (textLength > 10) {
+        fontSize = '26px';
+    } else {
+        fontSize = '28px'; // Default size
+    }
+
+    balanceElement.style.fontSize = fontSize;
+}
+
+/**
  * Initialize discount field with thousand separator formatting
  * @param {string} displayId - ID of the display input
  * @param {string} hiddenId - ID of the hidden input that stores actual value
@@ -554,6 +581,9 @@ async function checkAuth() {
         } else {
             // Regular reseller: show balance, hide resellers AND plans
             document.getElementById('balance-display').textContent = getCurrencySymbol(result.user.currency_name) + formatBalance(result.user.balance, result.user.currency_name);
+
+            // Auto-scale balance font size based on text length (v1.17.3)
+            adjustBalanceFontSize();
 
             // Hide admin-only tabs for regular resellers
             document.querySelectorAll('.tab').forEach(tab => {

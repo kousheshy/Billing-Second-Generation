@@ -274,6 +274,12 @@ body {
     position: relative;
     overflow: hidden;
     cursor: default;
+    /* Center content vertically (v1.17.3) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
 }
 
 .stat-card::before {
@@ -316,6 +322,14 @@ body {
     word-wrap: break-word;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     margin-top: var(--spacing-sm);
+}
+
+/* Balance display - auto-scale for large numbers (v1.17.3) */
+#balance-display {
+    font-size: clamp(16px, 5vw, 28px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stat-card:hover .value {
