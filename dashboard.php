@@ -111,7 +111,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.17.1</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.17.3</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -201,9 +201,20 @@ try {
                     </div>
                     <div id="accounts-pagination-info" class="pagination-info"></div>
                 </div>
+                <!-- Bulk Action Bar (v1.17.2) -->
+                <div id="bulk-action-bar" class="bulk-action-bar" style="display:none;">
+                    <div class="bulk-action-info">
+                        <span id="selected-count">0</span> accounts selected
+                    </div>
+                    <div class="bulk-action-buttons">
+                        <button class="btn-secondary" onclick="clearAccountSelection()">Clear Selection</button>
+                        <button class="btn-primary" onclick="openBulkAssignResellerModal()">Assign Reseller</button>
+                    </div>
+                </div>
                 <table id="accounts-table">
                     <thead>
                         <tr>
+                            <th id="bulk-select-header" class="checkbox-col" style="display:none;"><input type="checkbox" id="select-all-accounts" onclick="toggleSelectAllAccounts(this)" title="Select All"></th>
                             <th>Username</th>
                             <th class="sortable" data-sort="full_name">Full Name <span class="sort-icon"></span></th>
                             <th>Phone</th>
@@ -942,7 +953,7 @@ try {
                 <!-- Sync Accounts Section (Admin Only) -->
                 <div id="sync-section" class="sync-section" style="display:none;">
                     <h3>Sync Accounts</h3>
-                    <p>Sync all accounts from Stalker Portal. This will delete all existing accounts and fetch fresh data from the server.</p>
+                    <p>Sync all accounts from ShowBox Portal. This will delete all existing accounts and fetch fresh data from the server.</p>
                     <button class="btn-sync" onclick="syncAccounts()">
                         <span id="sync-icon">⟳</span> Sync from Server
                     </button>
@@ -986,8 +997,8 @@ try {
 
                 <!-- Stalker Portal Settings Section (Super Admin Only) -->
                 <div id="stalker-settings-section" class="settings-item" style="display:none; margin-top: 30px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                    <h3 style="margin-bottom: 10px;">🖥️ Stalker Portal Connection</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Configure connection settings to your Stalker Portal server</p>
+                    <h3 style="margin-bottom: 10px;">🖥️ ShowBox Portal Connection</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Configure connection settings to your ShowBox Portal server</p>
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         <!-- Dual Server Mode Toggle (at top with Edit/Save protection) -->
@@ -1022,28 +1033,28 @@ try {
                         <div class="form-group" style="margin: 0;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">Primary Server Address *</label>
                             <input type="text" id="stalker-server-address" class="reminder-input stalker-field" value="http://81.12.70.4" style="width: 100%;" readonly>
-                            <small style="color: var(--text-tertiary); font-size: 12px;">Main Stalker Portal server IP or domain</small>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Main ShowBox Portal server IP or domain</small>
                         </div>
 
                         <!-- Secondary Server Address (only visible when dual mode enabled) -->
                         <div id="secondary-server-group" class="form-group" style="margin: 0; display: none;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">Secondary Server Address</label>
                             <input type="text" id="stalker-server-2-address" class="reminder-input stalker-field" value="http://81.12.70.4" style="width: 100%;" readonly>
-                            <small style="color: var(--text-tertiary); font-size: 12px;">Second Stalker Portal server for redundancy</small>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">Second ShowBox Portal server for redundancy</small>
                         </div>
 
                         <!-- API Username -->
                         <div class="form-group" style="margin: 0;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">API Username *</label>
                             <input type="text" id="stalker-api-username" class="reminder-input stalker-field" value="admin" style="width: 100%;" readonly>
-                            <small style="color: var(--text-tertiary); font-size: 12px;">Stalker Portal API username</small>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">ShowBox Portal API username</small>
                         </div>
 
                         <!-- API Password -->
                         <div class="form-group" style="margin: 0;">
                             <label style="display: block; margin-bottom: 6px; font-weight: 500;">API Password *</label>
                             <input type="password" id="stalker-api-password" class="reminder-input stalker-field" value="********" style="width: 100%;" readonly>
-                            <small style="color: var(--text-tertiary); font-size: 12px;">Stalker Portal API password (leave empty to keep current)</small>
+                            <small style="color: var(--text-tertiary); font-size: 12px;">ShowBox Portal API password (leave empty to keep current)</small>
                         </div>
 
                         <!-- API Base URL (always disabled, auto-generated) -->
@@ -1670,8 +1681,12 @@ try {
                     <input type="text" name="password" id="account-password" required>
                 </div>
                 <div class="form-group">
-                    <label>Full Name *</label>
-                    <input type="text" name="name" id="account-fullname" autocapitalize="words" required>
+                    <label>First Name *</label>
+                    <input type="text" name="first_name" id="account-firstname" autocapitalize="words" required>
+                </div>
+                <div class="form-group">
+                    <label>Last Name *</label>
+                    <input type="text" name="last_name" id="account-lastname" autocapitalize="words" required>
                 </div>
                 <div class="form-group">
                     <label>Email</label>
@@ -1721,6 +1736,23 @@ try {
                     <div id="add-new-device-plans-container" class="renewal-plans-grid">
                         <!-- New device plans will be loaded dynamically as cards -->
                     </div>
+                </div>
+
+                <!-- Discount Field (Admin/Reseller Admin only) -->
+                <div class="form-group admin-only-field" id="add-discount-group" style="display: none;">
+                    <label>Discount (<span id="add-discount-currency">IRR</span>)</label>
+                    <input type="text" id="add-discount-display" value="0" placeholder="0" autocomplete="off" inputmode="numeric">
+                    <input type="hidden" name="discount" id="add-discount" value="0">
+                    <small>Enter discount amount to subtract from plan price</small>
+                </div>
+
+                <!-- Reseller Selection (Admin/Reseller Admin only) -->
+                <div class="form-group admin-only-field" id="add-reseller-group" style="display: none;">
+                    <label>Assign to Reseller</label>
+                    <select name="reseller" id="add-reseller-select">
+                        <option value="">-- Not Assigned (Use My Account) --</option>
+                    </select>
+                    <small>Select a reseller to assign this account to, or leave as your account</small>
                 </div>
 
                 <div class="form-group" id="add-admin-status-group">
@@ -1918,7 +1950,7 @@ try {
                     <select name="theme" id="edit-reseller-theme">
                         <!-- Themes will be loaded dynamically -->
                     </select>
-                    <small class="text-warning"><strong>⚠️ Warning:</strong> Changing the theme will update the Stalker Portal theme for ALL existing accounts under this reseller. This change will take effect immediately.</small>
+                    <small class="text-warning"><strong>⚠️ Warning:</strong> Changing the theme will update the ShowBox Portal theme for ALL existing accounts under this reseller. This change will take effect immediately.</small>
                 </div>
 
                 <!-- Permissions Section -->
@@ -2009,7 +2041,7 @@ try {
                     <select name="tariff_id" id="tariff-select" required onchange="updatePlanDetails(this)">
                         <option value="">-- Select a tariff --</option>
                     </select>
-                    <small>Choose a tariff plan from your Stalker Portal server</small>
+                    <small>Choose a tariff plan from your ShowBox Portal server</small>
                 </div>
                 <div class="form-group">
                     <label>Plan Name *</label>
@@ -2246,6 +2278,14 @@ try {
                     </div>
                 </div>
 
+                <!-- Discount Field (Admin/Reseller Admin only) -->
+                <div class="form-group admin-only-field" id="edit-discount-group" style="display: none;">
+                    <label>Discount (<span id="edit-discount-currency">IRR</span>)</label>
+                    <input type="text" id="edit-discount-display" value="0" placeholder="0" autocomplete="off" inputmode="numeric">
+                    <input type="hidden" name="discount" id="edit-discount" value="0">
+                    <small>Enter discount amount to subtract from plan price</small>
+                </div>
+
                 <div class="form-group">
                     <label>Comment</label>
                     <textarea id="edit-comment" name="comment" rows="3"></textarea>
@@ -2305,6 +2345,36 @@ try {
                 </div>
 
                 <button type="submit" class="btn-primary">Assign Reseller</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Assign Reseller Modal (v1.17.2) -->
+    <div id="bulkAssignResellerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Bulk Assign Reseller</h3>
+                <button class="close-btn" onclick="closeModal('bulkAssignResellerModal')">&times;</button>
+            </div>
+            <form id="bulkAssignResellerForm" onsubmit="submitBulkAssignReseller(event)">
+                <div class="form-group">
+                    <label>Selected Accounts</label>
+                    <div id="bulk-selected-accounts-list" class="selected-accounts-preview"></div>
+                    <small id="bulk-selected-count-info">0 accounts selected</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Assign to Reseller *</label>
+                    <select id="bulk-assign-reseller-select" name="reseller_id" required>
+                        <option value="">-- Not Assigned --</option>
+                    </select>
+                    <small>All selected accounts will be assigned to this reseller</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('bulkAssignResellerModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Assign to All Selected</button>
+                </div>
             </form>
         </div>
     </div>

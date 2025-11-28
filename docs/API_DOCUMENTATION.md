@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.17.1
+**Version:** 1.17.3
 **Last Updated:** November 28, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -504,7 +504,8 @@ Session management endpoints for auto-logout functionality and session heartbeat
   "username": "user001",
   "password": "password123",
   "mac": "00:1A:79:XX:XX:XX",
-  "full_name": "John Doe",
+  "first_name": "John",
+  "last_name": "Doe",
   "email": "user@example.com",
   "phone": "+447712345678",
   "tariff_plan": "1 Month Plan",
@@ -514,8 +515,14 @@ Session management endpoints for auto-logout functionality and session heartbeat
 }
 ```
 
-**New Fields (v1.7.1):**
-- `phone` (optional) - Customer phone number, sent to Stalker Portal and saved locally
+**Field Changes (v1.17.3):**
+- `first_name` (required) - Customer's first name
+- `last_name` (required) - Customer's last name
+- Backend combines: `full_name = first_name + " " + last_name`
+- Combined `full_name` sent to Stalker Portal and stored in `_accounts.full_name`
+
+**Legacy Fields:**
+- `phone` (optional) - Customer phone number, sent to Stalker Portal and saved locally (v1.7.1)
 
 **Response:**
 ```json

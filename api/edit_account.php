@@ -62,6 +62,7 @@ try {
     $plan_id = isset($_POST['plan']) ? intval($_POST['plan']) : 0;
     $status = isset($_POST['status']) ? intval($_POST['status']) : 1;
     $comment = isset($_POST['comment']) ? trim($_POST['comment']) : '';
+    $discount = isset($_POST['discount']) ? intval($_POST['discount']) : 0;
 
     // Get the account from local database
     $stmt = $pdo->prepare('SELECT * FROM _accounts WHERE username = ?');
@@ -119,10 +120,48 @@ try {
         error_log("edit_account.php: Plan lookup result = " . ($plan ? json_encode($plan) : 'NOT FOUND'));
 
         if($plan) {
+            // Get account's reseller info to validate currency match
+            $account_reseller_id = $account['reseller'];
+            if ($account_reseller_id) {
+                $stmt = $pdo->prepare('SELECT currency_id FROM _users WHERE id = ?');
+                $stmt->execute([$account_reseller_id]);
+                $account_reseller = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($account_reseller) {
+                    // Normalize IRT to IRR for comparison
+                    $plan_curr = ($plan['currency_id'] === 'IRT') ? 'IRR' : $plan['currency_id'];
+                    $reseller_curr = ($account_reseller['currency_id'] === 'IRT') ? 'IRR' : $account_reseller['currency_id'];
+
+                    if ($plan_curr !== $reseller_curr) {
+                        $response['error'] = 1;
+                        $response['err_msg'] = "Plan currency ($plan_curr) does not match account's reseller currency ($reseller_curr). Please select a plan with matching currency.";
+                        error_log("edit_account.php: Currency mismatch - Plan: $plan_curr, Reseller: $reseller_curr");
+                        header('Content-Type: application/json');
+                        echo json_encode($response);
+                        exit();
+                    }
+                }
+            }
+
+            // Calculate final price after discount (only super admin and reseller admin can apply discount)
+            $final_price = (int)$plan['price'];
+            if ($discount > 0 && ($user_info['super_user'] == 1 || $is_reseller_admin)) {
+                // Validate discount doesn't exceed plan price
+                if ($discount > $final_price) {
+                    $response['error'] = 1;
+                    $response['err_msg'] = 'Discount cannot exceed plan price';
+                    header('Content-Type: application/json');
+                    echo json_encode($response);
+                    exit();
+                }
+                $final_price = $final_price - $discount;
+                error_log("edit_account.php: Applied discount of $discount. Final price: $final_price (original: {$plan['price']})");
+            }
+
             // For resellers (not super admins or reseller admins), check if they have enough credit
             // Reseller admins don't have balance - they use admin's resources
             if($user_info['super_user'] != 1 && !$is_reseller_admin) {
-                if($user_info['balance'] < $plan['price']) {
+                if($user_info['balance'] < $final_price) {
                     $response['error'] = 1;
                     $response['err_msg'] = 'Insufficient balance';
                     header('Content-Type: application/json');
@@ -130,19 +169,23 @@ try {
                     exit();
                 }
 
-                // Deduct credit from reseller
-                $new_balance = $user_info['balance'] - $plan['price'];
+                // Deduct credit from reseller (using final_price after discount)
+                $new_balance = $user_info['balance'] - $final_price;
                 $stmt = $pdo->prepare('UPDATE _users SET balance = ? WHERE id = ?');
                 $stmt->execute([$new_balance, $user_info['id']]);
 
-                // Record transaction
+                // Record transaction with final price
+                $details = 'Account renewal: ' . $original_username . ' - Plan: ' . $plan['name'];
+                if ($discount > 0) {
+                    $details .= ' (Discount: ' . $discount . ')';
+                }
                 $stmt = $pdo->prepare('INSERT INTO _transactions (creator, for_user, amount, type, details, timestamp) VALUES (?,?,?,?,?,?)');
                 $stmt->execute([
                     $user_info['username'],
                     $user_info['id'],
-                    -$plan['price'],
+                    -$final_price,
                     1, // type: 1 for renewal
-                    'Account renewal: ' . $original_username . ' - Plan: ' . $plan['name'],
+                    $details,
                     time()
                 ]);
             }

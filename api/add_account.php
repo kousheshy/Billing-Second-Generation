@@ -120,7 +120,13 @@ $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
 
 
-if($user_info['super_user']==1)
+// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
+// (must be parsed before reseller selection logic)
+$permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
+$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
+
+// Super admin and reseller admin can specify a different reseller for the account
+if($user_info['super_user']==1 || $is_reseller_admin)
 {
     if(!empty($_POST['reseller']))
     {
@@ -136,12 +142,6 @@ if($user_info['super_user']==1)
 }else{
     $reseller_info=$user_info;
 }
-
-
-
-// Parse permissions: can_edit|can_add|is_reseller_admin|reserved|reserved
-$permissions = explode('|', $user_info['permissions'] ?? '0|0|0|0|0');
-$is_reseller_admin = isset($permissions[2]) && $permissions[2] === '1';
 
 $price = 0;
 $discount = 0;
@@ -267,6 +267,19 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
         $plan_info = $stmt->fetch(PDO::FETCH_ASSOC);
         error_log("add_account.php: Plan info - id=" . $plan_info['id'] . ", name=" . $plan_info['name'] . ", days=" . $plan_info['days']);
 
+        // Validate that plan currency matches reseller currency (prevent currency mismatch)
+        // Normalize IRT to IRR for comparison
+        $plan_curr = ($plan_info['currency_id'] === 'IRT') ? 'IRR' : $plan_info['currency_id'];
+        $reseller_curr = ($reseller_info['currency_id'] === 'IRT') ? 'IRR' : $reseller_info['currency_id'];
+
+        if ($plan_curr !== $reseller_curr) {
+            $response['error'] = 1;
+            $response['err_msg'] = "Plan currency ($plan_curr) does not match reseller currency ($reseller_curr). Please select a plan with matching currency.";
+            error_log("add_account.php: Currency mismatch - Plan: $plan_curr, Reseller: $reseller_curr");
+            echo json_encode($response);
+            exit();
+        }
+
         // Only check credit if admin is adding account for a reseller
         // Admin and reseller admin don't need credit when adding their own accounts
         if($user_info['super_user']==1 && !empty($_POST['reseller']))
@@ -372,7 +385,10 @@ if($decoded && isset($decoded->results)) {
 
 $username=trim($_POST['username']);
 $password=trim($_POST['password']);
-$name=trim($_POST['name']);
+// Combine first_name and last_name into full_name
+$first_name=trim($_POST['first_name'] ?? '');
+$last_name=trim($_POST['last_name'] ?? '');
+$name = trim($first_name . ' ' . $last_name);
 $email=trim($_POST['email']);
 $phone_number=trim($_POST['phone_number']);
 $account_number=10000000+$last_id;
@@ -523,8 +539,8 @@ if($decoded->status == 'OK')
     // Convert expire_billing_date to MySQL format for local DB (Y-m-d)
     $local_end_date = !empty($expire_billing_date) ? date('Y-m-d', strtotime($expire_billing_date)) : null;
 
-    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, phone_number, reseller, plan, end_date, timestamp) VALUES (?,?,?,?,?,?,?,?)');
-    $stmt->execute([$username, $mac, $email, $phone_number, $reseller_info['id'], $plan_id, $local_end_date, time()]);
+    $stmt = $pdo->prepare('INSERT INTO _accounts (username, mac, email, phone_number, full_name, reseller, plan, end_date, timestamp) VALUES (?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$username, $mac, $email, $phone_number, $name, $reseller_info['id'], $plan_id, $local_end_date, time()]);
 
     if($price>0)
     {

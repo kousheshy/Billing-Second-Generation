@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.17.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.17.3-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -666,20 +666,35 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Current Version: 1.17.1 - November 2025
+- Current Version: 1.17.3 - November 2025
 - **Lead Developer:** Kambiz Koosheshi
 - **GitHub:** [@kousheshy](https://github.com/kousheshy)
 - **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
-**Version:** 1.17.1
+**Version:** 1.17.3
 **Last Updated:** November 28, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.17.3** (Nov 2025) - First Name / Last Name Split in Add Account
+  - **Add Account Modal**: Replaced single "Full Name" field with separate "First Name" and "Last Name" fields
+  - **Mandatory Fields**: Both First Name and Last Name are now required when creating new accounts
+  - **Backend Processing**: `add_account.php` combines first_name + last_name into full_name
+  - **Database Storage**: full_name now properly saved to `_accounts` table (was missing before)
+  - **Stalker Portal**: Combined name sent as `full_name` parameter
+  - **Edit/Renew Modal**: Unchanged - continues to display combined full_name
+  - **Files Modified**: `dashboard.php`, `api/add_account.php`
+
+- **v1.17.2** (Nov 2025) - Bulk Account Selection & Discount Field Enhancements
+  - **Bulk Selection**: Admin can select multiple accounts and assign to reseller in bulk
+  - **Discount Currency**: Dynamic currency display based on selected reseller
+  - **Currency Validation**: Frontend + Backend validation to prevent plan/reseller currency mismatch
+  - **ShowBox Branding**: Changed "Stalker Portal" references to "ShowBox Portal" in UI
 
 - **v1.17.1** (Nov 2025) - Auto-Disable Expired Accounts & MySQL Timezone Fix
   - **Auto-Disable Cron Job**: New `cron/cron_disable_expired_accounts.php` automatically disables expired accounts

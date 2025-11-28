@@ -47,22 +47,23 @@ try {
     // Super admins and observers always see all accounts
     // Reseller admins can toggle between all accounts and their own
     // Regular resellers only see their own
+    // Include reseller's currency_name for discount field display
     if($user_info['super_user'] == 1 || $is_observer)
     {
-        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id ORDER BY a.id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name, c.name as currency_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id LEFT JOIN _currencies c ON r.currency_id = c.id ORDER BY a.id DESC');
         $stmt->execute([]);
     }
     else if($is_reseller_admin && $viewAllAccounts)
     {
         // Reseller admin viewing all accounts
-        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id ORDER BY a.id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name, c.name as currency_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id LEFT JOIN _currencies c ON r.currency_id = c.id ORDER BY a.id DESC');
         $stmt->execute([]);
     }
     else
     {
         // Regular reseller or reseller admin viewing only their own accounts
         error_log("Getting accounts for reseller - ID: " . $user_info['id'] . ", Username: " . $user_info['username']);
-        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id WHERE a.reseller = ? ORDER BY a.id DESC');
+        $stmt = $pdo->prepare('SELECT a.*, p.name as plan_name, r.name as reseller_name, c.name as currency_name FROM _accounts a LEFT JOIN _plans p ON a.plan = p.id LEFT JOIN _users r ON a.reseller = r.id LEFT JOIN _currencies c ON r.currency_id = c.id WHERE a.reseller = ? ORDER BY a.id DESC');
         $stmt->execute([$user_info['id']]);
     }
 

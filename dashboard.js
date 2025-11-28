@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.17.0
+// ShowBox Dashboard v1.17.3
 // ========================================
 
 // ========================================
@@ -37,6 +37,205 @@ function debounce(fn, key, cooldown = 200) {
 
 // ========================================
 // End of Debounce Mechanism
+// ========================================
+
+// ========================================
+// Discount Field Helpers (v1.17.2)
+// ========================================
+
+/**
+ * Format number with thousand separators
+ * @param {number|string} num - The number to format
+ * @returns {string} Formatted number with commas
+ */
+function formatWithThousandSeparator(num) {
+    // Remove any existing separators and non-numeric characters
+    const cleanNum = String(num).replace(/[^0-9]/g, '');
+    if (!cleanNum) return '0';
+    // Add thousand separators
+    return parseInt(cleanNum, 10).toLocaleString('en-US');
+}
+
+/**
+ * Remove thousand separators and get raw number
+ * @param {string} formattedNum - The formatted number string
+ * @returns {number} Raw number value
+ */
+function parseFormattedNumber(formattedNum) {
+    const cleanNum = String(formattedNum).replace(/[^0-9]/g, '');
+    return parseInt(cleanNum, 10) || 0;
+}
+
+/**
+ * Initialize discount field with thousand separator formatting
+ * @param {string} displayId - ID of the display input
+ * @param {string} hiddenId - ID of the hidden input that stores actual value
+ */
+function initDiscountField(displayId, hiddenId) {
+    const displayInput = document.getElementById(displayId);
+    const hiddenInput = document.getElementById(hiddenId);
+
+    if (!displayInput || !hiddenInput) return;
+
+    // Format on input
+    displayInput.addEventListener('input', function(e) {
+        const rawValue = parseFormattedNumber(this.value);
+        const formattedValue = formatWithThousandSeparator(rawValue);
+
+        // Update display with formatted value
+        this.value = formattedValue;
+
+        // Update hidden field with raw value
+        hiddenInput.value = rawValue;
+    });
+
+    // Select all on focus for easy editing
+    displayInput.addEventListener('focus', function() {
+        this.select();
+    });
+
+    // Prevent non-numeric input
+    displayInput.addEventListener('keypress', function(e) {
+        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete') {
+            e.preventDefault();
+        }
+    });
+}
+
+/**
+ * Set discount field currency label
+ * @param {string} currencySpanId - ID of the currency span element
+ * @param {string} currency - Currency code (e.g., 'IRR', 'USD')
+ */
+function setDiscountCurrency(currencySpanId, currency) {
+    const currencySpan = document.getElementById(currencySpanId);
+    if (currencySpan) {
+        // Normalize IRT to IRR (system only uses IRR)
+        let displayCurrency = currency || 'IRR';
+        if (displayCurrency === 'IRT') displayCurrency = 'IRR';
+        currencySpan.textContent = displayCurrency;
+    }
+}
+
+/**
+ * Reset discount field to zero
+ * @param {string} displayId - ID of the display input
+ * @param {string} hiddenId - ID of the hidden input
+ */
+function resetDiscountField(displayId, hiddenId) {
+    const displayInput = document.getElementById(displayId);
+    const hiddenInput = document.getElementById(hiddenId);
+    if (displayInput) displayInput.value = '0';
+    if (hiddenInput) hiddenInput.value = '0';
+}
+
+// ========================================
+// End of Discount Field Helpers
+// ========================================
+
+// ========================================
+// Reseller Selection Helpers for Add Account
+// ========================================
+
+/**
+ * Populate the reseller dropdown in Add Account modal
+ */
+async function populateAddAccountResellerDropdown() {
+    const resellerSelect = document.getElementById('add-reseller-select');
+    if (!resellerSelect) return;
+
+    // Reset to default
+    resellerSelect.innerHTML = '<option value="">-- Not Assigned (Use My Account) --</option>';
+
+    // If allResellers is empty, fetch them first
+    if (!allResellers || allResellers.length === 0) {
+        try {
+            const response = await fetch('api/get_resellers.php');
+            const result = await response.json();
+            if (result.error == 0 && result.resellers) {
+                allResellers = result.resellers;
+            }
+        } catch (error) {
+            console.error('Error fetching resellers for dropdown:', error);
+            return;
+        }
+    }
+
+    // Populate dropdown with resellers
+    if (allResellers && allResellers.length > 0) {
+        allResellers.forEach(reseller => {
+            const option = document.createElement('option');
+            option.value = reseller.id;
+            option.textContent = reseller.name;
+            // Store currency in data attribute for quick lookup
+            option.dataset.currency = reseller.currency_name || 'IRR';
+            resellerSelect.appendChild(option);
+        });
+    }
+
+    // Add onchange event to update discount currency and filter plans when reseller changes
+    resellerSelect.onchange = function() {
+        const selectedOption = this.options[this.selectedIndex];
+        let currency = 'IRR';
+
+        if (this.value === '') {
+            // "Not Assigned" - use current user's currency
+            currency = currentUser?.currency_name || 'IRR';
+        } else {
+            // Use selected reseller's currency from data attribute
+            currency = selectedOption.dataset.currency || 'IRR';
+        }
+
+        // Normalize IRT to IRR
+        if (currency === 'IRT') currency = 'IRR';
+
+        // Update discount currency label
+        setDiscountCurrency('add-discount-currency', currency);
+
+        // Filter plan dropdown to show only plans with matching currency
+        filterAddAccountPlansByCurrency(currency);
+    };
+}
+
+/**
+ * Filter the Add Account plan dropdown by currency
+ * @param {string} currency - Currency to filter by (e.g., 'IRR', 'USD')
+ */
+function filterAddAccountPlansByCurrency(currency) {
+    const planSelect = document.getElementById('add-plan-select');
+    if (!planSelect) return;
+
+    const options = planSelect.querySelectorAll('option');
+    let firstVisibleOption = null;
+
+    options.forEach(option => {
+        if (option.value === '0') {
+            // Always show "No Plan" option
+            option.style.display = '';
+            option.disabled = false;
+            return;
+        }
+
+        const optionCurrency = option.dataset.currency || 'IRR';
+        if (optionCurrency === currency) {
+            option.style.display = '';
+            option.disabled = false;
+            if (!firstVisibleOption) firstVisibleOption = option;
+        } else {
+            option.style.display = 'none';
+            option.disabled = true;
+        }
+    });
+
+    // If current selection is now hidden, reset to "No Plan"
+    const currentOption = planSelect.options[planSelect.selectedIndex];
+    if (currentOption && currentOption.disabled) {
+        planSelect.value = '0';
+    }
+}
+
+// ========================================
+// End of Reseller Selection Helpers
 // ========================================
 
 // PWA Service Worker Registration
@@ -160,6 +359,10 @@ let accountsPagination = {
     sortDirection: 'asc'
 };
 
+// Bulk selection state (v1.17.2)
+let selectedAccounts = new Set(); // Stores usernames of selected accounts
+let allResellers = []; // Stores reseller data for bulk operations
+
 // Transactions pagination state
 let transactionsPagination = {
     currentPage: 1,
@@ -246,6 +449,11 @@ async function checkAuth() {
         const isSuperAdmin = result.user.super_user == 1;
         const isResellerAdmin = result.user.is_reseller_admin === true || result.user.is_reseller_admin === '1';
         const isObserver = result.user.is_observer == 1;
+
+        // Enable bulk selection UI for admins only (v1.17.2)
+        if (isSuperAdmin || isResellerAdmin) {
+            initBulkSelectionUI();
+        }
 
         // Handle different user types
         if(isObserver) {
@@ -1183,6 +1391,35 @@ function openModalCore(modalId) {
             // Hide reseller plan section
             document.getElementById('add-reseller-plan-section').style.display = 'none';
         }
+
+        // Show discount field for super admin and reseller admin only
+        const addDiscountGroup = document.getElementById('add-discount-group');
+        if (addDiscountGroup) {
+            if (isSuperUser || isResellerAdmin) {
+                addDiscountGroup.style.display = 'block';
+                // Reset discount field
+                resetDiscountField('add-discount-display', 'add-discount');
+                // Initialize thousand separator formatting
+                initDiscountField('add-discount-display', 'add-discount');
+                // Set currency from current user
+                const userCurrency = currentUser?.currency_name || 'IRR';
+                setDiscountCurrency('add-discount-currency', userCurrency);
+            } else {
+                addDiscountGroup.style.display = 'none';
+            }
+        }
+
+        // Show reseller selection dropdown for super admin and reseller admin only
+        const addResellerGroup = document.getElementById('add-reseller-group');
+        if (addResellerGroup) {
+            if (isSuperUser || isResellerAdmin) {
+                addResellerGroup.style.display = 'block';
+                // Populate reseller dropdown
+                populateAddAccountResellerDropdown();
+            } else {
+                addResellerGroup.style.display = 'none';
+            }
+        }
     }
 
     if(modalId === 'editAccountModal') {
@@ -1265,9 +1502,11 @@ async function loadAccounts() {
             initializeAccountsSorting();
         } else {
             const tbody = document.getElementById('accounts-tbody');
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+            const colCount = isBulkSelectionEnabled() ? 10 : 9;
+            tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>`;
             document.getElementById('accounts-pagination').innerHTML = '';
             document.getElementById('accounts-pagination-info').textContent = '';
+            clearAccountSelection(); // Clear any selections (v1.17.2)
         }
     } catch(error) {
         console.error('Error loading accounts:', error);
@@ -1641,7 +1880,27 @@ function renderAccountsPage() {
                 fullNameDisplay = account.full_name || '';
             }
 
+            // Check if this account is selected (v1.17.2)
+            const isSelected = selectedAccounts.has(account.username);
+            if (isSelected) {
+                tr.classList.add('selected');
+            }
+
+            // Bulk selection checkbox - only if bulk selection is enabled (v1.17.2)
+            const showBulkCheckbox = isBulkSelectionEnabled();
+            const checkboxCell = showBulkCheckbox
+                ? `<td class="checkbox-cell">
+                    <input type="checkbox"
+                           class="account-checkbox"
+                           data-username="${account.username}"
+                           data-fullname="${account.full_name || account.username}"
+                           ${isSelected ? 'checked' : ''}
+                           onchange="toggleAccountSelection(this)">
+                   </td>`
+                : '';
+
             tr.innerHTML = `
+                ${checkboxCell}
                 <td>${account.username || ''}</td>
                 <td>${fullNameDisplay}</td>
                 <td>${account.phone_number || ''}</td>
@@ -1661,8 +1920,12 @@ function renderAccountsPage() {
 
             tbody.appendChild(tr);
         });
+
+        // Update select-all checkbox state (v1.17.2)
+        updateSelectAllCheckboxState();
     } else {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>';
+        const colCount = isBulkSelectionEnabled() ? 10 : 9;
+        tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:40px;color:#999">No accounts found</td></tr>`;
     }
 
     // Update pagination info
@@ -1887,6 +2150,9 @@ async function loadResellers() {
         const tbody = document.getElementById('resellers-tbody');
 
         if(result.error == 0 && result.resellers && result.resellers.length > 0) {
+            // Store resellers globally for bulk operations (v1.17.2)
+            allResellers = result.resellers;
+
             tbody.innerHTML = '';
             document.getElementById('total-resellers').textContent = result.resellers.length;
 
@@ -2038,6 +2304,8 @@ async function loadPlans() {
                 const option = document.createElement('option');
                 option.value = `${plan.external_id}-${plan.currency_id}`;
                 option.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${plan.days} days)`;
+                // Store currency for filtering (normalize IRT to IRR)
+                option.dataset.currency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
                 planSelect.appendChild(option);
 
                 // Add to reseller plan assignment checkboxes with planID-currency format
@@ -3469,8 +3737,29 @@ async function editAccountCore(username) {
             const statusSelect = document.getElementById('edit-status');
             statusSelect.value = account.status !== undefined ? account.status : '1';
 
-            // Load plans into dropdown for admin
-            await loadPlansForEdit();
+            // Get account's reseller currency (normalize IRT to IRR)
+            let accountCurrency = account.currency_name || currentUser?.currency_name || 'IRR';
+            if (accountCurrency === 'IRT') accountCurrency = 'IRR';
+
+            // Load plans into dropdown for admin, filtered by account's reseller currency
+            await loadPlansForEdit(accountCurrency);
+        }
+
+        // Show discount field for super admin and reseller admin only
+        const editDiscountGroup = document.getElementById('edit-discount-group');
+        if (editDiscountGroup) {
+            if (isSuperUser || isResellerAdmin) {
+                editDiscountGroup.style.display = 'block';
+                // Reset discount field
+                resetDiscountField('edit-discount-display', 'edit-discount');
+                // Initialize thousand separator formatting
+                initDiscountField('edit-discount-display', 'edit-discount');
+                // Set currency - use account's reseller currency or current user's currency
+                const discountCurrency = account.currency_name || currentUser?.currency_name || 'IRR';
+                setDiscountCurrency('edit-discount-currency', discountCurrency);
+            } else {
+                editDiscountGroup.style.display = 'none';
+            }
         }
 
         // Open modal
@@ -3482,9 +3771,9 @@ async function editAccountCore(username) {
     }
 }
 
-async function loadPlansForEdit() {
+async function loadPlansForEdit(filterCurrency = null) {
     try {
-        console.log('[loadPlansForEdit] Starting to load plans...');
+        console.log('[loadPlansForEdit] Starting to load plans...', filterCurrency ? `(filtering by ${filterCurrency})` : '');
         const viewAllAccounts = localStorage.getItem('viewAllAccounts') === 'true';
         const response = await fetch(`api/get_plans.php?viewAllAccounts=${viewAllAccounts}`);
         const result = await response.json();
@@ -3498,8 +3787,19 @@ async function loadPlansForEdit() {
 
         if(result.error == 0 && result.plans) {
             console.log('[loadPlansForEdit] Loading ' + result.plans.length + ' plans');
-            // Show ALL plans for admins (no filtering by category)
-            result.plans.forEach(plan => {
+
+            // Filter plans by currency if specified
+            let plansToShow = result.plans;
+            if (filterCurrency) {
+                plansToShow = result.plans.filter(plan => {
+                    // Normalize IRT to IRR
+                    const planCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
+                    return planCurrency === filterCurrency;
+                });
+                console.log('[loadPlansForEdit] Filtered to ' + plansToShow.length + ' plans matching currency: ' + filterCurrency);
+            }
+
+            plansToShow.forEach(plan => {
                 const option = document.createElement('option');
                 option.value = plan.id;
                 const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
@@ -6136,7 +6436,7 @@ async function loadStalkerSettings() {
         }
     } catch (error) {
         console.error('Error loading Stalker settings:', error);
-        showStalkerStatus('Failed to load Stalker settings', 'error');
+        showStalkerStatus('Failed to load ShowBox Portal settings', 'error');
     }
 }
 
@@ -6255,7 +6555,7 @@ async function testStalkerConnection() {
         const data = await response.json();
 
         if (data.error === 0) {
-            showStalkerStatus('Connection successful! Stalker Portal is reachable.', 'success');
+            showStalkerStatus('Connection successful! ShowBox Portal is reachable.', 'success');
         } else {
             showStalkerStatus(data.message || 'Connection failed', 'error');
         }
@@ -9954,4 +10254,250 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ========================================
 // End of Reseller Payments (v1.17.0)
+// ========================================
+
+// ========================================
+// Bulk Account Selection (v1.17.2)
+// ========================================
+
+/**
+ * Initialize bulk selection UI for admins
+ * Shows the checkbox column header and enables selection features
+ */
+function initBulkSelectionUI() {
+    // Show the checkbox column header
+    const bulkSelectHeader = document.getElementById('bulk-select-header');
+    if (bulkSelectHeader) {
+        bulkSelectHeader.style.display = '';
+    }
+
+    // Mark that bulk selection is enabled (used by renderAccountsPage)
+    window.bulkSelectionEnabled = true;
+
+    console.log('[BulkSelection] UI initialized for admin user');
+}
+
+/**
+ * Check if bulk selection is enabled
+ */
+function isBulkSelectionEnabled() {
+    return window.bulkSelectionEnabled === true;
+}
+
+/**
+ * Toggle selection of a single account
+ */
+function toggleAccountSelection(checkbox) {
+    const username = checkbox.dataset.username;
+    const row = checkbox.closest('tr');
+
+    if (checkbox.checked) {
+        selectedAccounts.add(username);
+        row.classList.add('selected');
+    } else {
+        selectedAccounts.delete(username);
+        row.classList.remove('selected');
+    }
+
+    updateBulkActionBar();
+    updateSelectAllCheckboxState();
+}
+
+/**
+ * Toggle select all accounts on current page
+ */
+function toggleSelectAllAccounts(checkbox) {
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+
+    accountCheckboxes.forEach(cb => {
+        const username = cb.dataset.username;
+        const row = cb.closest('tr');
+
+        if (checkbox.checked) {
+            cb.checked = true;
+            selectedAccounts.add(username);
+            row.classList.add('selected');
+        } else {
+            cb.checked = false;
+            selectedAccounts.delete(username);
+            row.classList.remove('selected');
+        }
+    });
+
+    updateBulkActionBar();
+}
+
+/**
+ * Clear all account selections
+ */
+function clearAccountSelection() {
+    selectedAccounts.clear();
+
+    // Uncheck all checkboxes
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    accountCheckboxes.forEach(cb => {
+        cb.checked = false;
+        const row = cb.closest('tr');
+        if (row) row.classList.remove('selected');
+    });
+
+    // Uncheck select-all checkbox
+    const selectAllCheckbox = document.getElementById('select-all-accounts');
+    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+
+    updateBulkActionBar();
+}
+
+/**
+ * Update the bulk action bar visibility and count
+ */
+function updateBulkActionBar() {
+    const bulkActionBar = document.getElementById('bulk-action-bar');
+    const selectedCountSpan = document.getElementById('selected-count');
+
+    if (selectedAccounts.size > 0) {
+        bulkActionBar.style.display = 'flex';
+        selectedCountSpan.textContent = selectedAccounts.size;
+    } else {
+        bulkActionBar.style.display = 'none';
+    }
+}
+
+/**
+ * Update select-all checkbox state based on current page selections
+ */
+function updateSelectAllCheckboxState() {
+    const selectAllCheckbox = document.getElementById('select-all-accounts');
+    if (!selectAllCheckbox) return;
+
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    if (accountCheckboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        return;
+    }
+
+    const checkedCount = Array.from(accountCheckboxes).filter(cb => cb.checked).length;
+
+    if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedCount === accountCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+/**
+ * Open bulk assign reseller modal
+ */
+async function openBulkAssignResellerModal() {
+    if (selectedAccounts.size === 0) {
+        showAlert('No accounts selected', 'error');
+        return;
+    }
+
+    // Populate selected accounts preview
+    const previewDiv = document.getElementById('bulk-selected-accounts-list');
+    const countInfo = document.getElementById('bulk-selected-count-info');
+
+    // Get full names for selected accounts
+    const accountDetails = [];
+    selectedAccounts.forEach(username => {
+        const checkbox = document.querySelector(`.account-checkbox[data-username="${username}"]`);
+        const fullName = checkbox ? checkbox.dataset.fullname : username;
+        accountDetails.push({ username, fullName });
+    });
+
+    // Display as tags
+    previewDiv.innerHTML = accountDetails.map(a =>
+        `<span class="account-tag" title="${a.username}">${a.fullName}</span>`
+    ).join('');
+
+    countInfo.textContent = `${selectedAccounts.size} account${selectedAccounts.size > 1 ? 's' : ''} selected`;
+
+    // Populate reseller dropdown
+    const resellerSelect = document.getElementById('bulk-assign-reseller-select');
+    resellerSelect.innerHTML = '<option value="">-- Not Assigned --</option>';
+
+    // If allResellers is empty, fetch them first
+    if (!allResellers || allResellers.length === 0) {
+        try {
+            const response = await fetch('api/get_resellers.php');
+            const result = await response.json();
+            if (result.error == 0 && result.resellers) {
+                allResellers = result.resellers;
+            }
+        } catch (error) {
+            console.error('Error fetching resellers:', error);
+        }
+    }
+
+    // Populate dropdown with resellers
+    if (allResellers && allResellers.length > 0) {
+        allResellers.forEach(reseller => {
+            resellerSelect.innerHTML += `<option value="${reseller.id}">${reseller.name}</option>`;
+        });
+    }
+
+    openModal('bulkAssignResellerModal');
+}
+
+/**
+ * Submit bulk assign reseller
+ */
+async function submitBulkAssignReseller(event) {
+    event.preventDefault();
+
+    const resellerId = document.getElementById('bulk-assign-reseller-select').value;
+    const usernames = Array.from(selectedAccounts);
+
+    if (usernames.length === 0) {
+        showAlert('No accounts selected', 'error');
+        return;
+    }
+
+    // Show loading state
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Assigning...';
+    submitBtn.disabled = true;
+
+    try {
+        // Send bulk assign request
+        const response = await fetch('api/bulk_assign_reseller.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usernames: usernames,
+                reseller_id: resellerId || null
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.error === 0) {
+            showAlert(`Successfully assigned ${data.updated_count} account(s) to reseller`, 'success');
+            closeModal('bulkAssignResellerModal');
+            clearAccountSelection();
+            loadAccounts(); // Refresh accounts list
+        } else {
+            showAlert(data.err_msg || 'Failed to assign reseller', 'error');
+        }
+    } catch (error) {
+        console.error('Bulk assign error:', error);
+        showAlert('An error occurred while assigning reseller', 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// ========================================
+// End of Bulk Account Selection (v1.17.2)
 // ========================================
