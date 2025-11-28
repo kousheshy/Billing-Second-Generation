@@ -272,7 +272,10 @@ if($user_info['super_user']==0 && !$is_reseller_admin)
         $plan_curr = ($plan_info['currency_id'] === 'IRT') ? 'IRR' : $plan_info['currency_id'];
         $reseller_curr = ($reseller_info['currency_id'] === 'IRT') ? 'IRR' : $reseller_info['currency_id'];
 
-        if ($plan_curr !== $reseller_curr) {
+        // Unlimited plans (currency='*') are available for all currencies (v1.17.5)
+        $is_unlimited_plan = ($plan_info['currency_id'] === '*');
+
+        if ($plan_curr !== $reseller_curr && !$is_unlimited_plan) {
             $response['error'] = 1;
             $response['err_msg'] = "Plan currency ($plan_curr) does not match reseller currency ($reseller_curr). Please select a plan with matching currency.";
             error_log("add_account.php: Currency mismatch - Plan: $plan_curr, Reseller: $reseller_curr");
@@ -394,24 +397,25 @@ $phone_number=trim($_POST['phone_number']);
 $account_number=10000000+$last_id;
 $mac=trim($_POST['mac']);
 
-// Use strict check for plan value (consistent with above)
+// Plan is required - "No Plan" is not allowed (v1.17.5)
 $plan_post_value = trim($_POST['plan'] ?? '');
 if($plan_post_value === '' || $plan_post_value === '0')
 {
-    $plan="";
-    error_log("add_account.php: No plan selected, tariff_plan will be empty");
-}else
-{
-    // Plan is sent in format "external_id-currency" (e.g., "78-IRR")
-    // We need the external_id for Stalker Portal's tariff_plan field
-    $plan_parts_for_stalker = explode('-', $plan_post_value);
-    $external_id_for_stalker = $plan_parts_for_stalker[0];
-
-    // Use external_id directly for Stalker Portal
-    $plan = $external_id_for_stalker;
-
-    error_log("add_account.php: Plan value from POST: " . $plan_post_value . ", external_id for Stalker: " . $plan);
+    $response['error'] = 1;
+    $response['err_msg'] = 'Please select a plan';
+    echo json_encode($response);
+    exit();
 }
+
+// Plan is sent in format "external_id-currency" (e.g., "78-IRR")
+// We need the external_id for Stalker Portal's tariff_plan field
+$plan_parts_for_stalker = explode('-', $plan_post_value);
+$external_id_for_stalker = $plan_parts_for_stalker[0];
+
+// Use external_id directly for Stalker Portal
+$plan = $external_id_for_stalker;
+
+error_log("add_account.php: Plan value from POST: " . $plan_post_value . ", external_id for Stalker: " . $plan);
 
 $status=$_POST['status'];
 $expire_billing_date=trim($_POST['expire_billing_date']);
@@ -419,12 +423,11 @@ $expire_billing_date=trim($_POST['expire_billing_date']);
 error_log("add_account.php: Calculating expiration - super_user=" . $user_info['super_user'] . ", POST expire_billing_date=" . ($_POST['expire_billing_date'] ?? 'empty') . ", POST plan=" . $_POST['plan']);
 error_log("add_account.php: plan_info set? " . (isset($plan_info) ? 'YES - days=' . ($plan_info['days'] ?? 'null') : 'NO'));
 
-// Determine if plan is "no plan" (unlimited) - use strict check
-// Plan value can be "0", "78-IRR", etc. Only "0" or empty means unlimited
-$plan_value = trim($_POST['plan'] ?? '');
-$is_unlimited_plan = ($plan_value === '' || $plan_value === '0');
+// Determine if plan is unlimited based on days = 0 (v1.17.5)
+$plan_days = isset($plan_info['days']) ? (int)$plan_info['days'] : 30;
+$is_unlimited_plan = ($plan_days === 0);
 
-error_log("add_account.php: Plan value='$plan_value', is_unlimited=$is_unlimited_plan");
+error_log("add_account.php: Plan days=$plan_days, is_unlimited=" . ($is_unlimited_plan ? 'true' : 'false'));
 
 if($user_info['super_user']==1)
 {
@@ -433,11 +436,10 @@ if($user_info['super_user']==1)
         if($is_unlimited_plan)
         {
             $expire_billing_date="";
-            error_log("add_account.php: Admin with no plan, expire_billing_date set to empty (unlimited)");
+            error_log("add_account.php: Admin with unlimited plan (days=0), expire_billing_date set to empty");
         }else
         {
             $now = time();
-            $plan_days = isset($plan_info['days']) ? (int)$plan_info['days'] : 30;
             $expire = $now+($plan_days*86400);
             $expire_billing_date=date('Y/m/d', $expire);
             error_log("add_account.php: Admin with plan, calculated expiration: $expire_billing_date (plan_days=$plan_days)");
@@ -448,12 +450,18 @@ if($user_info['super_user']==1)
     }
 }else
 {
-    // For resellers/reseller admins, always calculate expiration from plan
-    $now = time();
-    $plan_days = isset($plan_info['days']) ? (int)$plan_info['days'] : 30;
-    $expire = $now+($plan_days*86400);
-    $expire_billing_date=date('Y/m/d', $expire);
-    error_log("add_account.php: Reseller calculated expiration: $expire_billing_date (plan_days=$plan_days)");
+    // For resellers/reseller admins, calculate expiration from plan
+    if($is_unlimited_plan)
+    {
+        $expire_billing_date="";
+        error_log("add_account.php: Reseller with unlimited plan (days=0), expire_billing_date set to empty");
+    }else
+    {
+        $now = time();
+        $expire = $now+($plan_days*86400);
+        $expire_billing_date=date('Y/m/d', $expire);
+        error_log("add_account.php: Reseller calculated expiration: $expire_billing_date (plan_days=$plan_days)");
+    }
 }
 
 

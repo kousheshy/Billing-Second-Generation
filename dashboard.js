@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.17.3
+// ShowBox Dashboard v1.17.5
 // ========================================
 
 // ========================================
@@ -244,7 +244,9 @@ function filterAddAccountPlansByCurrency(currency) {
         }
 
         const optionCurrency = option.dataset.currency || 'IRR';
-        if (optionCurrency === currency) {
+        // Always show unlimited plans (currency='*') for all currencies (v1.17.5)
+        const isUnlimitedPlan = optionCurrency === '*';
+        if (optionCurrency === currency || isUnlimitedPlan) {
             option.style.display = '';
             option.disabled = false;
             if (!firstVisibleOption) firstVisibleOption = option;
@@ -759,6 +761,13 @@ function switchTab(tabName) {
         // Load audit log for super admin (v1.12.0)
         if (typeof initAuditLog === 'function') {
             initAuditLog();
+        }
+    }
+
+    // Load STB action history when switching to STB Control tab (v1.17.4)
+    if(tabName === 'stb-control') {
+        if (typeof loadStbLogs === 'function') {
+            loadStbLogs(1);
         }
     }
 }
@@ -2279,10 +2288,12 @@ async function loadPlans() {
 
             result.plans.forEach(plan => {
                 const tr = document.createElement('tr');
-                // Normalize currency display (IRT -> IRR)
-                const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
-                const formattedPrice = formatBalance(plan.price, plan.currency_id);
-                const formattedPriceWithSymbol = getCurrencySymbol(plan.currency_id) + formattedPrice;
+                // Check if this is an unlimited plan (currency='*' or days=0) (v1.17.5)
+                const isUnlimitedPlan = plan.currency_id === '*' || parseInt(plan.days) === 0;
+                // Normalize currency display (IRT -> IRR, * -> - for unlimited plans)
+                const displayCurrency = isUnlimitedPlan ? '-' : ((plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id);
+                const formattedPrice = isUnlimitedPlan ? '-' : formatBalance(plan.price, plan.currency_id);
+                const formattedPriceWithSymbol = isUnlimitedPlan ? '-' : (getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id));
 
                 // Format category display
                 const categoryLabels = {
@@ -2317,13 +2328,16 @@ async function loadPlans() {
                         </div>
                     </td>`;
 
+                // Display "Unlimited" for days=0 (v1.17.5)
+                const displayDays = isUnlimitedPlan ? 'Unlimited' : (plan.days || 0);
+
                 tr.innerHTML = `
                     <td>${plan.external_id || ''}</td>
                     <td>${plan.name || ''}</td>
                     <td>${categoryDisplay}</td>
                     <td>${displayCurrency || ''}</td>
                     <td>${formattedPrice}</td>
-                    <td>${plan.days || 0}</td>
+                    <td>${displayDays}</td>
                     ${actionsColumn}
                 `;
                 tbody.appendChild(tr);
@@ -2333,15 +2347,19 @@ async function loadPlans() {
                 // Add ALL plans to dropdown (admins see all plans)
                 const option = document.createElement('option');
                 option.value = `${plan.external_id}-${plan.currency_id}`;
-                option.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${plan.days} days)`;
+                // Show "Unlimited" instead of "0 days" for unlimited plans (v1.17.5)
+                const optionDaysText = isUnlimitedPlan ? 'Unlimited' : `${plan.days} days`;
+                option.textContent = `${plan.name || plan.external_id} - ${formattedPriceWithSymbol} (${optionDaysText})`;
                 // Store currency for filtering (normalize IRT to IRR)
-                option.dataset.currency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
+                // Unlimited plans (currency='*') are available for ALL currencies (v1.17.5)
+                option.dataset.currency = isUnlimitedPlan ? '*' : ((plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id);
                 planSelect.appendChild(option);
 
                 // Add to reseller plan assignment checkboxes with planID-currency format
                 if(resellerPlansCheckboxes) {
                     // Normalize IRT to IRR for filtering
-                    const filterCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
+                    // Unlimited plans (currency='*') are available for ALL currencies (v1.17.5)
+                    const filterCurrency = isUnlimitedPlan ? '*' : ((plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id);
                     const checkboxItem = document.createElement('div');
                     checkboxItem.className = 'plan-checkbox-item';
                     checkboxItem.dataset.currency = filterCurrency;
@@ -2350,7 +2368,7 @@ async function loadPlans() {
                             <input type="checkbox" name="reseller_plans" value="${plan.external_id}-${plan.currency_id}">
                             <div class="plan-info">
                                 <span class="plan-name">${plan.name || plan.external_id}</span>
-                                <span class="plan-details">${formattedPriceWithSymbol} (${plan.days} days)</span>
+                                <span class="plan-details">${formattedPriceWithSymbol} (${optionDaysText})</span>
                             </div>
                         </label>
                     `;
@@ -2415,15 +2433,36 @@ function populateTariffDropdown() {
 // Update plan details when tariff is selected
 function updatePlanDetails(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const priceInput = document.getElementById('plan-price-input');
+    const currencyInput = document.getElementById('plan-currency-input');
 
     if (selectedOption.value) {
         // Auto-fill name and days from selected tariff
         document.getElementById('plan-name-input').value = selectedOption.dataset.name;
         document.getElementById('plan-days-input').value = selectedOption.dataset.days;
+
+        // Check if unlimited plan (days = 0) - mark as readonly (v1.17.5)
+        const days = parseInt(selectedOption.dataset.days, 10);
+        if (days === 0) {
+            // Unlimited plan - make readonly and style as disabled
+            priceInput.value = '0';
+            priceInput.readOnly = true;
+            priceInput.classList.add('field-disabled');
+            currencyInput.classList.add('field-disabled');
+        } else {
+            // Regular plan - enable price/currency
+            priceInput.readOnly = false;
+            priceInput.classList.remove('field-disabled');
+            currencyInput.classList.remove('field-disabled');
+        }
     } else {
         // Clear fields if no tariff selected
         document.getElementById('plan-name-input').value = '';
         document.getElementById('plan-days-input').value = '';
+        priceInput.value = '';
+        priceInput.readOnly = false;
+        priceInput.classList.remove('field-disabled');
+        currencyInput.classList.remove('field-disabled');
     }
 }
 
@@ -3174,7 +3213,9 @@ function filterPlansByCurrency() {
     let visibleCount = 0;
     planItems.forEach(item => {
         const planCurrency = item.dataset.currency;
-        if (!selectedCurrency || planCurrency === selectedCurrency) {
+        // Always show unlimited plans (currency='*') for all currencies (v1.17.5)
+        const isUnlimitedPlan = planCurrency === '*';
+        if (!selectedCurrency || planCurrency === selectedCurrency || isUnlimitedPlan) {
             item.style.display = '';
             visibleCount++;
         } else {
@@ -3857,11 +3898,17 @@ async function loadRenewalPlans() {
 
         if(result.error == 0 && result.plans) {
             // Filter to only show renew_device plans for renewal cards
-            const renewalPlans = result.plans.filter(plan => plan.category === 'renew_device');
+            // Also include unlimited plans (currency_id='*') regardless of category (v1.17.5)
+            const renewalPlans = result.plans.filter(plan =>
+                plan.category === 'renew_device' || plan.currency_id === '*'
+            );
 
             if(renewalPlans.length > 0) {
                 renewalPlans.forEach(plan => {
-                    const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                    // Handle unlimited plans display (v1.17.5)
+                    const isUnlimited = plan.currency_id === '*';
+                    const formattedPrice = isUnlimited ? '-' : getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                    const durationDisplay = isUnlimited ? 'Unlimited' : `${plan.days} days`;
 
                     const card = document.createElement('div');
                     card.className = 'renewal-plan-card';
@@ -3869,7 +3916,7 @@ async function loadRenewalPlans() {
                     card.innerHTML = `
                         <div class="renewal-plan-checkbox"></div>
                         <div class="renewal-plan-name">${plan.name}</div>
-                        <div class="renewal-plan-duration">${plan.days} days</div>
+                        <div class="renewal-plan-duration">${durationDisplay}</div>
                         <div class="renewal-plan-price">${formattedPrice}</div>
                     `;
 
@@ -3912,11 +3959,17 @@ async function loadNewDevicePlans() {
 
         if(result.error == 0 && result.plans) {
             // Filter to only show new_device plans for add account cards
-            const newDevicePlans = result.plans.filter(plan => plan.category === 'new_device');
+            // Also include unlimited plans (currency_id='*') regardless of category (v1.17.5)
+            const newDevicePlans = result.plans.filter(plan =>
+                plan.category === 'new_device' || plan.currency_id === '*'
+            );
 
             if(newDevicePlans.length > 0) {
                 newDevicePlans.forEach(plan => {
-                    const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                    // Handle unlimited plans display (v1.17.5)
+                    const isUnlimited = plan.currency_id === '*';
+                    const formattedPrice = isUnlimited ? '-' : getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                    const durationDisplay = isUnlimited ? 'Unlimited' : `${plan.days} days`;
 
                     const card = document.createElement('div');
                     card.className = 'renewal-plan-card';
@@ -3925,7 +3978,7 @@ async function loadNewDevicePlans() {
                     card.innerHTML = `
                         <div class="renewal-plan-checkbox"></div>
                         <div class="renewal-plan-name">${plan.name}</div>
-                        <div class="renewal-plan-duration">${plan.days} days</div>
+                        <div class="renewal-plan-duration">${durationDisplay}</div>
                         <div class="renewal-plan-price">${formattedPrice}</div>
                     `;
 
@@ -4157,7 +4210,10 @@ function assignPlans(resellerId, resellerName, currentPlans, resellerCurrency) {
     checkboxContainer.innerHTML = '';
 
     // Filter plans to only show those matching reseller's currency
-    const matchingPlans = availablePlans.filter(plan => plan.currency_id === resellerCurrency);
+    // Also include unlimited plans (currency='*') for all resellers (v1.17.5)
+    const matchingPlans = availablePlans.filter(plan =>
+        plan.currency_id === resellerCurrency || plan.currency_id === '*'
+    );
 
     console.log('[assignPlans] Matching plans:', matchingPlans);
 
@@ -4169,8 +4225,11 @@ function assignPlans(resellerId, resellerName, currentPlans, resellerCurrency) {
         checkboxContainer.innerHTML = `<p style="color: var(--warning); text-align: center; padding: 20px;">No plans available for ${displayCurrency} currency. Please create plans with ${displayCurrency} currency first.</p>`;
     } else {
         matchingPlans.forEach(plan => {
-            const displayCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
-            const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+            // Check if this is an unlimited plan (v1.17.5)
+            const isUnlimitedPlan = plan.currency_id === '*' || parseInt(plan.days) === 0;
+            const displayCurrency = isUnlimitedPlan ? '-' : ((plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id);
+            const formattedPrice = isUnlimitedPlan ? '-' : (getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id));
+            const displayDays = isUnlimitedPlan ? 'Unlimited' : `${plan.days}d`;
             const planValue = `${plan.external_id}-${plan.currency_id}`;
             const isChecked = plansArray.includes(planValue);
 
@@ -4181,7 +4240,7 @@ function assignPlans(resellerId, resellerName, currentPlans, resellerCurrency) {
                     <input type="checkbox" name="plan_checkbox" value="${planValue}" ${isChecked ? 'checked' : ''}>
                     <div class="plan-info">
                         <span class="plan-name">${plan.name || plan.external_id}</span>
-                        <span class="plan-details">${formattedPrice} • ${plan.days}d</span>
+                        <span class="plan-details">${formattedPrice} • ${displayDays}</span>
                     </div>
                 </label>
             `;
@@ -4783,7 +4842,10 @@ async function sendStbEvent(event) {
             // Add to history
             addStbHistory('Event', formData.get('event'), formData.get('mac'));
         } else {
-            showAlert(result.err_msg || 'Error sending event', 'error');
+            // Format user-friendly error message
+            const rawError = result.err_msg || 'Error sending event';
+            const formattedError = formatStbAlertError(rawError);
+            showAlert(formattedError, 'error');
         }
     } catch(error) {
         console.error('Error sending STB event:', error);
@@ -4820,7 +4882,10 @@ async function sendStbMessage(event) {
             // Add to history
             addStbHistory('Message', formData.get('message').substring(0, 50) + '...', formData.get('mac'));
         } else {
-            showAlert(result.err_msg || 'Error sending message', 'error');
+            // Format user-friendly error message
+            const rawError = result.err_msg || 'Error sending message';
+            const formattedError = formatStbAlertError(rawError);
+            showAlert(formattedError, 'error');
         }
     } catch(error) {
         console.error('Error sending STB message:', error);
@@ -4853,37 +4918,198 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Add action to STB history
+ * STB Action History - Permanent Log with Pagination (v1.17.4)
+ */
+
+let currentStbLogPage = 1;
+
+/**
+ * Get STB logs per page from dropdown (default: 10)
+ */
+function getStbLogsPerPage() {
+    const perPageSelect = document.getElementById('stb-per-page');
+    return perPageSelect ? parseInt(perPageSelect.value, 10) : 10;
+}
+
+/**
+ * Add action to STB history (now refreshes from database)
  */
 function addStbHistory(type, action, mac) {
-    const historyContainer = document.getElementById('stb-history');
+    // Refresh logs from database after a short delay (to allow backend to save)
+    setTimeout(() => loadStbLogs(1), 500);
+}
 
-    if(!historyContainer) return;
+/**
+ * Map technical STB error messages to user-friendly messages
+ */
+function formatStbErrorMessage(errorMessage) {
+    if (!errorMessage) return '';
 
-    // Remove "no actions" message if present
-    if(historyContainer.querySelector('p')) {
-        historyContainer.innerHTML = '';
+    const errorMappings = {
+        'Empty stb list': 'STB not found',
+        'empty stb list': 'STB not found',
+        'Unknown error': 'Unable to reach device',
+        'Connection refused': 'Server connection failed',
+        'Connection timed out': 'Device did not respond',
+        'Timeout': 'Device did not respond in time',
+        'timeout': 'Device did not respond in time',
+        'Not authorized': 'Authorization failed',
+        'Access denied': 'Access denied to device'
+    };
+
+    // Check for exact match first
+    if (errorMappings[errorMessage]) {
+        return errorMappings[errorMessage];
     }
 
-    const historyItem = document.createElement('div');
-    historyItem.className = 'stb-history-item';
+    // Check for partial match (case-insensitive)
+    const lowerError = errorMessage.toLowerCase();
+    for (const [key, value] of Object.entries(errorMappings)) {
+        if (lowerError.includes(key.toLowerCase())) {
+            return value;
+        }
+    }
 
-    const now = new Date();
-    const timeString = now.toLocaleTimeString();
+    // Return original message if no mapping found
+    return errorMessage;
+}
 
-    historyItem.innerHTML = `
-        <div class="stb-history-time">${timeString}</div>
-        <div class="stb-history-details">
-            <strong>${type}:</strong> ${action} → <code>${mac}</code>
-        </div>
-    `;
+/**
+ * Format STB alert error messages (for showAlert)
+ * Handles full messages like "Failed to send message: Empty stb list"
+ */
+function formatStbAlertError(fullMessage) {
+    if (!fullMessage) return 'Unknown error';
 
-    // Add to top of list
-    historyContainer.insertBefore(historyItem, historyContainer.firstChild);
+    // Error mappings for the actual error part
+    const errorMappings = {
+        'Empty stb list': 'STB not found',
+        'empty stb list': 'STB not found',
+        'Unknown error': 'Unable to reach device',
+        'Connection refused': 'Server connection failed',
+        'Connection timed out': 'Device did not respond',
+        'Timeout': 'Device did not respond in time'
+    };
 
-    // Keep only last 10 items
-    while(historyContainer.children.length > 10) {
-        historyContainer.removeChild(historyContainer.lastChild);
+    // Check each error mapping
+    for (const [key, value] of Object.entries(errorMappings)) {
+        if (fullMessage.toLowerCase().includes(key.toLowerCase())) {
+            // Replace the error part with user-friendly message
+            if (fullMessage.includes('message')) {
+                return 'Failed to send message: ' + value;
+            } else if (fullMessage.includes('event')) {
+                return 'Failed to send event: ' + value;
+            }
+            return value;
+        }
+    }
+
+    // Return original if no mapping found
+    return fullMessage;
+}
+
+/**
+ * Load STB action logs from database with pagination
+ */
+async function loadStbLogs(page = 1) {
+    const historyContainer = document.getElementById('stb-history');
+    const paginationContainer = document.getElementById('stb-logs-pagination');
+    const filterSelect = document.getElementById('stb-log-filter');
+
+    if (!historyContainer) return;
+
+    currentStbLogPage = page;
+    const actionType = filterSelect ? filterSelect.value : '';
+
+    // Show loading
+    historyContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Loading...</p>';
+
+    try {
+        const perPage = getStbLogsPerPage();
+        const params = new URLSearchParams({
+            page: page,
+            per_page: perPage,
+            action_type: actionType
+        });
+
+        const response = await fetch(`api/get_stb_logs.php?${params}`);
+        const data = await response.json();
+
+        if (data.error !== 0) {
+            historyContainer.innerHTML = `<p style="color: #ff6b6b; text-align: center; padding: 20px;">${data.err_msg || 'Error loading logs'}</p>`;
+            return;
+        }
+
+        const logs = data.logs;
+        const pagination = data.pagination;
+
+        if (logs.length === 0) {
+            historyContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No actions recorded yet</p>';
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            return;
+        }
+
+        // Build logs HTML
+        let html = '';
+        logs.forEach(log => {
+            const typeIcon = log.action_type === 'event' ? '⚡' : '💬';
+            const statusClass = log.status === 'success' ? 'success' : 'failed';
+            const statusIcon = log.status === 'success' ? '✓' : '✗';
+
+            html += `
+                <div class="stb-history-item ${statusClass}">
+                    <div class="stb-history-header">
+                        <span class="stb-history-type">${typeIcon} ${log.action_type.charAt(0).toUpperCase() + log.action_type.slice(1)}</span>
+                        <span class="stb-history-status ${statusClass}">${statusIcon}</span>
+                    </div>
+                    <div class="stb-history-details">
+                        <strong>${log.action_detail}</strong>
+                        <code>${log.mac_address}</code>
+                    </div>
+                    <div class="stb-history-meta">
+                        <span class="stb-history-user">by ${log.username}</span>
+                        <span class="stb-history-time" title="${log.created_at_formatted}">${log.created_at_relative}</span>
+                    </div>
+                    ${log.error_message ? `<div class="stb-history-error">${formatStbErrorMessage(log.error_message)}</div>` : ''}
+                </div>
+            `;
+        });
+
+        historyContainer.innerHTML = html;
+
+        // Update pagination
+        if (paginationContainer && pagination.total_pages > 1) {
+            paginationContainer.style.display = 'flex';
+
+            const infoSpan = document.getElementById('stb-logs-info');
+            const pageInfo = document.getElementById('stb-page-info');
+            const prevBtn = document.getElementById('stb-prev-btn');
+            const nextBtn = document.getElementById('stb-next-btn');
+
+            if (infoSpan) {
+                const start = (pagination.current_page - 1) * pagination.per_page + 1;
+                const end = Math.min(start + logs.length - 1, pagination.total_items);
+                infoSpan.textContent = `Showing ${start}-${end} of ${pagination.total_items}`;
+            }
+
+            if (pageInfo) {
+                pageInfo.textContent = `Page ${pagination.current_page} of ${pagination.total_pages}`;
+            }
+
+            if (prevBtn) {
+                prevBtn.disabled = pagination.current_page <= 1;
+            }
+
+            if (nextBtn) {
+                nextBtn.disabled = pagination.current_page >= pagination.total_pages;
+            }
+        } else if (paginationContainer) {
+            paginationContainer.style.display = 'none';
+        }
+
+    } catch (error) {
+        console.error('Error loading STB logs:', error);
+        historyContainer.innerHTML = '<p style="color: #ff6b6b; text-align: center; padding: 20px;">Error loading action history</p>';
     }
 }
 
@@ -10530,4 +10756,310 @@ async function submitBulkAssignReseller(event) {
 
 // ========================================
 // End of Bulk Account Selection (v1.17.2)
+// ========================================
+
+// ========================================
+// Flatpickr Date Picker Initialization (v1.17.4)
+// Replaces native date inputs with Flatpickr
+// Supports Jalali calendar and data indicators
+// ========================================
+
+/**
+ * Store for Flatpickr instances
+ */
+const flatpickrInstances = {};
+
+/**
+ * Store for cached dates with data (to avoid repeated API calls)
+ */
+const datesWithDataCache = {};
+
+/**
+ * Current calendar type preference (stored in localStorage)
+ */
+let calendarType = localStorage.getItem('calendarType') || 'gregorian';
+
+/**
+ * Fetch dates with data from API
+ * @param {string} type - Type of data (sms_history, reminder_history, audit_log, payments, transactions)
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
+ * @returns {Promise<string[]>} Array of dates with data
+ */
+async function fetchDatesWithData(type, startDate, endDate) {
+    const cacheKey = `${type}_${startDate}_${endDate}`;
+
+    // Check cache first (expires after 5 minutes)
+    const cached = datesWithDataCache[cacheKey];
+    if (cached && (Date.now() - cached.timestamp) < 300000) {
+        return cached.dates;
+    }
+
+    try {
+        const response = await fetch(`api/get_dates_with_data.php?type=${type}&start_date=${startDate}&end_date=${endDate}`);
+        const data = await response.json();
+
+        if (data.error === 0) {
+            // Cache the result
+            datesWithDataCache[cacheKey] = {
+                dates: data.dates,
+                timestamp: Date.now()
+            };
+            return data.dates;
+        }
+    } catch (error) {
+        console.error('[Flatpickr] Error fetching dates with data:', error);
+    }
+
+    return [];
+}
+
+/**
+ * Create onDayCreate callback for adding data indicators
+ * @param {string} dataType - Type of data to check
+ * @returns {Function} Callback function for Flatpickr
+ */
+function createDayCallback(dataType) {
+    return async function(dObj, dStr, fp, dayElem) {
+        // Get the date for this day element
+        const date = dayElem.dateObj;
+        const dateStr = date.toISOString().split('T')[0];
+
+        // Check if this month's dates have been loaded
+        const monthStart = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        // Fetch dates with data for this month range
+        const datesWithData = await fetchDatesWithData(dataType, monthStart, monthEnd);
+
+        // Add has-data class if this date has data
+        if (datesWithData.includes(dateStr)) {
+            dayElem.classList.add('has-data');
+        }
+    };
+}
+
+/**
+ * Create onMonthChange callback to refresh data indicators
+ * @param {string} dataType - Type of data to check
+ * @returns {Function} Callback function for Flatpickr
+ */
+function createMonthChangeCallback(dataType) {
+    return async function(selectedDates, dateStr, instance) {
+        // Get the currently visible month
+        const currentMonth = instance.currentMonth;
+        const currentYear = instance.currentYear;
+
+        const monthStart = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+        const monthEnd = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+
+        // Fetch dates with data
+        const datesWithData = await fetchDatesWithData(dataType, monthStart, monthEnd);
+
+        // Update all day elements
+        const dayElements = instance.calendarContainer.querySelectorAll('.flatpickr-day');
+        dayElements.forEach(dayElem => {
+            if (dayElem.dateObj) {
+                const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+                if (datesWithData.includes(dateStr)) {
+                    dayElem.classList.add('has-data');
+                } else {
+                    dayElem.classList.remove('has-data');
+                }
+            }
+        });
+    };
+}
+
+/**
+ * Initialize Flatpickr on a date input
+ * @param {string} elementId - ID of the input element
+ * @param {string} dataType - Type of data for indicators (optional)
+ * @param {Object} customOptions - Custom Flatpickr options (optional)
+ */
+function initFlatpickr(elementId, dataType = null, customOptions = {}) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.log(`[Flatpickr] Element not found: ${elementId}`);
+        return null;
+    }
+
+    // Destroy existing instance if any
+    if (flatpickrInstances[elementId]) {
+        flatpickrInstances[elementId].destroy();
+    }
+
+    // Check if Jalali plugin is available
+    const hasJalali = typeof flatpickr.l10ns !== 'undefined' && typeof flatpickr.l10ns.fa !== 'undefined';
+    const useJalali = calendarType === 'jalali' && hasJalali;
+
+    // Base options
+    const baseOptions = {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+        disableMobile: true, // Always use Flatpickr (not native on mobile)
+        locale: useJalali ? 'fa' : 'default',
+        onReady: function(selectedDates, dateStr, instance) {
+            // Add jalali class for RTL styling if needed
+            if (useJalali) {
+                instance.calendarContainer.classList.add('flatpickr-jalali');
+            }
+        }
+    };
+
+    // Add data indicator callbacks if dataType is specified
+    if (dataType) {
+        baseOptions.onDayCreate = createDayCallback(dataType);
+        baseOptions.onMonthChange = createMonthChangeCallback(dataType);
+        baseOptions.onYearChange = createMonthChangeCallback(dataType);
+    }
+
+    // Merge with custom options
+    const options = { ...baseOptions, ...customOptions };
+
+    // Initialize Flatpickr
+    try {
+        flatpickrInstances[elementId] = flatpickr(element, options);
+        console.log(`[Flatpickr] Initialized: ${elementId} (${useJalali ? 'Jalali' : 'Gregorian'})`);
+        return flatpickrInstances[elementId];
+    } catch (error) {
+        console.error(`[Flatpickr] Error initializing ${elementId}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Toggle calendar type between Gregorian and Jalali
+ * @param {string} type - 'gregorian' or 'jalali'
+ */
+function setCalendarType(type) {
+    calendarType = type;
+    localStorage.setItem('calendarType', type);
+
+    // Re-initialize all Flatpickr instances with new calendar type
+    reinitializeAllFlatpickr();
+}
+
+/**
+ * Re-initialize all Flatpickr instances (when calendar type changes)
+ */
+function reinitializeAllFlatpickr() {
+    // Re-initialize each instance with current calendar type
+    Object.keys(flatpickrInstances).forEach(elementId => {
+        const instance = flatpickrInstances[elementId];
+        if (instance) {
+            const currentValue = instance.input.value;
+            const dataType = instance._dataType; // Store data type in instance
+            const customOptions = instance._customOptions || {};
+
+            // Re-initialize
+            initFlatpickr(elementId, dataType, customOptions);
+
+            // Restore value
+            if (currentValue && flatpickrInstances[elementId]) {
+                flatpickrInstances[elementId].setDate(currentValue, false);
+            }
+        }
+    });
+}
+
+/**
+ * Initialize all date pickers in the dashboard
+ */
+function initializeAllDatePickers() {
+    console.log('[Flatpickr] Initializing all date pickers...');
+
+    // SMS History date picker
+    const smsHistoryPicker = initFlatpickr('sms-history-date', 'sms_history', {
+        defaultDate: 'today',
+        onChange: function(selectedDates, dateStr) {
+            if (typeof loadSMSHistory === 'function') {
+                loadSMSHistory();
+            }
+        }
+    });
+    if (smsHistoryPicker) smsHistoryPicker._dataType = 'sms_history';
+
+    // Reminder History date picker
+    const reminderHistoryPicker = initFlatpickr('history-date', 'reminder_history', {
+        defaultDate: 'today',
+        onChange: function(selectedDates, dateStr) {
+            if (typeof loadReminderHistory === 'function') {
+                loadReminderHistory();
+            }
+        }
+    });
+    if (reminderHistoryPicker) reminderHistoryPicker._dataType = 'reminder_history';
+
+    // Audit Log date pickers (From/To)
+    const auditFromPicker = initFlatpickr('audit-date-from', 'audit_log', {
+        onChange: function(selectedDates, dateStr) {
+            if (typeof loadAuditLog === 'function') {
+                loadAuditLog(1);
+            }
+        }
+    });
+    if (auditFromPicker) auditFromPicker._dataType = 'audit_log';
+
+    const auditToPicker = initFlatpickr('audit-date-to', 'audit_log', {
+        onChange: function(selectedDates, dateStr) {
+            if (typeof loadAuditLog === 'function') {
+                loadAuditLog(1);
+            }
+        }
+    });
+    if (auditToPicker) auditToPicker._dataType = 'audit_log';
+
+    // Payments date pickers
+    const paymentsStartPicker = initFlatpickr('payments-start-date', 'payments', {
+        onChange: function(selectedDates, dateStr) {
+            if (typeof loadResellerPayments === 'function') {
+                loadResellerPayments();
+            }
+        }
+    });
+    if (paymentsStartPicker) paymentsStartPicker._dataType = 'payments';
+
+    const paymentsEndPicker = initFlatpickr('payments-end-date', 'payments', {
+        onChange: function(selectedDates, dateStr) {
+            if (typeof loadResellerPayments === 'function') {
+                loadResellerPayments();
+            }
+        }
+    });
+    if (paymentsEndPicker) paymentsEndPicker._dataType = 'payments';
+
+    // Payment modal date picker
+    const paymentDatePicker = initFlatpickr('payment-date', 'payments', {
+        defaultDate: 'today'
+    });
+    if (paymentDatePicker) paymentDatePicker._dataType = 'payments';
+
+    console.log('[Flatpickr] All date pickers initialized');
+}
+
+/**
+ * Get Flatpickr instance by element ID
+ * @param {string} elementId - ID of the input element
+ * @returns {Object|null} Flatpickr instance or null
+ */
+function getFlatpickrInstance(elementId) {
+    return flatpickrInstances[elementId] || null;
+}
+
+/**
+ * Clear dates with data cache (call when data changes)
+ */
+function clearDatesWithDataCache() {
+    Object.keys(datesWithDataCache).forEach(key => delete datesWithDataCache[key]);
+}
+
+// Initialize date pickers when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure all elements are rendered
+    setTimeout(initializeAllDatePickers, 500);
+});
+
+// ========================================
+// End of Flatpickr Date Picker (v1.17.4)
 // ========================================

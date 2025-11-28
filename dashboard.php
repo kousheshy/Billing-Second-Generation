@@ -96,6 +96,14 @@ try {
 
     <link rel="stylesheet" href="dashboard.css?v=<?php echo filemtime('dashboard.css'); ?>">
 
+    <!-- Flatpickr Date Picker with Jalali Support (v1.17.4) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fa.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jdate-js@latest/jdate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr-jalali@latest/dist/index.min.js"></script>
+
     <!-- Export Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -111,7 +119,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.17.3</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.17.5</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -671,11 +679,36 @@ try {
                     </div>
                 </div>
 
-                <!-- Recent STB Actions -->
+                <!-- STB Action History (v1.17.4) -->
                 <div class="stb-actions-history" style="margin-top: 30px;">
-                    <h3>Recent Actions</h3>
+                    <div class="section-header" style="margin-bottom: 15px;">
+                        <h3>STB Action History</h3>
+                        <div class="stb-history-filters">
+                            <select id="stb-log-filter" onchange="loadStbLogs(1)">
+                                <option value="">All Actions</option>
+                                <option value="event">Events Only</option>
+                                <option value="message">Messages Only</option>
+                            </select>
+                            <select id="stb-per-page" onchange="loadStbLogs(1)">
+                                <option value="10" selected>10 per page</option>
+                                <option value="25">25 per page</option>
+                                <option value="50">50 per page</option>
+                            </select>
+                            <button class="btn-secondary btn-sm" onclick="loadStbLogs(1)">Refresh</button>
+                        </div>
+                    </div>
                     <div id="stb-history" class="stb-history-list">
-                        <p style="color: #999; text-align: center; padding: 20px;">No recent actions</p>
+                        <p style="color: #999; text-align: center; padding: 20px;">Loading...</p>
+                    </div>
+                    <div id="stb-logs-pagination" class="pagination-container" style="margin-top: 15px; display: none;">
+                        <div class="pagination-info">
+                            <span id="stb-logs-info"></span>
+                        </div>
+                        <div class="pagination-buttons">
+                            <button id="stb-prev-btn" class="btn-secondary btn-sm" onclick="loadStbLogs(currentStbLogPage - 1)" disabled>Previous</button>
+                            <span id="stb-page-info" style="margin: 0 10px;"></span>
+                            <button id="stb-next-btn" class="btn-secondary btn-sm" onclick="loadStbLogs(currentStbLogPage + 1)" disabled>Next</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1719,6 +1752,15 @@ try {
                     <input type="text" name="mac" required placeholder="00:1A:79:xx:xx:xx">
                 </div>
 
+                <!-- Reseller Selection (Admin/Reseller Admin only) - Moved above Plan (v1.17.5) -->
+                <div class="form-group admin-only-field" id="add-reseller-group" style="display: none;">
+                    <label>Assign to Reseller</label>
+                    <select name="reseller" id="add-reseller-select">
+                        <option value="">-- Not Assigned (Use My Account) --</option>
+                    </select>
+                    <small>Select a reseller to assign this account to (affects available plans)</small>
+                </div>
+
                 <!-- Admin Plan Selection (Dropdown) -->
                 <div class="form-group" id="add-admin-plan-group">
                     <label>Plan</label>
@@ -1744,15 +1786,6 @@ try {
                     <input type="text" id="add-discount-display" value="0" placeholder="0" autocomplete="off" inputmode="numeric">
                     <input type="hidden" name="discount" id="add-discount" value="0">
                     <small>Enter discount amount to subtract from plan price</small>
-                </div>
-
-                <!-- Reseller Selection (Admin/Reseller Admin only) -->
-                <div class="form-group admin-only-field" id="add-reseller-group" style="display: none;">
-                    <label>Assign to Reseller</label>
-                    <select name="reseller" id="add-reseller-select">
-                        <option value="">-- Not Assigned (Use My Account) --</option>
-                    </select>
-                    <small>Select a reseller to assign this account to, or leave as your account</small>
                 </div>
 
                 <div class="form-group" id="add-admin-status-group">
@@ -2050,7 +2083,7 @@ try {
                 </div>
                 <div class="form-group">
                     <label>Currency *</label>
-                    <select name="currency" required>
+                    <select name="currency" id="plan-currency-input" required>
                         <option value="GBP">GBP (£)</option>
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
@@ -2059,7 +2092,7 @@ try {
                 </div>
                 <div class="form-group">
                     <label>Price *</label>
-                    <input type="number" step="0.01" name="price" required>
+                    <input type="number" step="0.01" name="price" id="plan-price-input" required>
                     <small>Set the price for this plan in selected currency</small>
                 </div>
                 <div class="form-group">

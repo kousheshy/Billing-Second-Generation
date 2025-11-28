@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.17.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.17.5-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -673,13 +673,20 @@ Unauthorized copying, modification, or distribution is prohibited.
 
 ---
 
-**Version:** 1.17.3
+**Version:** 1.17.5
 **Last Updated:** November 28, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
+
+- **v1.17.5** (Nov 2025) - Unlimited Plans Feature
+  - **Unlimited Plans**: Plans with days=0 are currency-agnostic and category-independent
+  - **Universal Access**: Unlimited plans available to all resellers regardless of currency
+  - **Category Bypass**: Unlimited plans appear in both Add and Edit/Renew flows
+  - **Auto-Configuration**: Currency='*', price=0 set automatically for days=0
+  - **UI Improvements**: "Assign to Reseller" moved above "Plan" in Add Account modal
 
 - **v1.17.3** (Nov 2025) - First Name / Last Name Split in Add Account
   - **Add Account Modal**: Replaced single "Full Name" field with separate "First Name" and "Last Name" fields

@@ -9,6 +9,9 @@ ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
+// Debug logging for v1.17.5
+error_log('[edit_plan.php] Request received: ' . json_encode($_GET));
+
 try {
     include(__DIR__ . '/../config.php');
 
@@ -77,7 +80,8 @@ try {
         exit;
     }
 
-    if(!is_numeric($days) || $days < 1) {
+    // Allow days = 0 for unlimited plans (v1.17.5)
+    if(!is_numeric($days) || $days < 0) {
         echo json_encode(['error' => 1, 'err_msg' => 'Invalid days']);
         exit;
     }
@@ -99,10 +103,22 @@ try {
         exit;
     }
 
-    // Update the plan
-    $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=?, category=? WHERE id=?');
-    $stmt->execute([$name, $price, $days, $category, $plan_id]);
+    // For unlimited plans (days=0), set currency to '*' and price to 0 (v1.17.5)
+    error_log('[edit_plan.php] Processing plan_id=' . $plan_id . ', days=' . $days . ', price=' . $price . ', category=' . $category);
 
+    if ((int)$days === 0) {
+        $currency = '*';
+        $price = 0;
+        error_log('[edit_plan.php] Unlimited plan detected, setting currency=*');
+        $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=?, category=?, currency_id=? WHERE id=?');
+        $stmt->execute([$name, $price, $days, $category, $currency, $plan_id]);
+    } else {
+        // Normal update without changing currency
+        $stmt = $pdo->prepare('UPDATE _plans SET name=?, price=?, days=?, category=? WHERE id=?');
+        $stmt->execute([$name, $price, $days, $category, $plan_id]);
+    }
+
+    error_log('[edit_plan.php] Update successful');
     echo json_encode([
         'error' => 0,
         'err_msg' => '',

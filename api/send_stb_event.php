@@ -12,6 +12,7 @@ error_reporting(0);
 
 include(__DIR__ . '/../config.php');
 include('api.php');
+include('stb_log_helper.php');
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
     $response['error'] = 1;
@@ -188,11 +189,18 @@ try {
         $response['error'] = 0;
         $response['message'] = 'Event sent successfully to device ' . $mac;
 
+        // Log to STB action logs (v1.17.4)
+        logStbEvent($pdo, $mac, $event, 'success');
+
         // Log the action
         error_log("User {$username} sent event '{$event}' to device {$mac}");
     } else {
+        $errorMsg = $decoded->error ?? 'Unknown error';
         $response['error'] = 1;
-        $response['err_msg'] = 'Failed to send event: ' . ($decoded->error ?? 'Unknown error');
+        $response['err_msg'] = 'Failed to send event: ' . $errorMsg;
+
+        // Log failed attempt to STB action logs (v1.17.4)
+        logStbEvent($pdo, $mac, $event, 'failed', $errorMsg);
     }
 
 } catch(Exception $e) {

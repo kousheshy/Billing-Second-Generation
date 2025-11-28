@@ -132,7 +132,10 @@ try {
                     $plan_curr = ($plan['currency_id'] === 'IRT') ? 'IRR' : $plan['currency_id'];
                     $reseller_curr = ($account_reseller['currency_id'] === 'IRT') ? 'IRR' : $account_reseller['currency_id'];
 
-                    if ($plan_curr !== $reseller_curr) {
+                    // Unlimited plans (currency='*') are available for all currencies (v1.17.5)
+                    $is_unlimited_plan = ($plan['currency_id'] === '*');
+
+                    if ($plan_curr !== $reseller_curr && !$is_unlimited_plan) {
                         $response['error'] = 1;
                         $response['err_msg'] = "Plan currency ($plan_curr) does not match account's reseller currency ($reseller_curr). Please select a plan with matching currency.";
                         error_log("edit_account.php: Currency mismatch - Plan: $plan_curr, Reseller: $reseller_curr");
@@ -190,20 +193,28 @@ try {
                 ]);
             }
 
-            // Calculate new expiration date
-            $current_expiration = $account['end_date'] ? strtotime($account['end_date']) : time();
-            $now = time();
+            // Calculate new expiration date (v1.17.5: support unlimited plans with days=0)
+            $plan_days = (int)$plan['days'];
 
-            // If account is expired, start from now, otherwise extend from current expiration
-            $base_date = ($current_expiration < $now) ? $now : $current_expiration;
-            $new_expiration_timestamp = $base_date + ($plan['days'] * 24 * 60 * 60);
-            $new_expiration_date = date('Y-m-d H:i:s', $new_expiration_timestamp);
+            if ($plan_days === 0) {
+                // Unlimited plan - set expiration to empty
+                $new_expiration_date = "";
+                error_log("edit_account.php: Unlimited plan (days=0), setting expiration to empty");
+            } else {
+                $current_expiration = $account['end_date'] ? strtotime($account['end_date']) : time();
+                $now = time();
 
-            // Debug: Log expiration calculation
-            error_log("edit_account.php: Plan days = " . $plan['days']);
-            error_log("edit_account.php: Current expiration = " . $account['end_date'] . " (timestamp: $current_expiration)");
-            error_log("edit_account.php: Base date used = " . date('Y-m-d H:i:s', $base_date) . " (expired: " . ($current_expiration < $now ? 'yes' : 'no') . ")");
-            error_log("edit_account.php: New expiration = " . $new_expiration_date);
+                // If account is expired, start from now, otherwise extend from current expiration
+                $base_date = ($current_expiration < $now) ? $now : $current_expiration;
+                $new_expiration_timestamp = $base_date + ($plan_days * 24 * 60 * 60);
+                $new_expiration_date = date('Y-m-d H:i:s', $new_expiration_timestamp);
+
+                // Debug: Log expiration calculation
+                error_log("edit_account.php: Plan days = " . $plan_days);
+                error_log("edit_account.php: Current expiration = " . $account['end_date'] . " (timestamp: $current_expiration)");
+                error_log("edit_account.php: Base date used = " . date('Y-m-d H:i:s', $base_date) . " (expired: " . ($current_expiration < $now ? 'yes' : 'no') . ")");
+                error_log("edit_account.php: New expiration = " . $new_expiration_date);
+            }
         } else {
             error_log("edit_account.php: Plan NOT FOUND for id = " . $plan_id);
         }

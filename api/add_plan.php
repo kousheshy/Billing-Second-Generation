@@ -78,7 +78,8 @@ try {
         exit;
     }
 
-    if(!in_array($currency, ['GBP', 'USD', 'EUR', 'IRR'])) {
+    // Allow '*' for unlimited plans (validated separately based on days=0)
+    if(!in_array($currency, ['GBP', 'USD', 'EUR', 'IRR', '*'])) {
         echo json_encode(['error' => 1, 'err_msg' => 'Invalid currency']);
         exit;
     }
@@ -88,7 +89,8 @@ try {
         exit;
     }
 
-    if(!is_numeric($days) || $days < 1) {
+    // Allow days = 0 for unlimited plans (v1.17.5)
+    if(!is_numeric($days) || $days < 0) {
         echo json_encode(['error' => 1, 'err_msg' => 'Invalid days']);
         exit;
     }
@@ -102,6 +104,12 @@ try {
 
     // Use tariff_id as external_id (the Stalker Portal tariff plan ID)
     $plan = $tariff_id;
+
+    // For unlimited plans (days=0), set currency to '*' so it's available for all currencies (v1.17.5)
+    if ((int)$days === 0) {
+        $currency = '*';
+        $price = 0;
+    }
 
     // Check if this tariff ID + currency combination already exists
     $stmt = $pdo->prepare('SELECT * FROM _plans WHERE external_id = ? AND currency_id = ?');

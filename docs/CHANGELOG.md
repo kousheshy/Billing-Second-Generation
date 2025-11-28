@@ -7,6 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.17.5] - 2025-11-28
+
+### Added - Unlimited Plans Feature
+
+**Status:** Production Release
+
+#### Overview
+
+Introduces unlimited plans that are currency-agnostic and category-independent, allowing them to be used across all resellers regardless of their currency setting and in both Add Account and Edit/Renew flows.
+
+#### New Features
+
+**Unlimited Plans:**
+- Plans with `days = 0` are automatically treated as unlimited plans
+- Currency is automatically set to `*` (wildcard) for unlimited plans
+- Price is automatically set to `0` for unlimited plans
+- Unlimited plans are visible to ALL resellers regardless of their assigned currency
+- Unlimited plans appear in both "Add Account" (new_device) and "Edit/Renew" (renew_device) sections
+- Unlimited plans bypass category filtering
+
+**UI Improvements:**
+- "Assign to Reseller" dropdown moved above "Plan" dropdown in Add Account modal
+- This allows admin/reseller admin to select reseller first, which affects available plans
+- Unlimited plans display "-" for currency and "Unlimited" for duration
+- Plan cards show "Unlimited" instead of "0 days" for unlimited plans
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `api/add_plan.php` | Set currency='*' and price=0 when days=0 |
+| `api/edit_plan.php` | Update currency to '*' when editing to days=0 |
+| `api/get_plans.php` | Include unlimited plans (currency='*') for all resellers |
+| `api/add_account.php` | Skip currency validation for unlimited plans |
+| `api/edit_account.php` | Skip currency validation for unlimited plans |
+| `api/assign_plans.php` | Allow assigning unlimited plans to any reseller |
+| `dashboard.js` | Category-independent filtering, display formatting |
+| `dashboard.php` | Moved Assign to Reseller above Plan in Add Account modal |
+
+#### Technical Details
+
+**Currency Validation Bypass:**
+```php
+// Unlimited plans (currency='*') are available for all currencies
+$is_unlimited_plan = ($plan_info['currency_id'] === '*');
+
+if ($plan_curr !== $reseller_curr && !$is_unlimited_plan) {
+    // Currency mismatch error only for non-unlimited plans
+}
+```
+
+**Category-Independent Filtering (JavaScript):**
+```javascript
+// Include unlimited plans regardless of category
+const renewalPlans = result.plans.filter(plan =>
+    plan.category === 'renew_device' || plan.currency_id === '*'
+);
+
+const newDevicePlans = result.plans.filter(plan =>
+    plan.category === 'new_device' || plan.currency_id === '*'
+);
+```
+
+**Display Formatting:**
+```javascript
+const isUnlimited = plan.currency_id === '*';
+const formattedPrice = isUnlimited ? '-' : getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+const durationDisplay = isUnlimited ? 'Unlimited' : `${plan.days} days`;
+```
+
+#### Database
+
+The existing `_plans` table now supports:
+- `currency_id = '*'` for unlimited plans
+- `days = 0` for unlimited duration
+- `price = 0.00` for unlimited plans
+
+No new tables or migrations required.
+
+#### Usage
+
+**Creating an Unlimited Plan:**
+1. Go to Plans tab
+2. Click "Add Plan"
+3. Enter plan details with **Days = 0**
+4. Currency will automatically be set to '*'
+5. Plan will be available to all resellers
+
+**Editing to Unlimited:**
+1. Edit any existing plan
+2. Set Days to 0
+3. Currency will automatically change to '*'
+
+---
+
 ## [1.17.1] - 2025-11-28
 
 ### Added - Auto-Disable Expired Accounts & MySQL Timezone Fix

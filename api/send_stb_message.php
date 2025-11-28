@@ -13,6 +13,7 @@ error_reporting(0);
 include(__DIR__ . '/../config.php');
 include('api.php');
 include('audit_helper.php');
+include('stb_log_helper.php');
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
     $response['error'] = 1;
@@ -141,11 +142,18 @@ try {
         // Audit log: Message sent to STB (v1.13.0)
         auditStbMessage($pdo, $mac, $message);
 
+        // Log to STB action logs (v1.17.4)
+        logStbMessage($pdo, $mac, $message, 'success');
+
         // Log the action
         error_log("User {$username} sent message to device {$mac}: {$message}");
     } else {
+        $errorMsg = $decoded->error ?? 'Unknown error';
         $response['error'] = 1;
-        $response['err_msg'] = 'Failed to send message: ' . ($decoded->error ?? 'Unknown error');
+        $response['err_msg'] = 'Failed to send message: ' . $errorMsg;
+
+        // Log failed attempt to STB action logs (v1.17.4)
+        logStbMessage($pdo, $mac, $message, 'failed', $errorMsg);
     }
 
 } catch(Exception $e) {

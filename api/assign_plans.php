@@ -82,8 +82,11 @@ if(!empty($plans)) {
             $plan_id = $parts[0];
             $plan_currency = $parts[1];
 
-            // Check if plan currency matches reseller currency
-            if($plan_currency !== $reseller_currency) {
+            // Unlimited plans (currency='*') are available for all resellers (v1.17.5)
+            $is_unlimited_plan = ($plan_currency === '*');
+
+            // Check if plan currency matches reseller currency (skip for unlimited plans)
+            if($plan_currency !== $reseller_currency && !$is_unlimited_plan) {
                 // Get plan name for better error message
                 $stmt = $pdo->prepare('SELECT name, external_id FROM _plans WHERE external_id = ? AND currency_id = ?');
                 $stmt->execute([$plan_id, $plan_currency]);

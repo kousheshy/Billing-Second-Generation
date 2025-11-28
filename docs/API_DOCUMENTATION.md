@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.17.3
+**Version:** 1.17.5
 **Last Updated:** November 28, 2025
 **Base URL:** `http://your-domain.com/`
 
@@ -980,6 +980,36 @@ The `permissions` field is a pipe-delimited string with 7 fields:
   "err_msg": "Plan deleted successfully"
 }
 ```
+
+---
+
+### Unlimited Plans (v1.17.5)
+
+**Feature:** Plans with `days = 0` are treated as unlimited plans.
+
+**Characteristics:**
+- `currency_id` is automatically set to `*` (wildcard)
+- `price` is automatically set to `0`
+- Available to ALL resellers regardless of their currency
+- Appears in both Add Account (new_device) and Edit/Renew (renew_device) sections
+- Bypasses category filtering
+
+**Example Unlimited Plan:**
+```json
+{
+  "id": 21,
+  "external_id": "18",
+  "name": "UNLIMITED",
+  "currency_id": "*",
+  "price": "0.00",
+  "days": 0,
+  "category": "new_device"
+}
+```
+
+**Display Formatting:**
+- Currency displays as: `-`
+- Duration displays as: `Unlimited`
 
 ---
 

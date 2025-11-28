@@ -65,7 +65,7 @@ try {
         error_log('[get_plans.php] User: ' . $user_info['username'] . ' | Assigned plans: ' . ($assigned_plans ?: 'NONE'));
 
         if(empty($assigned_plans)) {
-            // If no plans assigned, show empty array
+            // If no plans assigned, show empty array (but still include unlimited plans)
             $plans = [];
         } else {
             // Parse plan assignments (format: "planID-currency,planID-currency")
@@ -94,6 +94,27 @@ try {
                         error_log('[get_plans.php] Plan NOT FOUND for external_id=' . $plan_id . ', currency_id=' . $currency);
                     }
                 }
+            }
+        }
+
+        // Always include unlimited plans (currency_id='*') for all resellers (v1.17.5)
+        // These plans are available to everyone regardless of their assigned plans
+        $stmt = $pdo->prepare("SELECT * FROM _plans WHERE currency_id = '*'");
+        $stmt->execute();
+        $unlimited_plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add unlimited plans if not already in the list
+        foreach($unlimited_plans as $unlimited_plan) {
+            $already_exists = false;
+            foreach($plans as $p) {
+                if($p['id'] == $unlimited_plan['id']) {
+                    $already_exists = true;
+                    break;
+                }
+            }
+            if(!$already_exists) {
+                $plans[] = $unlimited_plan;
+                error_log('[get_plans.php] Added unlimited plan: ' . $unlimited_plan['name']);
             }
         }
     }
