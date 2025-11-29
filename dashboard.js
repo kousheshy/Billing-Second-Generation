@@ -1,5 +1,5 @@
 // ========================================
-// ShowBox Dashboard v1.17.5
+// ShowBox Dashboard v1.18.0
 // ========================================
 
 // ========================================
@@ -476,12 +476,26 @@ async function checkAuth() {
 
         // Check if user is super admin, reseller admin, or observer
         const isSuperAdmin = result.user.super_user == 1;
-        const isResellerAdmin = result.user.is_reseller_admin === true || result.user.is_reseller_admin === '1';
+        const isResellerAdmin = result.user.is_reseller_admin == 1 || result.user.is_reseller_admin === true;
         const isObserver = result.user.is_observer == 1;
+
+        console.log('[DEBUG] User permissions - isSuperAdmin:', isSuperAdmin, 'isResellerAdmin:', isResellerAdmin, 'is_reseller_admin value:', result.user.is_reseller_admin);
+
+        // Set global permission variables for Telegram and other features (v1.18.0)
+        window.userIsSuperAdmin = isSuperAdmin;
+        window.userIsResellerAdmin = isResellerAdmin;
 
         // Enable bulk selection UI for admins only (v1.17.2)
         if (isSuperAdmin || isResellerAdmin) {
             initBulkSelectionUI();
+        }
+
+        // Show Telegram tab for super admin and reseller admin only (v1.18.0)
+        if (isSuperAdmin || isResellerAdmin) {
+            const telegramTabBtn = document.getElementById('telegram-tab-btn');
+            if (telegramTabBtn) {
+                telegramTabBtn.style.display = 'inline-block';
+            }
         }
 
         // Handle different user types
@@ -536,6 +550,12 @@ async function checkAuth() {
             const mobilePushBtn = document.getElementById('mobile-push-btn');
             if (mobilePushBtn) {
                 mobilePushBtn.style.display = 'flex';
+            }
+
+            // Show Mail tab for super admin only (v1.18.0)
+            const mailTabBtn = document.getElementById('mail-tab-btn');
+            if (mailTabBtn) {
+                mailTabBtn.style.display = 'inline-block';
             }
 
             // Hide Plans and Transactions tabs in bottom navigation (PWA) for super admin
@@ -2375,6 +2395,31 @@ async function loadPlans() {
                     resellerPlansCheckboxes.appendChild(checkboxItem);
                 }
             });
+
+            // v1.17.5: Add change listener to disable discount for unlimited plans (admin dropdown)
+            planSelect.onchange = function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const discountGroup = document.getElementById('add-discount-group');
+                const discountInput = document.getElementById('add-discount');
+                const discountDisplay = document.getElementById('add-discount-display');
+
+                if (discountGroup && discountInput && selectedOption) {
+                    const isUnlimitedPlan = selectedOption.dataset.currency === '*';
+                    if (isUnlimitedPlan) {
+                        discountInput.value = 0;
+                        if (discountDisplay) discountDisplay.value = '';
+                        discountInput.disabled = true;
+                        if (discountDisplay) discountDisplay.disabled = true;
+                        discountGroup.style.opacity = '0.5';
+                        discountGroup.title = 'Discount not available for unlimited plans';
+                    } else {
+                        discountInput.disabled = false;
+                        if (discountDisplay) discountDisplay.disabled = false;
+                        discountGroup.style.opacity = '1';
+                        discountGroup.title = '';
+                    }
+                }
+            };
         } else {
             console.log('[loadPlans] No plans to display. Error:', result.error, 'Plans:', result.plans);
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999">No plans found</td></tr>';
@@ -3860,24 +3905,55 @@ async function loadPlansForEdit(filterCurrency = null) {
             console.log('[loadPlansForEdit] Loading ' + result.plans.length + ' plans');
 
             // Filter plans by currency if specified
+            // Also include unlimited plans (currency='*') for all currencies (v1.17.5)
             let plansToShow = result.plans;
             if (filterCurrency) {
                 plansToShow = result.plans.filter(plan => {
                     // Normalize IRT to IRR
                     const planCurrency = (plan.currency_id === 'IRT') ? 'IRR' : plan.currency_id;
-                    return planCurrency === filterCurrency;
+                    // Include unlimited plans (currency='*') for all currencies (v1.17.5)
+                    return planCurrency === filterCurrency || plan.currency_id === '*';
                 });
-                console.log('[loadPlansForEdit] Filtered to ' + plansToShow.length + ' plans matching currency: ' + filterCurrency);
+                console.log('[loadPlansForEdit] Filtered to ' + plansToShow.length + ' plans matching currency: ' + filterCurrency + ' (including unlimited)');
             }
 
             plansToShow.forEach(plan => {
                 const option = document.createElement('option');
                 option.value = plan.id;
-                const formattedPrice = getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
-                option.textContent = `${plan.name} - ${formattedPrice} (${plan.days} days)`;
+                // Handle unlimited plans display (v1.17.5)
+                const isUnlimited = plan.currency_id === '*';
+                const formattedPrice = isUnlimited ? '-' : getCurrencySymbol(plan.currency_id) + formatBalance(plan.price, plan.currency_id);
+                const daysDisplay = isUnlimited ? 'Unlimited' : `${plan.days} days`;
+                option.textContent = `${plan.name} - ${formattedPrice} (${daysDisplay})`;
+                option.dataset.isUnlimited = isUnlimited ? 'true' : 'false'; // v1.17.5: track unlimited
                 planSelect.appendChild(option);
             });
             console.log('[loadPlansForEdit] Dropdown now has ' + planSelect.options.length + ' options');
+
+            // v1.17.5: Add change listener to disable discount for unlimited plans (edit dropdown)
+            planSelect.onchange = function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const discountGroup = document.getElementById('edit-discount-group');
+                const discountInput = document.getElementById('edit-discount');
+                const discountDisplay = document.getElementById('edit-discount-display');
+
+                if (discountGroup && discountInput && selectedOption) {
+                    const isUnlimitedPlan = selectedOption.dataset.isUnlimited === 'true';
+                    if (isUnlimitedPlan) {
+                        discountInput.value = 0;
+                        if (discountDisplay) discountDisplay.value = '';
+                        discountInput.disabled = true;
+                        if (discountDisplay) discountDisplay.disabled = true;
+                        discountGroup.style.opacity = '0.5';
+                        discountGroup.title = 'Discount not available for unlimited plans';
+                    } else {
+                        discountInput.disabled = false;
+                        if (discountDisplay) discountDisplay.disabled = false;
+                        discountGroup.style.opacity = '1';
+                        discountGroup.title = '';
+                    }
+                }
+            };
         } else {
             console.error('[loadPlansForEdit] No plans returned or error:', result);
         }
@@ -3913,6 +3989,7 @@ async function loadRenewalPlans() {
                     const card = document.createElement('div');
                     card.className = 'renewal-plan-card';
                     card.dataset.planId = plan.id;
+                    card.dataset.isUnlimited = isUnlimited ? 'true' : 'false'; // v1.17.5: track unlimited plans
                     card.innerHTML = `
                         <div class="renewal-plan-checkbox"></div>
                         <div class="renewal-plan-name">${plan.name}</div>
@@ -3928,6 +4005,27 @@ async function loadRenewalPlans() {
                         });
                         // Select this card
                         this.classList.add('selected');
+
+                        // v1.17.5: Disable discount field for unlimited plans (renewal cards)
+                        const discountGroup = document.getElementById('edit-discount-group');
+                        const discountInput = document.getElementById('edit-discount');
+                        const discountDisplay = document.getElementById('edit-discount-display');
+                        if (discountGroup && discountInput) {
+                            const isUnlimitedPlan = this.dataset.isUnlimited === 'true';
+                            if (isUnlimitedPlan) {
+                                discountInput.value = 0;
+                                if (discountDisplay) discountDisplay.value = '';
+                                discountInput.disabled = true;
+                                if (discountDisplay) discountDisplay.disabled = true;
+                                discountGroup.style.opacity = '0.5';
+                                discountGroup.title = 'Discount not available for unlimited plans';
+                            } else {
+                                discountInput.disabled = false;
+                                if (discountDisplay) discountDisplay.disabled = false;
+                                discountGroup.style.opacity = '1';
+                                discountGroup.title = '';
+                            }
+                        }
                     });
 
                     container.appendChild(card);
@@ -3975,6 +4073,7 @@ async function loadNewDevicePlans() {
                     card.className = 'renewal-plan-card';
                     // Store in format expected by add_account.php: "external_id-currency_id"
                     card.dataset.planId = plan.external_id + '-' + plan.currency_id;
+                    card.dataset.isUnlimited = isUnlimited ? 'true' : 'false'; // v1.17.5: track unlimited plans
                     card.innerHTML = `
                         <div class="renewal-plan-checkbox"></div>
                         <div class="renewal-plan-name">${plan.name}</div>
@@ -3990,6 +4089,27 @@ async function loadNewDevicePlans() {
                         });
                         // Select this card
                         this.classList.add('selected');
+
+                        // v1.17.5: Disable discount field for unlimited plans
+                        const discountGroup = document.getElementById('add-discount-group');
+                        const discountInput = document.getElementById('add-discount');
+                        const discountDisplay = document.getElementById('add-discount-display');
+                        if (discountGroup && discountInput) {
+                            const isUnlimitedPlan = this.dataset.isUnlimited === 'true';
+                            if (isUnlimitedPlan) {
+                                discountInput.value = 0;
+                                if (discountDisplay) discountDisplay.value = '';
+                                discountInput.disabled = true;
+                                if (discountDisplay) discountDisplay.disabled = true;
+                                discountGroup.style.opacity = '0.5';
+                                discountGroup.title = 'Discount not available for unlimited plans';
+                            } else {
+                                discountInput.disabled = false;
+                                if (discountDisplay) discountDisplay.disabled = false;
+                                discountGroup.style.opacity = '1';
+                                discountGroup.title = '';
+                            }
+                        }
                     });
 
                     container.appendChild(card);

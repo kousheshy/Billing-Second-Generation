@@ -2,7 +2,7 @@
 
 A comprehensive IPTV billing and account management system integrated with Stalker Portal. This web-based application provides administrators and resellers with powerful tools to manage subscriptions, track accounts, and monitor business metrics.
 
-![Version](https://img.shields.io/badge/version-1.17.5-blue.svg)
+![Version](https://img.shields.io/badge/version-1.18.2-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange.svg)
@@ -666,21 +666,40 @@ Unauthorized copying, modification, or distribution is prohibited.
 **Developed for ShowBox**
 - IPTV Billing Management System
 - Integrated with Stalker Portal
-- Current Version: 1.17.3 - November 2025
+- Current Version: 1.17.6 - November 2025
 - **Lead Developer:** Kambiz Koosheshi
 - **GitHub:** [@kousheshy](https://github.com/kousheshy)
 - **Repository:** [Billing-Second-Generation](https://github.com/kousheshy/Billing-Second-Generation)
 
 ---
 
-**Version:** 1.17.5
-**Last Updated:** November 28, 2025
+**Version:** 1.18.2
+**Last Updated:** November 29, 2025
 **Status:** Production Release
 **Maintained by:** ShowBox Development Team
 **Developer:** Kambiz Koosheshi
 
 ## Version History
 
+- **v1.18.2** (Nov 2025) - Telegram Notification System
+  - **Telegram Integration**: Send notifications via Telegram bot
+  - **User Preferences**: Users can link Telegram accounts for notifications
+  - **Bot Commands**: /start, /link, /unlink, /status commands
+  - **Multi-Channel**: Email + Telegram notification support
+  - **Selective Delivery**: Send to both, email only, or Telegram only
+
+- **v1.18.1** (Nov 2025) - Hotfix Release
+  - **Bug Fixes**: Server2 notification delivery improvements
+  - **Code Cleanup**: Removed obsolete SMS system remnants
+
+- **v1.18.0** (Nov 2025) - Email Notification System
+  - **Email Integration**: PHPMailer for automated notifications
+  - **Template System**: Customizable email templates
+  - **Mail Logs**: Complete audit trail of sent emails
+  - **SMTP Support**: Gmail, custom SMTP configuration
+  - **Expiry Reminders**: Automated cron job for expiring accounts
+
+- **v1.17.6** (Nov 2025) - Unlimited Plans Bug Fixes
 - **v1.17.5** (Nov 2025) - Unlimited Plans Feature
   - **Unlimited Plans**: Plans with days=0 are currency-agnostic and category-independent
   - **Universal Access**: Unlimited plans available to all resellers regardless of currency

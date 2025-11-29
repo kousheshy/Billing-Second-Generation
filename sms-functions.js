@@ -3,6 +3,51 @@
  * Handles SMS configuration, sending, and history management
  */
 
+// Add click handler for telegram button via JavaScript (bypass onclick issue)
+document.addEventListener('DOMContentLoaded', function() {
+    const telegramBtn = document.getElementById('telegram-tab-btn');
+    if (telegramBtn) {
+        console.log('[DEBUG] Adding click listener to telegram button');
+        telegramBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Direct implementation to bypass any issues with switchMessagingTab
+            const stbContent = document.getElementById('stb-messages-content');
+            const smsContent = document.getElementById('sms-messages-content');
+            const mailContent = document.getElementById('mail-messages-content');
+            const telegramContent = document.getElementById('telegram-messages-content');
+            const tabs = document.querySelectorAll('.messaging-tab-btn');
+
+            // Hide all content
+            if (stbContent) stbContent.style.display = 'none';
+            if (smsContent) smsContent.style.display = 'none';
+            if (mailContent) mailContent.style.display = 'none';
+
+            // Show telegram content
+            if (telegramContent) {
+                telegramContent.style.display = 'block';
+            } else {
+                alert('ERROR: telegram-messages-content NOT FOUND!');
+                return;
+            }
+
+            // Update active tab
+            tabs.forEach(btn => btn.classList.remove('active'));
+            telegramBtn.classList.add('active');
+
+            // Load telegram settings
+            if (typeof loadTelegramSettings === 'function') {
+                loadTelegramSettings();
+            }
+
+            localStorage.setItem('messagingSubTab', 'telegram');
+        });
+    } else {
+        console.log('[DEBUG] telegram-tab-btn not found in DOMContentLoaded');
+    }
+});
+
 // Global SMS state
 let smsCurrentPage = 1;
 let smsPageSize = 25;
@@ -11,27 +56,56 @@ let smsFilteredLogs = [];
 let smsTemplates = [];
 let smsAccountsWithPhone = [];
 
-// Switch between STB and SMS messaging tabs
+// Switch between STB, SMS, Mail, and Telegram messaging tabs
 function switchMessagingTab(tab) {
+    console.log('[DEBUG] switchMessagingTab called with:', tab);
     const stbContent = document.getElementById('stb-messages-content');
     const smsContent = document.getElementById('sms-messages-content');
+    const mailContent = document.getElementById('mail-messages-content');
+    const telegramContent = document.getElementById('telegram-messages-content');
     const tabs = document.querySelectorAll('.messaging-tab-btn');
+    console.log('[DEBUG] telegramContent found:', !!telegramContent);
 
+    // Hide all content
+    if (stbContent) stbContent.style.display = 'none';
+    if (smsContent) smsContent.style.display = 'none';
+    if (mailContent) mailContent.style.display = 'none';
+    if (telegramContent) telegramContent.style.display = 'none';
+
+    // Remove active class from all tabs
     tabs.forEach(btn => btn.classList.remove('active'));
 
     if (tab === 'stb') {
-        stbContent.style.display = 'block';
-        smsContent.style.display = 'none';
+        if (stbContent) stbContent.style.display = 'block';
         tabs[0].classList.add('active');
     } else if (tab === 'sms') {
-        stbContent.style.display = 'none';
-        smsContent.style.display = 'block';
+        if (smsContent) smsContent.style.display = 'block';
         tabs[1].classList.add('active');
 
         // Load SMS settings and data when switching to SMS tab
         loadSMSSettings();
         loadAccountsWithPhone();
         loadSMSHistory();
+    } else if (tab === 'mail') {
+        if (mailContent) mailContent.style.display = 'block';
+        const mailTabBtn = document.getElementById('mail-tab-btn');
+        if (mailTabBtn) mailTabBtn.classList.add('active');
+
+        // Load mail settings if function exists
+        if (typeof loadMailSettings === 'function') {
+            loadMailSettings();
+        }
+    } else if (tab === 'telegram') {
+        if (telegramContent) {
+            telegramContent.style.display = 'block';
+        }
+        const telegramTabBtn = document.getElementById('telegram-tab-btn');
+        if (telegramTabBtn) telegramTabBtn.classList.add('active');
+
+        // Load telegram settings
+        if (typeof loadTelegramSettings === 'function') {
+            loadTelegramSettings();
+        }
     }
 
     // Save current messaging sub-tab to localStorage

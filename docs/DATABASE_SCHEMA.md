@@ -2,8 +2,8 @@
 
 Complete database schema documentation for the ShowBox Billing Panel.
 
-**Version:** 1.17.0
-**Last Updated:** November 27, 2025
+**Version:** 1.18.1
+**Last Updated:** November 28, 2025
 **Database:** MySQL 5.7+ / MariaDB 10.3+
 **Character Set:** utf8mb4
 **Collation:** utf8mb4_unicode_ci
@@ -57,12 +57,13 @@ This will:
 
 ## Overview
 
-The ShowBox Billing Panel uses **20 tables** organized into functional groups:
+The ShowBox Billing Panel uses **24 tables** organized into functional groups:
 
 | Group | Tables | Purpose |
 |-------|--------|---------|
 | Core | 6 tables | Users, accounts, plans, transactions, currencies, reminders |
 | SMS | 4 tables | SMS settings, logs, templates, tracking |
+| Mail | 4 tables | Mail settings, logs, templates, tracking (v1.18.0) |
 | Security | 3 tables | WebAuthn, login history, audit log |
 | Push | 2 tables | Push subscriptions, expiry tracking |
 | Settings | 3 tables | Reminder settings, Stalker settings, app settings |
@@ -100,6 +101,10 @@ The ShowBox Billing Panel uses **20 tables** organized into functional groups:
 | `_app_settings` | Global application settings | id, setting_key, setting_value | v1.11.20 |
 | `_reseller_payments` | Reseller payment tracking | id, reseller_id, amount, payment_date | v1.17.0 |
 | `_iranian_banks` | Iranian banks reference | id, code, name_fa, name_en | v1.17.0 |
+| `_mail_settings` | SMTP configuration per user | id, user_id, smtp_host, smtp_username | v1.18.0 |
+| `_mail_templates` | Email templates with HTML body | id, user_id, name, subject, body_html | v1.18.0 |
+| `_mail_logs` | Email sending history | id, recipient_email, status, message_type | v1.18.0 |
+| `_mail_reminder_tracking` | Multi-stage email tracking | id, account_id, reminder_stage | v1.18.0 |
 
 ---
 
@@ -410,6 +415,103 @@ CREATE TABLE `_sms_reminder_tracking` (
     UNIQUE KEY `unique_reminder` (`account_id`, `reminder_stage`, `end_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
+
+---
+
+## Mail Tables (v1.18.0)
+
+### 11. _mail_settings
+
+**Purpose:** Store SMTP configuration per user
+
+```sql
+CREATE TABLE `_mail_settings` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `smtp_host` VARCHAR(255) DEFAULT 'mail.showboxtv.tv',
+    `smtp_port` INT DEFAULT 587,
+    `smtp_secure` ENUM('tls', 'ssl', 'none') DEFAULT 'tls',
+    `smtp_username` VARCHAR(255),
+    `smtp_password` VARCHAR(255),
+    `from_email` VARCHAR(255),
+    `from_name` VARCHAR(255) DEFAULT 'ShowBox',
+    `auto_send_new_account` TINYINT(1) DEFAULT 1,
+    `auto_send_renewal` TINYINT(1) DEFAULT 1,
+    `auto_send_expiry` TINYINT(1) DEFAULT 1,
+    `notify_admin` TINYINT(1) DEFAULT 1,
+    `notify_reseller` TINYINT(1) DEFAULT 1,
+    `days_before_expiry` INT DEFAULT 7,
+    `enable_multistage_reminders` TINYINT(1) DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### 12. _mail_templates
+
+**Purpose:** Store email templates with HTML body
+
+```sql
+CREATE TABLE `_mail_templates` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `subject` VARCHAR(255) NOT NULL,
+    `body_html` TEXT NOT NULL,
+    `body_plain` TEXT,
+    `description` VARCHAR(255),
+    `is_active` TINYINT(1) DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_user` (`user_id`),
+    INDEX `idx_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### 13. _mail_logs
+
+**Purpose:** Store email sending history
+
+```sql
+CREATE TABLE `_mail_logs` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `account_id` INT DEFAULT NULL,
+    `recipient_email` VARCHAR(255) NOT NULL,
+    `recipient_name` VARCHAR(255),
+    `cc_emails` TEXT,
+    `subject` VARCHAR(255) NOT NULL,
+    `body` TEXT NOT NULL,
+    `message_type` ENUM('manual', 'new_account', 'renewal', 'expiry_reminder') NOT NULL,
+    `sent_by` INT NOT NULL,
+    `status` ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
+    `error_message` TEXT,
+    `smtp_response` TEXT,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_status` (`status`),
+    INDEX `idx_type` (`message_type`),
+    INDEX `idx_created` (`created_at`),
+    INDEX `idx_recipient` (`recipient_email`),
+    INDEX `idx_account` (`account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### 14. _mail_reminder_tracking
+
+**Purpose:** Track multi-stage email reminders sent to accounts
+
+```sql
+CREATE TABLE `_mail_reminder_tracking` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `account_id` INT NOT NULL,
+    `reminder_stage` INT NOT NULL COMMENT '1=7days, 2=3days, 3=1day, 4=expired',
+    `sent_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_reminder` (`account_id`, `reminder_stage`),
+    INDEX `idx_account` (`account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Migration Script:** `scripts/create_mail_tables.php`
 
 ---
 
@@ -820,6 +922,8 @@ Then run: `php scripts/setup_complete_database.php`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.18.1 | 2025-11-28 | Hotfix: File permission fix, Server 2 notification reversion (no schema changes) |
+| 1.18.0 | 2025-11-28 | Added _mail_settings, _mail_templates, _mail_logs, _mail_reminder_tracking tables for email system |
 | 1.17.0 | 2025-11-27 | Added _reseller_payments and _iranian_banks tables for payment tracking and balance calculation |
 | 1.16.0 | 2025-11-27 | Added transaction correction columns (correction_amount, correction_note, corrected_by, corrected_by_username, corrected_at, status) with indexes |
 | 1.15.3 | 2025-11-27 | Account deletion with balance refund (superseded by v1.16.0 immutable records) |

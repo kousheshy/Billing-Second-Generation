@@ -1,6 +1,6 @@
 # ShowBox Billing Panel - Documentation Index
 
-Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.17.5!
+Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.18.1!
 
 ---
 
@@ -208,6 +208,7 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.17.5
 - **Auto-Disable Expired Accounts**: [AUTO_DISABLE_EXPIRED_ACCOUNTS.md](AUTO_DISABLE_EXPIRED_ACCOUNTS.md) **NEW in v1.17.1**
 - **Push Notifications**: [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md)
 - **Multi-Stage SMS Reminders**: [MULTISTAGE_SMS_GUIDE.md](MULTISTAGE_SMS_GUIDE.md)
+- **Email Notification System**: [DEPLOYMENT_v1.18.0_SUMMARY.md](DEPLOYMENT_v1.18.0_SUMMARY.md) **NEW in v1.18.0**
 
 ### API Reference
 - Authentication: [API_DOCUMENTATION.md#authentication](API_DOCUMENTATION.md#authentication)
@@ -230,10 +231,10 @@ Welcome to the comprehensive documentation for the ShowBox Billing Panel v1.17.5
 
 | Attribute | Value |
 |-----------|-------|
-| Product Version | 1.11.22 |
-| Release Date | November 25, 2025 |
-| Documentation Version | 1.11.22 |
-| Last Updated | November 25, 2025 |
+| Product Version | 1.18.0 |
+| Release Date | November 28, 2025 |
+| Documentation Version | 1.18.0 |
+| Last Updated | November 28, 2025 |
 | Status | Production Ready ✅ |
 
 ---

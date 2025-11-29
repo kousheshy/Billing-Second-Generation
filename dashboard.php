@@ -119,7 +119,7 @@ try {
     <nav class="navbar">
         <div class="navbar-brand">
             <h1>ShowBox Billing Panel</h1>
-            <small class="app-version">© 2025 All Rights Reserved | v1.17.5</small>
+            <small class="app-version">© 2025 All Rights Reserved | v1.18.2</small>
         </div>
         <div class="user-info":
             <span id="user-balance"></span>
@@ -1306,10 +1306,12 @@ try {
                     <p style="color: var(--text-secondary); margin-top: 8px;">Manage automated and manual messaging to your customers</p>
                 </div>
 
-                <!-- SMS Tab Navigation -->
+                <!-- Messaging Tab Navigation -->
                 <div class="messaging-tabs" style="margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     <button class="messaging-tab-btn active" onclick="switchMessagingTab('stb')">STB Messages</button>
                     <button class="messaging-tab-btn" onclick="switchMessagingTab('sms')">SMS Messages</button>
+                    <button class="messaging-tab-btn" id="mail-tab-btn" onclick="switchMessagingTab('mail')" style="display:none;">Mail</button>
+                    <button class="messaging-tab-btn" id="telegram-tab-btn" onclick="switchMessagingTab('telegram')" style="display:none;">Telegram</button>
                 </div>
 
                 <!-- STB Messages Content -->
@@ -1692,9 +1694,656 @@ try {
                         </div>
                     </div>
                 </div> <!-- End SMS Messages Content -->
+
+                <!-- Mail Messages Content -->
+                <div id="mail-messages-content" class="messaging-tab-content" style="display:none;">
+                    <!-- Mail Configuration Section -->
+                    <div class="mail-config-section">
+                        <h3>Mail Configuration</h3>
+                        <p>Configure your email settings for sending notifications to customers</p>
+
+                        <div class="reminder-config">
+                            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="form-group">
+                                    <label>SMTP Host *</label>
+                                    <input type="text" id="mail-smtp-host" class="reminder-input" value="mail.showboxtv.tv" placeholder="mail.showboxtv.tv">
+                                </div>
+                                <div class="form-group">
+                                    <label>SMTP Port *</label>
+                                    <select id="mail-smtp-port" class="reminder-input">
+                                        <option value="587">587 (TLS - Recommended)</option>
+                                        <option value="465">465 (SSL)</option>
+                                        <option value="25">25 (No encryption)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="background: var(--bg-secondary); padding: 16px; border-radius: var(--radius-md); border-left: 4px solid var(--primary); margin: 15px 0;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">Email Account Credentials</h4>
+                                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>Email Address *</label>
+                                        <input type="email" id="mail-smtp-username" class="reminder-input" placeholder="info@showboxtv.tv">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="mail-smtp-password" class="reminder-input" placeholder="Enter password" style="padding-right: 40px;">
+                                            <button type="button" onclick="toggleMailPasswordVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px;" title="Show/Hide password">
+                                                <span id="mail-password-toggle-icon">👁</span>
+                                            </button>
+                                        </div>
+                                        <small id="mail-password-status" style="color: var(--text-tertiary);"></small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="form-group">
+                                    <label>From Email</label>
+                                    <input type="email" id="mail-from-email" class="reminder-input" placeholder="info@showboxtv.tv">
+                                    <small>Leave empty to use SMTP username</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>From Name</label>
+                                    <input type="text" id="mail-from-name" class="reminder-input" value="ShowBox" placeholder="ShowBox">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">Automatic Email Options</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                                    <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm);">
+                                        <span class="toggle-text" style="font-size: 13px;">New account email</span>
+                                        <div class="reminder-toggle">
+                                            <input type="checkbox" id="mail-auto-new-account" checked>
+                                            <span class="toggle-slider-reminder round"></span>
+                                        </div>
+                                    </label>
+                                    <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm);">
+                                        <span class="toggle-text" style="font-size: 13px;">Renewal email</span>
+                                        <div class="reminder-toggle">
+                                            <input type="checkbox" id="mail-auto-renewal" checked>
+                                            <span class="toggle-slider-reminder round"></span>
+                                        </div>
+                                    </label>
+                                    <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm);">
+                                        <span class="toggle-text" style="font-size: 13px;">Expiry reminder</span>
+                                        <div class="reminder-toggle">
+                                            <input type="checkbox" id="mail-auto-expiry" checked>
+                                            <span class="toggle-slider-reminder round"></span>
+                                        </div>
+                                    </label>
+                                    <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm);">
+                                        <span class="toggle-text" style="font-size: 13px;">CC Admin</span>
+                                        <div class="reminder-toggle">
+                                            <input type="checkbox" id="mail-notify-admin" checked>
+                                            <span class="toggle-slider-reminder round"></span>
+                                        </div>
+                                    </label>
+                                    <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm);">
+                                        <span class="toggle-text" style="font-size: 13px;">CC Reseller</span>
+                                        <div class="reminder-toggle">
+                                            <input type="checkbox" id="mail-notify-reseller" checked>
+                                            <span class="toggle-slider-reminder round"></span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button class="btn-secondary" onclick="testMailConnection()">Test Connection</button>
+                                <button class="btn-primary" onclick="saveMailSettings()">Save Settings</button>
+                            </div>
+                        </div>
+
+                        <div id="mail-config-status" class="reminder-status" style="display:none;"></div>
+                    </div>
+
+                    <!-- Send Mail Section -->
+                    <div class="mail-send-section" style="margin-top: 30px;">
+                        <h3>Send Email</h3>
+                        <p>Send manual emails to customers or multiple accounts</p>
+
+                        <div style="margin: 15px 0; display: flex; gap: 0;">
+                            <button class="sms-tab-btn active" id="mail-mode-manual-btn" onclick="switchMailSendMode('manual')">Manual</button>
+                            <button class="sms-tab-btn" id="mail-mode-accounts-btn" onclick="switchMailSendMode('accounts')">To Accounts</button>
+                        </div>
+
+                        <!-- Manual Mode -->
+                        <div id="mail-manual-mode" class="reminder-config">
+                            <div class="form-group">
+                                <label>Recipient Email *</label>
+                                <input type="email" id="mail-manual-email" class="reminder-input" placeholder="customer@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Recipient Name</label>
+                                <input type="text" id="mail-manual-name" class="reminder-input" placeholder="Customer Name">
+                            </div>
+                            <div class="form-group">
+                                <label>Subject *</label>
+                                <input type="text" id="mail-manual-subject" class="reminder-input" placeholder="Email subject">
+                            </div>
+                            <div class="form-group">
+                                <label>Template (Optional)</label>
+                                <select id="mail-manual-template" class="reminder-input" onchange="loadMailTemplateContent('manual')">
+                                    <option value="">-- Select a template --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Message *</label>
+                                <textarea id="mail-manual-message" rows="6" class="reminder-textarea" placeholder="Write your email message here..."></textarea>
+                                <small>Available variables: {name}, {mac}, {expiry_date}, {plan_name}</small>
+                            </div>
+                            <button class="btn-primary" onclick="sendManualMail()">Send Email</button>
+                        </div>
+
+                        <!-- Accounts Mode -->
+                        <div id="mail-accounts-mode" class="reminder-config" style="display:none;">
+                            <div class="form-group">
+                                <label>Search Accounts</label>
+                                <input type="text" id="mail-accounts-search" class="reminder-input" placeholder="Search by name, email, or MAC..." oninput="filterMailAccounts()">
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="mail-select-all-accounts" onchange="toggleAllMailAccounts()">
+                                    Select All with Email
+                                </label>
+                            </div>
+
+                            <div id="mail-accounts-list" class="sms-accounts-list" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 15px;">
+                                <p style="text-align: center; color: var(--text-tertiary);">Loading accounts...</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Subject *</label>
+                                <input type="text" id="mail-accounts-subject" class="reminder-input" placeholder="Email subject">
+                            </div>
+                            <div class="form-group">
+                                <label>Template</label>
+                                <select id="mail-accounts-template" class="reminder-input" onchange="loadMailTemplateContent('accounts')">
+                                    <option value="">-- Select a template --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Message *</label>
+                                <textarea id="mail-accounts-message" rows="6" class="reminder-textarea" placeholder="Use {name}, {mac}, {expiry_date} for personalization"></textarea>
+                                <small>Each recipient will receive a personalized message</small>
+                            </div>
+                            <button class="btn-primary" onclick="sendMailToAccounts()">Send to Selected (<span id="mail-selected-count">0</span>)</button>
+                        </div>
+
+                        <div id="mail-send-status" class="reminder-status" style="display:none;"></div>
+                    </div>
+
+                    <!-- Mail Templates Section -->
+                    <div class="mail-templates-section" style="margin-top: 30px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div>
+                                <h3 style="margin: 0;">Email Templates</h3>
+                                <p style="color: var(--text-secondary); margin: 5px 0 0 0;">Manage your email templates for automated messages</p>
+                            </div>
+                            <button class="btn-primary" onclick="openMailTemplateModal()">+ Add Template</button>
+                        </div>
+
+                        <div id="mail-templates-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                            <p style="text-align: center; color: var(--text-tertiary); grid-column: 1/-1; padding: 40px;">Loading templates...</p>
+                        </div>
+                    </div>
+
+                    <!-- Mail History Section -->
+                    <div class="mail-history-section" style="margin-top: 30px;">
+                        <h3>Email History</h3>
+                        <p>View all sent emails with filtering options</p>
+
+                        <div class="history-controls" style="margin-top: 15px;">
+                            <div class="date-browser">
+                                <button class="btn-date-nav" onclick="changeMailHistoryDate(-1)" title="Previous day">◀</button>
+                                <input type="date" id="mail-history-date" onchange="loadMailHistory()" class="history-date-input">
+                                <button class="btn-date-nav" onclick="changeMailHistoryDate(1)" title="Next day">▶</button>
+                                <button class="btn-today" onclick="setMailHistoryToday()">Today</button>
+                            </div>
+                        </div>
+
+                        <div class="history-search-controls" style="margin-top: 10px;">
+                            <input type="text" id="mail-history-search" placeholder="Search by email, name, or subject..." class="history-search-input" oninput="filterMailHistory()">
+                            <select id="mail-history-status-filter" class="history-filter-select" onchange="loadMailHistory()">
+                                <option value="">All Status</option>
+                                <option value="sent">Sent</option>
+                                <option value="failed">Failed</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                            <select id="mail-history-type-filter" class="history-filter-select" onchange="loadMailHistory()">
+                                <option value="">All Types</option>
+                                <option value="manual">Manual</option>
+                                <option value="new_account">New Account</option>
+                                <option value="renewal">Renewal</option>
+                                <option value="expiry_reminder">Expiry Reminder</option>
+                            </select>
+                        </div>
+
+                        <div id="mail-history-table-container" class="history-table-container" style="margin-top: 15px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Recipient</th>
+                                        <th>Subject</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Sent By</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mail-history-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+                                            Select a date to view email history
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="history-pagination" id="mail-history-pagination" style="display:none; margin-top: 15px;">
+                            <div class="pagination-info">
+                                <span id="mail-history-page-info">Showing 0-0 of 0</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn-pagination" onclick="changeMailHistoryPage(-1)" id="mail-history-prev-btn" disabled>Previous</button>
+                                <span id="mail-history-page-numbers"></span>
+                                <button class="btn-pagination" onclick="changeMailHistoryPage(1)" id="mail-history-next-btn" disabled>Next</button>
+                            </div>
+                            <div class="pagination-size">
+                                <label>Show:</label>
+                                <select id="mail-history-page-size" onchange="changeMailHistoryPageSize()">
+                                    <option value="10">10</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                <span>per page</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mail Statistics -->
+                    <div class="mail-stats-section" style="margin-top: 30px;">
+                        <h3>Email Statistics</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="mail-stats-total">0</div>
+                                <div class="stat-label">Total Sent</div>
+                            </div>
+                            <div class="stat-card stat-success-card">
+                                <div class="stat-value" id="mail-stats-sent">0</div>
+                                <div class="stat-label">Successful</div>
+                            </div>
+                            <div class="stat-card stat-error-card">
+                                <div class="stat-value" id="mail-stats-failed">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="mail-stats-pending">0</div>
+                                <div class="stat-label">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Mail Messages Content -->
+
+                <!-- Telegram Messages Content -->
+                <div id="telegram-messages-content" class="messaging-tab-content" style="display:none;">
+                    <!-- Telegram Bot Configuration Section (Super Admin Only) -->
+                    <div id="telegram-bot-config-section" class="telegram-config-section" style="display:none;">
+                        <h3>Telegram Bot Configuration</h3>
+                        <p>Configure your Telegram bot for sending notifications to admins and reseller admins</p>
+
+                        <div class="reminder-config">
+                            <div class="form-group">
+                                <label>Bot Token *</label>
+                                <div style="position: relative;">
+                                    <input type="password" id="telegram-bot-token" class="reminder-input" placeholder="Enter your Telegram Bot Token">
+                                    <button type="button" onclick="toggleTelegramTokenVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px;" title="Show/Hide token">
+                                        <span id="telegram-token-toggle-icon">👁</span>
+                                    </button>
+                                </div>
+                                <small>Get your bot token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a> on Telegram</small>
+                            </div>
+
+                            <div id="telegram-bot-info" style="display:none; background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-md); margin: 15px 0; border-left: 4px solid var(--success);">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 24px;">🤖</span>
+                                    <div>
+                                        <strong id="telegram-bot-name">Bot Name</strong>
+                                        <div style="color: var(--text-secondary); font-size: 13px;">@<span id="telegram-bot-username">username</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                <button class="btn-secondary" onclick="verifyTelegramBot()">Test Connection</button>
+                                <button class="btn-primary" onclick="saveTelegramBotSettings()">Save Settings</button>
+                            </div>
+                        </div>
+
+                        <div id="telegram-bot-status" class="reminder-status" style="display:none;"></div>
+                    </div>
+
+                    <!-- Link Telegram Account Section -->
+                    <div class="telegram-link-section" style="margin-top: 30px;">
+                        <h3>Link Your Telegram Account</h3>
+                        <p>Connect your Telegram to receive notifications</p>
+
+                        <div class="reminder-config">
+                            <div id="telegram-link-status" style="padding: 20px; text-align: center; background: var(--bg-secondary); border-radius: var(--radius-md);">
+                                <!-- Status will be loaded dynamically -->
+                                <p style="color: var(--text-tertiary);">Loading...</p>
+                            </div>
+
+                            <div id="telegram-link-form" style="display:none; margin-top: 20px;">
+                                <div class="form-group">
+                                    <label>Your Chat ID</label>
+                                    <input type="text" id="telegram-chat-id-input" class="reminder-input" placeholder="Enter your Telegram Chat ID">
+                                    <small>
+                                        To get your Chat ID:
+                                        <ol style="margin: 10px 0; padding-left: 20px; color: var(--text-secondary);">
+                                            <li>Open Telegram and search for <a href="https://t.me/userinfobot" target="_blank" style="color: var(--primary);">@userinfobot</a></li>
+                                            <li>Send any message to the bot</li>
+                                            <li>Copy the <strong>Id</strong> number from the reply</li>
+                                            <li>Paste it here and click "Link Account"</li>
+                                        </ol>
+                                    </small>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn-primary" onclick="linkTelegramAccount()">Link Account</button>
+                                </div>
+                            </div>
+
+                            <div id="telegram-linked-info" style="display:none; margin-top: 20px;">
+                                <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-md); border-left: 4px solid var(--success);">
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <span style="font-size: 40px;">✅</span>
+                                        <div>
+                                            <strong style="font-size: 16px;">Telegram Connected</strong>
+                                            <div style="color: var(--text-secondary); margin-top: 5px;">
+                                                Linked on: <span id="telegram-linked-date">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn-secondary" style="margin-top: 15px;" onclick="unlinkTelegramAccount()">Unlink Telegram</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings Section -->
+                    <div class="telegram-notifications-section" style="margin-top: 30px;">
+                        <h3>Notification Settings</h3>
+                        <p>Choose which notifications you want to receive via Telegram</p>
+
+                        <div class="reminder-config">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">New Account Created</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">When a new account is created</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-new-account" checked>
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">Account Renewed</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">When an account is renewed</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-renewal" checked>
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">Expiry Warning</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">Before account expires (7/3/1 days)</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-expiry" checked>
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">Account Expired</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">When an account expires</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-expired" checked>
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">Low Balance</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">When your balance is running low</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-low-balance" checked>
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">New Payment</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">When a reseller payment is added</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-new-payment" checked>
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">Login Alert</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">When someone logs into your account</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-login">
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                                <label class="toggle-label-horizontal" style="background: var(--bg-secondary); padding: 15px; border-radius: var(--radius-sm);">
+                                    <div>
+                                        <span class="toggle-text" style="font-size: 14px; font-weight: 500;">Daily Report</span>
+                                        <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 3px;">Daily summary of accounts</div>
+                                    </div>
+                                    <div class="reminder-toggle">
+                                        <input type="checkbox" id="tg-notify-daily-report">
+                                        <span class="toggle-slider-reminder round"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <button class="btn-primary" style="margin-top: 20px;" onclick="saveTelegramNotificationSettings()">Save Notification Settings</button>
+                        </div>
+                    </div>
+
+                    <!-- Send Telegram Message Section -->
+                    <div class="telegram-send-section" style="margin-top: 30px;">
+                        <h3>Send Message</h3>
+                        <p>Send a message to admins and reseller admins</p>
+
+                        <div class="reminder-config">
+                            <div class="form-group">
+                                <label>Recipients</label>
+                                <div id="telegram-recipients-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px;">
+                                    <p style="text-align: center; color: var(--text-tertiary);">Loading recipients...</p>
+                                </div>
+                                <small>Only users with Telegram linked can receive messages</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="telegram-select-all-recipients" onchange="toggleAllTelegramRecipients()">
+                                    Select All Available
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Message *</label>
+                                <textarea id="telegram-message" rows="6" class="reminder-textarea" placeholder="Write your message here...
+
+You can use Markdown:
+*bold* _italic_ `code`"></textarea>
+                                <small>Supports Markdown formatting. Max 4096 characters.</small>
+                            </div>
+
+                            <button class="btn-primary" onclick="sendTelegramMessage()">Send Message (<span id="telegram-selected-count">0</span> recipients)</button>
+                        </div>
+
+                        <div id="telegram-send-status" class="reminder-status" style="display:none;"></div>
+                    </div>
+
+                    <!-- Telegram History Section -->
+                    <div class="telegram-history-section" style="margin-top: 30px;">
+                        <h3>Message History</h3>
+                        <p>View all sent Telegram messages</p>
+
+                        <div class="history-controls" style="margin-top: 15px;">
+                            <div class="date-browser">
+                                <button class="btn-date-nav" onclick="changeTelegramHistoryDate(-1)" title="Previous day">◀</button>
+                                <input type="date" id="telegram-history-date" onchange="loadTelegramHistory()" class="history-date-input">
+                                <button class="btn-date-nav" onclick="changeTelegramHistoryDate(1)" title="Next day">▶</button>
+                                <button class="btn-today" onclick="setTelegramHistoryToday()">Today</button>
+                            </div>
+                        </div>
+
+                        <div class="history-search-controls" style="margin-top: 10px;">
+                            <input type="text" id="telegram-history-search" placeholder="Search..." class="history-search-input" oninput="filterTelegramHistory()">
+                            <select id="telegram-history-status-filter" class="history-filter-select" onchange="loadTelegramHistory()">
+                                <option value="">All Status</option>
+                                <option value="sent">Sent</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                            <select id="telegram-history-type-filter" class="history-filter-select" onchange="loadTelegramHistory()">
+                                <option value="">All Types</option>
+                                <option value="manual">Manual</option>
+                                <option value="new_account">New Account</option>
+                                <option value="renewal">Renewal</option>
+                                <option value="expiry_reminder">Expiry Reminder</option>
+                                <option value="expired">Expired</option>
+                                <option value="new_payment">New Payment</option>
+                                <option value="broadcast">Broadcast</option>
+                            </select>
+                        </div>
+
+                        <div id="telegram-history-table-container" class="history-table-container" style="margin-top: 15px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Recipient</th>
+                                        <th>Message</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telegram-history-tbody">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+                                            Select a date to view message history
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="history-pagination" id="telegram-history-pagination" style="display:none; margin-top: 15px;">
+                            <div class="pagination-info">
+                                <span id="telegram-history-page-info">Showing 0-0 of 0</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn-pagination" onclick="changeTelegramHistoryPage(-1)" id="telegram-history-prev-btn" disabled>Previous</button>
+                                <span id="telegram-history-page-numbers"></span>
+                                <button class="btn-pagination" onclick="changeTelegramHistoryPage(1)" id="telegram-history-next-btn" disabled>Next</button>
+                            </div>
+                            <div class="pagination-size">
+                                <label>Show:</label>
+                                <select id="telegram-history-page-size" onchange="changeTelegramHistoryPageSize()">
+                                    <option value="10">10</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                <span>per page</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Telegram Statistics -->
+                    <div class="telegram-stats-section" style="margin-top: 30px;">
+                        <h3>Statistics</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="telegram-stats-total">0</div>
+                                <div class="stat-label">Total Messages</div>
+                            </div>
+                            <div class="stat-card stat-success-card">
+                                <div class="stat-value" id="telegram-stats-sent">0</div>
+                                <div class="stat-label">Delivered</div>
+                            </div>
+                            <div class="stat-card stat-error-card">
+                                <div class="stat-value" id="telegram-stats-failed">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Telegram Messages Content -->
+
             </div>
         </div>
     </div>
+    </div>
+
+    <!-- Mail Template Modal -->
+    <div id="mailTemplateModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="mail-template-modal-title">Add Email Template</h3>
+                <button class="close-btn" onclick="closeModal('mailTemplateModal')">&times;</button>
+            </div>
+            <form onsubmit="saveMailTemplate(event)">
+                <input type="hidden" id="mail-template-id" value="">
+                <div class="form-group">
+                    <label>Template Name *</label>
+                    <input type="text" id="mail-template-name" required placeholder="e.g., Welcome Email">
+                </div>
+                <div class="form-group">
+                    <label>Subject *</label>
+                    <input type="text" id="mail-template-subject" required placeholder="Email subject line">
+                    <small>You can use variables: {name}, {mac}, {expiry_date}, {plan_name}</small>
+                </div>
+                <div class="form-group">
+                    <label>Email Body (HTML) *</label>
+                    <textarea id="mail-template-body" rows="12" required placeholder="HTML email content..."></textarea>
+                    <small>Use RTL div for Persian: &lt;div dir="rtl"&gt;...&lt;/div&gt;</small>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="mail-template-description" placeholder="Brief description of this template">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="mail-template-active" checked>
+                        Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-primary">Save Template</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal('mailTemplateModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Add Account Modal -->
@@ -2859,5 +3508,7 @@ try {
 
     <script src="dashboard.js?v=<?php echo filemtime('dashboard.js'); ?>"></script>
     <script src="sms-functions.js?v=<?php echo filemtime('sms-functions.js'); ?>"></script>
+    <script src="mail-functions.js?v=<?php echo filemtime('mail-functions.js'); ?>"></script>
+    <script src="telegram-functions.js?v=<?php echo filemtime('telegram-functions.js'); ?>"></script>
 </body>
 </html>

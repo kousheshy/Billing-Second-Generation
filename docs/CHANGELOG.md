@@ -7,6 +7,397 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.18.2] - 2025-11-29
+
+### Added - Telegram Notification System
+
+**Status:** Production Release
+
+#### Overview
+
+Introduces a comprehensive Telegram notification system for the ShowBox Billing Panel. Users (admins, reseller admins, and resellers) can link their Telegram accounts to receive automatic notifications about account events. Admins and reseller admins can also send manual broadcast messages.
+
+#### New Features
+
+**Telegram Integration:**
+- Telegram Bot integration via Bot API
+- Bot token: `8243087847:AAGJf5V27tmefuxQBzMbhW4WEOjKPG6vats` (@ShowBox_TelegramBot)
+- Webhook handler for /start and /help commands (requires HTTPS)
+- Alternative Chat ID retrieval via @userinfobot
+
+**User Access:**
+- ALL users (admins, reseller admins, resellers) can access Telegram tab
+- ALL users can link their Telegram account
+- ALL users can configure notification preferences
+- Only admins and reseller admins can send broadcast messages
+- Only super admins can configure bot token
+
+**Automatic Notifications:**
+- New account creation notifications
+- Account renewal notifications
+- Account expiry warnings
+- Reseller payment notifications
+- Configurable per notification type per user
+
+**Notification Recipients:**
+- Super admins receive ALL notifications
+- Reseller admins receive ALL notifications
+- Resellers receive notifications for their OWN accounts only
+
+**Manual Messaging:**
+- Admins can send to ALL users
+- Reseller admins can send to resellers and other reseller admins
+- Resellers cannot send messages (receive only)
+
+#### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `api/telegram_helper.php` | Core Telegram functions (sendMessage, notifications, templates) |
+| `api/telegram/get_settings.php` | Get bot config, user status, notification prefs |
+| `api/telegram/link_telegram.php` | Link/unlink Telegram account |
+| `api/telegram/update_notification_settings.php` | Save notification preferences |
+| `api/telegram/save_bot_settings.php` | Save bot token (super admin only) |
+| `api/telegram/send_message.php` | Send manual messages |
+| `api/telegram/get_logs.php` | Get message history |
+| `api/telegram/webhook.php` | Webhook handler for bot commands |
+| `telegram-functions.js` | UI logic for Telegram tab |
+| `scripts/create_telegram_tables.php` | Database migration |
+
+#### Database Tables Added
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `_telegram_settings` | Bot configuration | bot_token, bot_username |
+| `_telegram_notification_settings` | User notification prefs | user_id, notify_new_account, notify_renewal, etc. |
+| `_telegram_templates` | Message templates | template_key, template, variables |
+| `_telegram_logs` | Message history | user_id, chat_id, message, status, message_type |
+
+#### Database Schema
+
+```sql
+-- Telegram Settings
+CREATE TABLE _telegram_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    bot_token VARCHAR(100),
+    bot_username VARCHAR(100),
+    webhook_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Notification Settings per User
+CREATE TABLE _telegram_notification_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    notify_new_account TINYINT(1) DEFAULT 1,
+    notify_renewal TINYINT(1) DEFAULT 1,
+    notify_expiry TINYINT(1) DEFAULT 1,
+    notify_expired TINYINT(1) DEFAULT 1,
+    notify_low_balance TINYINT(1) DEFAULT 1,
+    notify_new_payment TINYINT(1) DEFAULT 1,
+    notify_login TINYINT(1) DEFAULT 0,
+    notify_daily_report TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY (user_id)
+);
+
+-- Message Templates
+CREATE TABLE _telegram_templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    template_key VARCHAR(50) UNIQUE NOT NULL,
+    template TEXT NOT NULL,
+    description TEXT,
+    is_system TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Message Logs
+CREATE TABLE _telegram_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    chat_id VARCHAR(50),
+    message TEXT,
+    message_type VARCHAR(50),
+    status ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
+    error_message TEXT,
+    telegram_message_id VARCHAR(50),
+    account_id INT,
+    account_mac VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `dashboard.php` | Added Telegram tab UI in Messaging section, updated instructions to use @userinfobot |
+| `dashboard.js` | Added Telegram tab initialization |
+| `sms-functions.js` | Added Telegram tab click handler and switchMessagingTab support |
+| `api/add_account.php` | Added telegram_helper.php include, Telegram notification on new account |
+| `api/edit_account.php` | Added telegram_helper.php include, Telegram notification on renewal |
+| `config.php` | Updated Server 2 IP from 192.168.99.99 to 81.12.70.4 |
+
+#### User Table Changes
+
+Added columns to `_users` table:
+```sql
+ALTER TABLE _users ADD COLUMN telegram_chat_id VARCHAR(50) DEFAULT NULL;
+ALTER TABLE _users ADD COLUMN telegram_linked_at TIMESTAMP NULL DEFAULT NULL;
+```
+
+#### Technical Details
+
+**Telegram Tab Visibility (All Users):**
+```javascript
+function initializeTelegramTab() {
+    const telegramTabBtn = document.getElementById('telegram-tab-btn');
+    // Show Telegram tab for ALL users
+    if (telegramTabBtn) {
+        telegramTabBtn.style.display = 'inline-block';
+    }
+}
+```
+
+**Send Message Permission Check:**
+```php
+// Only admins and reseller admins can send messages
+if ($current_user['super_user'] != 1 && !$is_reseller_admin) {
+    echo json_encode(['error' => 1, 'message' => 'Access denied']);
+    exit;
+}
+```
+
+**Notification Recipients Logic:**
+```php
+function getTelegramNotificationRecipients($pdo, $reseller_username, $notification_type) {
+    // 1. Get super admins with notification enabled
+    // 2. Get reseller admins with notification enabled
+    // 3. Get the reseller who owns the account (for their own notifications)
+    return $recipients;
+}
+```
+
+#### Configuration Changes
+
+**Server 2 IP Update:**
+```php
+// config.php
+$SERVER_2_ADDRESS = "http://81.12.70.4";  // Changed from 192.168.99.99
+$WEBSERVICE_2_BASE_URL = "http://81.12.70.4/stalker_portal/api/";
+```
+
+#### Network Notes (Iran Server)
+
+- Server IP: 5.160.86.140 (Iran)
+- Telegram API access: Requires VPN/proxy for outbound connections
+- Telegram webhooks: Cannot receive due to inbound blocking
+- Workaround: Users get Chat ID from @userinfobot instead of /start command
+
+#### Deployment Notes
+
+1. Run database migration: `php scripts/create_telegram_tables.php`
+2. Deploy all modified files to server
+3. Update config.php with correct Server 2 IP
+4. Verify Telegram API connectivity: `curl https://api.telegram.org/bot<TOKEN>/getMe`
+5. Clear browser cache (Ctrl+Shift+R)
+6. PWA users need to reinstall the app
+
+---
+
+## [1.18.1] - 2025-11-28
+
+### Fixed - Hotfix Release
+
+**Status:** Production Release
+
+#### Bug Fixes
+
+**1. File Permission Fix (Critical):**
+- Fixed: `toggle_account_status.php` returning HTTP 500 Internal Server Error
+- **Error:** `PHP Fatal error: Failed opening required '/var/www/showbox/api/toggle_account_status.php'`
+- **Root Cause:** File permissions were set to `600` (owner read/write only) instead of `644`
+- **Solution:** Changed permissions to `644` (owner read/write, others read)
+
+**2. Server 2 Notification Reversion:**
+- Reverted experimental Server 2 failure notification system
+- Removed `handleServer2Failure()` and `notifyServer2Failure()` calls from all API files
+- `server2_notification_helper.php` still exists but is not included
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `api/toggle_account_status.php` | File permissions fixed (600 → 644) |
+| `api/edit_account.php` | Removed Server 2 notification calls |
+| `api/add_account.php` | Removed notification includes |
+| `api/remove_account.php` | Removed notification calls |
+| `api/change_status.php` | Removed notification calls |
+| `api/send_message.php` | Removed notification calls |
+| `api/send_stb_message.php` | Removed notification calls |
+| `api/send_stb_event.php` | Removed notification calls |
+
+#### Deployment Notes
+
+1. Fix file permissions: `chmod 644 /var/www/showbox/api/toggle_account_status.php`
+2. Clear browser cache (Ctrl+Shift+R)
+3. PWA users may need to reinstall the app
+
+---
+
+## [1.18.0] - 2025-11-28
+
+### Added - Email Notification System
+
+**Status:** Production Release
+
+#### Overview
+
+Introduces a comprehensive email notification system using PHPMailer with cPanel SMTP integration. Supports automatic emails on account events (new account, renewal, expiry) and manual email sending to customers.
+
+#### New Features
+
+**Email System:**
+- SMTP configuration with cPanel mail server (mail.showboxtv.tv)
+- Support for TLS (port 587) and SSL (port 465) encryption
+- Email credential management with password visibility toggle
+- Automatic emails on: new account creation, account renewal, account expiry
+- Manual email sending (single recipient or multiple accounts)
+- Multi-stage expiry reminders (7 days, 3 days, 1 day, expired)
+- CC notifications to admin and reseller (configurable)
+- Email template system with variables ({name}, {mac}, {expiry_date}, {plan_name})
+- Email history with filtering by date, status, type
+- Persian RTL email templates
+
+**Access Control:**
+- Mail feature restricted to super admin only
+- Both UI and API level permission checks
+- Mail tab hidden by default, shown only for super_user=1
+
+#### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `api/mail_helper.php` | Core mail functions (sendEmail, sendWelcomeMail, etc.) |
+| `api/get_mail_settings.php` | Get mail configuration and templates |
+| `api/update_mail_settings.php` | Update SMTP settings |
+| `api/test_mail_connection.php` | Test SMTP connection |
+| `api/send_mail.php` | Send manual emails |
+| `api/save_mail_template.php` | Create/update email templates |
+| `api/delete_mail_template.php` | Delete email templates |
+| `api/get_mail_template.php` | Get template with body |
+| `api/get_mail_logs.php` | Get email history |
+| `mail-functions.js` | UI logic for mail tab |
+| `scripts/create_mail_tables.php` | Database migration |
+| `cron/cron_send_expiry_mail.php` | Automated expiry reminders |
+
+#### Database Tables Added
+
+| Table | Purpose |
+|-------|---------|
+| `_mail_settings` | SMTP configuration per user |
+| `_mail_templates` | Email templates with HTML body |
+| `_mail_logs` | Email sending history |
+| `_mail_reminder_tracking` | Multi-stage reminder tracking |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `dashboard.php` | Added Mail tab UI in Messaging section |
+| `dashboard.js` | Added Mail tab visibility for super admin |
+| `api/add_account.php` | Added automatic welcome email |
+| `api/edit_account.php` | Added automatic renewal email |
+
+#### Technical Details
+
+**Permission Check (PHP):**
+```php
+// Only super admin can access mail settings (v1.18.0)
+$is_super_admin = isset($_SESSION['super_user']) && $_SESSION['super_user'] == 1;
+if (!$is_super_admin) {
+    echo json_encode(['error' => 1, 'message' => 'Permission denied.']);
+    exit;
+}
+```
+
+**Mail Tab Visibility (JavaScript):**
+```javascript
+// Show Mail tab for super admin only (v1.18.0)
+const mailTabBtn = document.getElementById('mail-tab-btn');
+if (mailTabBtn) {
+    mailTabBtn.style.display = 'inline-block';
+}
+```
+
+#### Deployment Notes
+
+1. Run database migration: `php scripts/create_mail_tables.php`
+2. PHPMailer library required in `/PHPMailer/` directory
+3. Configure cron for expiry reminders:
+   ```
+   0 9 * * * /usr/bin/php /var/www/showbox/cron/cron_send_expiry_mail.php
+   ```
+
+---
+
+## [1.17.6] - 2025-11-28
+
+### Fixed - Unlimited Plans Bug Fixes
+
+**Status:** Production Release
+
+#### Bug Fixes
+
+**1. Unlimited Plan Renewal Date Error (Critical):**
+- Fixed: `SQLSTATE[22007]: Invalid datetime format: 1292 Incorrect date value: '' for column 'end_date'`
+- **Root Cause:** When renewing with an unlimited plan (days=0), the end_date was set to an empty string `""` which MySQL rejected
+- **Solution:** Changed to set end_date to `'2099-12-31 23:59:59'` (far-future date) for unlimited plans
+- **File:** `api/edit_account.php` (line 199-202)
+
+**2. Discount Field for Unlimited Plans:**
+- Fixed: Discount field now automatically disables when an unlimited plan is selected
+- **Rationale:** Unlimited plans have price=0, so discount is not applicable
+- **Behavior:** Field is disabled, value reset to 0, grayed out with tooltip explanation
+- **Coverage:** All 4 plan selection scenarios:
+  - Add Account (Admin dropdown)
+  - Add Account (Reseller plan cards)
+  - Edit/Renew (Admin dropdown)
+  - Edit/Renew (Reseller plan cards)
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `api/edit_account.php` | Fixed unlimited plan end_date (empty string → 2099-12-31) |
+| `dashboard.js` | Added discount field disable logic for unlimited plans |
+
+#### Technical Details
+
+**End Date Fix (PHP):**
+```php
+if ($plan_days === 0) {
+    // Unlimited plan - set expiration to far future date (v1.17.6 fix)
+    $new_expiration_date = '2099-12-31 23:59:59';
+    error_log("edit_account.php: Unlimited plan (days=0), setting expiration to 2099-12-31");
+}
+```
+
+**Discount Field Disable (JavaScript):**
+```javascript
+// v1.17.6: Disable discount field for unlimited plans
+if (isUnlimitedPlan) {
+    discountInput.value = 0;
+    discountInput.disabled = true;
+    discountGroup.style.opacity = '0.5';
+    discountGroup.title = 'Discount not available for unlimited plans';
+}
+```
+
+---
+
 ## [1.17.5] - 2025-11-28
 
 ### Added - Unlimited Plans Feature

@@ -112,9 +112,23 @@ $op = "DELETE";
 // Check if both servers are the same (avoid duplicate operations)
 $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
 
+// Step 1: Delete from Server 1 (primary) FIRST
+error_log("Deleting account from Server 1...");
+$res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+$decoded = json_decode($res);
+error_log("Server 1 delete response: " . $res);
+
+if(!$decoded || $decoded->status != 'OK')
+{
+    $response['error'] = 1;
+    $response['err_msg'] = 'Failed to delete account from Server 1. ' . ($decoded && isset($decoded->error) ? $decoded->error : 'Connection error');
+    echo json_encode($response);
+    exit();
+}
+
+// Step 2: Delete from Server 2 (only if dual server mode and Server 1 succeeded)
 if($dual_server_mode)
 {
-    // Step 1: Delete from Server 2 first
     error_log("Deleting account from Server 2...");
     $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
     $decoded2 = json_decode($res2);
@@ -122,19 +136,11 @@ if($dual_server_mode)
 
     if(!$decoded2 || $decoded2->status != 'OK')
     {
-        $response['error'] = 1;
-        $response['err_msg'] = 'Failed to delete account from Server 2. ' . ($decoded2 && isset($decoded2->error) ? $decoded2->error : 'Connection error');
-        echo json_encode($response);
-        exit();
+        // Note: For delete, we don't rollback Server 1 because the account should be deleted
     }
 }
 
-// Step 2: Delete from Server 1 (primary)
-error_log("Deleting account from Server 1...");
-$res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-$decoded = json_decode($res);
-error_log("Server 1 delete response: " . $res);
-
+// Server 1 delete succeeded
 if($decoded->status == 'OK')
 {
     // Get account data before deletion for audit log (v1.12.0)

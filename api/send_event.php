@@ -129,21 +129,19 @@ foreach ($stb_macs as $mac)
 
     $counter_all++;
 
-    // Send to Server 2 (only if dual server mode)
-    if($dual_server_mode)
-    {
-        api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-    }
-
-    // Send to Server 1 (primary)
+    // Step 1: Send to Server 1 (primary) FIRST
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
     $decoded = json_decode($res);
-
 
     if($decoded && $decoded->status == 'OK')
     {
         $success_counter++;
 
+        // Step 2: Send to Server 2 (only if dual server mode and Server 1 succeeded)
+        if($dual_server_mode)
+        {
+            api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+        }
     }else
     {
         $error_counter++;

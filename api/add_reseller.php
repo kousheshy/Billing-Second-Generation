@@ -13,6 +13,7 @@ header('Content-Type: application/json');
 try {
     include(__DIR__ . '/../config.php');
     include('sms_helper.php'); // Include SMS helper functions
+    include('mail_helper.php'); // Include Mail helper functions (v1.18.0)
     include('audit_helper.php'); // Audit logging
 
     if(!isset($_SESSION['login']) || $_SESSION['login'] != 1) {
@@ -89,6 +90,12 @@ try {
     // Initialize SMS settings and templates for the new reseller
     // This allows them to automatically send welcome SMS when adding accounts
     initializeResellerSMS($pdo, $new_reseller_id);
+
+    // Initialize Mail settings and templates for the new reseller (v1.18.0)
+    // This allows them to automatically send welcome emails when adding accounts
+    if (function_exists('initializeResellerMail')) {
+        initializeResellerMail($pdo, $new_reseller_id);
+    }
 
     // Audit log: Reseller created (v1.13.0)
     auditUserCreated($pdo, $new_reseller_id, $username, [

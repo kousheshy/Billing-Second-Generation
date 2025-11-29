@@ -82,23 +82,20 @@ $op = "PUT";
 // Check if both servers are the same (avoid duplicate operations)
 $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
 
-// Update Server 2 first (only if dual server mode)
-if($dual_server_mode)
+// Step 1: Update Server 1 (primary) FIRST
+$res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+$decoded = json_decode($res);
+
+// Step 2: Update Server 2 (only if dual server mode and Server 1 succeeded)
+if($decoded && $decoded->status == 'OK' && $dual_server_mode)
 {
     $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
     $decoded2 = json_decode($res2);
 
     if(!$decoded2 || $decoded2->status != 'OK')
     {
-        error_log("Warning: Server 2 status change failed for MAC $mac: " . ($decoded2->error ?? 'Unknown error'));
-        // Continue to update Server 1
     }
 }
-
-// Update Server 1 (primary)
-$res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-
-$decoded = json_decode($res);
 
 if($decoded->status == 'OK')
 {

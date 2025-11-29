@@ -2,8 +2,8 @@
 
 Complete reference for all API endpoints in the ShowBox Billing Panel.
 
-**Version:** 1.17.5
-**Last Updated:** November 28, 2025
+**Version:** 1.18.2
+**Last Updated:** November 29, 2025
 **Base URL:** `http://your-domain.com/`
 
 ---
@@ -16,7 +16,7 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 4. [Account Management](#account-management)
 5. [Reseller Management](#reseller-management)
 6. [Plan Management](#plan-management)
-7. [Reseller Payments & Balance](#reseller-payments--balance) **NEW in v1.17.0**
+7. [Reseller Payments & Balance](#reseller-payments--balance)
 8. [Transaction Management](#transaction-management)
 9. [Accounting & Monthly Invoices](#accounting--monthly-invoices)
 10. [User Management](#user-management)
@@ -26,7 +26,9 @@ Complete reference for all API endpoints in the ShowBox Billing Panel.
 14. [Push Notifications](#push-notifications)
 15. [Audit Log](#audit-log)
 16. [Login History](#login-history)
-17. [Error Codes](#error-codes)
+17. [Email System](#email-system) **NEW in v1.18.0**
+18. [Telegram Notifications](#telegram-notifications) **NEW in v1.18.2**
+19. [Error Codes](#error-codes)
 
 ---
 
@@ -2153,6 +2155,423 @@ The audit log provides a permanent, immutable record of all critical administrat
 **Status Values:**
 - `success`: Successful login
 - `failed`: Failed login attempt
+
+---
+
+## Email System
+
+**Note:** All email endpoints require super admin access (`super_user = 1`).
+
+### Get Mail Settings
+**Endpoint:** `GET /api/get_mail_settings.php`
+
+**Description:** Get mail configuration, templates, and statistics.
+
+**Response:**
+```json
+{
+  "error": 0,
+  "settings": {
+    "smtp_host": "mail.showboxtv.tv",
+    "smtp_port": 587,
+    "smtp_username": "info@showboxtv.tv",
+    "from_email": "info@showboxtv.tv",
+    "from_name": "ShowBox",
+    "auto_send_new_account": 1,
+    "auto_send_renewal": 1,
+    "auto_send_expiry": 1,
+    "notify_admin": 1,
+    "notify_reseller": 1,
+    "smtp_password_set": true
+  },
+  "templates": [...],
+  "stats": {
+    "total": 100,
+    "sent": 95,
+    "failed": 5,
+    "pending": 0
+  }
+}
+```
+
+### Update Mail Settings
+**Endpoint:** `POST /api/update_mail_settings.php`
+
+**Request Body:**
+```json
+{
+  "smtp_host": "mail.showboxtv.tv",
+  "smtp_port": 587,
+  "smtp_secure": "tls",
+  "smtp_username": "info@showboxtv.tv",
+  "smtp_password": "your_password",
+  "from_email": "info@showboxtv.tv",
+  "from_name": "ShowBox",
+  "auto_send_new_account": 1,
+  "auto_send_renewal": 1,
+  "auto_send_expiry": 1,
+  "notify_admin": 1,
+  "notify_reseller": 1
+}
+```
+
+### Test Mail Connection
+**Endpoint:** `POST /api/test_mail_connection.php`
+
+**Description:** Test SMTP connection with provided settings.
+
+**Request Body:**
+```json
+{
+  "smtp_host": "mail.showboxtv.tv",
+  "smtp_port": 587,
+  "smtp_secure": "tls",
+  "smtp_username": "info@showboxtv.tv",
+  "smtp_password": "your_password"
+}
+```
+
+### Send Mail
+**Endpoint:** `POST /api/send_mail.php`
+
+**Description:** Send manual email to single recipient or multiple accounts.
+
+**Request Body (Single):**
+```json
+{
+  "to": "customer@example.com",
+  "name": "Customer Name",
+  "subject": "Email Subject",
+  "body": "Email content...",
+  "type": "manual"
+}
+```
+
+**Request Body (Multiple Accounts):**
+```json
+{
+  "account_ids": [1, 2, 3],
+  "subject": "Email Subject",
+  "body": "Email content with {name}, {mac}, {expiry_date} variables"
+}
+```
+
+### Save Mail Template
+**Endpoint:** `POST /api/save_mail_template.php`
+
+**Request Body:**
+```json
+{
+  "template_id": null,
+  "name": "Welcome Email",
+  "subject": "Welcome to ShowBox",
+  "body_html": "<html>...</html>",
+  "description": "Sent to new customers",
+  "is_active": 1
+}
+```
+
+### Delete Mail Template
+**Endpoint:** `POST /api/delete_mail_template.php`
+
+**Request Body:**
+```json
+{
+  "template_id": 5
+}
+```
+
+### Get Mail Template
+**Endpoint:** `GET /api/get_mail_template.php?id=1`
+
+**Response:**
+```json
+{
+  "error": 0,
+  "template": {
+    "id": 1,
+    "name": "Welcome Email",
+    "subject": "Welcome to ShowBox",
+    "body_html": "<html>...</html>",
+    "description": "Sent to new customers"
+  }
+}
+```
+
+### Get Mail Logs
+**Endpoint:** `GET /api/get_mail_logs.php`
+
+**Query Parameters:**
+- `date`: Filter by date (YYYY-MM-DD)
+- `status`: Filter by status (sent/failed/pending)
+- `type`: Filter by type (manual/new_account/renewal/expiry_reminder)
+- `search`: Search in recipient email
+- `page`: Page number (default 1)
+- `limit`: Items per page (default 25, max 100)
+
+**Response:**
+```json
+{
+  "error": 0,
+  "logs": [...],
+  "total": 150,
+  "page": 1,
+  "pages": 6
+}
+```
+
+### Template Variables
+
+Available variables for email templates:
+- `{name}` - Customer full name
+- `{mac}` - MAC address
+- `{expiry_date}` - Expiration date
+- `{plan_name}` - Plan name
+- `{username}` - Account username (welcome emails only)
+- `{password}` - Account password (welcome emails only)
+
+---
+
+## Telegram Notifications
+
+**NEW in v1.18.2**
+
+Telegram notification system allowing users to receive account notifications via Telegram Bot.
+
+### Get Telegram Settings
+**Endpoint:** `GET /api/telegram/get_settings.php`
+
+**Description:** Get Telegram bot configuration, user's Telegram status, and notification preferences.
+
+**Access:** All logged-in users
+
+**Response:**
+```json
+{
+  "error": 0,
+  "bot_configured": true,
+  "bot_username": "ShowBox_TelegramBot",
+  "bot_token": null,
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "is_super_admin": true,
+    "is_reseller_admin": false,
+    "is_reseller": false,
+    "can_send_messages": true,
+    "telegram_linked": true,
+    "telegram_linked_at": "2025-11-29 10:30:00"
+  },
+  "notification_settings": {
+    "notify_new_account": 1,
+    "notify_renewal": 1,
+    "notify_expiry": 1,
+    "notify_expired": 1,
+    "notify_low_balance": 1,
+    "notify_new_payment": 1,
+    "notify_login": 0,
+    "notify_daily_report": 0
+  },
+  "templates": [...],
+  "stats": {
+    "total_sent": 150,
+    "sent_success": 145,
+    "sent_failed": 5
+  },
+  "recipients": [...]
+}
+```
+
+**Note:** `bot_token` is only returned for super admins.
+
+---
+
+### Link Telegram Account
+**Endpoint:** `POST /api/telegram/link_telegram.php`
+
+**Description:** Link or unlink Telegram account using Chat ID.
+
+**Access:** All logged-in users
+
+**Request Body (Link):**
+```json
+{
+  "action": "set_chat_id",
+  "chat_id": "1301477515"
+}
+```
+
+**Request Body (Unlink):**
+```json
+{
+  "action": "unlink"
+}
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Telegram account linked successfully"
+}
+```
+
+**How to Get Chat ID:**
+1. Open Telegram and search for @userinfobot
+2. Send any message to the bot
+3. Copy the "Id" number from the reply
+4. Paste it in the panel
+
+---
+
+### Update Notification Settings
+**Endpoint:** `POST /api/telegram/update_notification_settings.php`
+
+**Description:** Update user's Telegram notification preferences.
+
+**Access:** All logged-in users
+
+**Request Body:**
+```
+notify_new_account=1&notify_renewal=1&notify_expiry=1&notify_expired=1&notify_low_balance=1&notify_new_payment=1&notify_login=0&notify_daily_report=0
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Notification settings updated successfully"
+}
+```
+
+---
+
+### Save Bot Settings
+**Endpoint:** `POST /api/telegram/save_bot_settings.php`
+
+**Description:** Save Telegram bot token configuration.
+
+**Access:** Super admin only
+
+**Request Body:**
+```
+bot_token=8243087847:AAGJf5V27tmefuxQBzMbhW4WEOjKPG6vats
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Bot settings saved successfully",
+  "bot_username": "ShowBox_TelegramBot"
+}
+```
+
+---
+
+### Send Telegram Message
+**Endpoint:** `POST /api/telegram/send_message.php`
+
+**Description:** Send manual Telegram message to selected recipients.
+
+**Access:** Super admin and Reseller admin only
+
+**Request Body:**
+```
+message=Hello from ShowBox&recipient_ids=[1,2,3]
+```
+
+**Response:**
+```json
+{
+  "error": 0,
+  "message": "Message sent successfully to 3 of 3 recipients",
+  "results": {
+    "total": 3,
+    "sent": 3,
+    "failed": 0,
+    "errors": []
+  }
+}
+```
+
+---
+
+### Get Message Logs
+**Endpoint:** `GET /api/telegram/get_logs.php`
+
+**Description:** Get Telegram message history with filtering.
+
+**Access:** Super admin and Reseller admin only
+
+**Query Parameters:**
+- `date` - Filter by date (YYYY-MM-DD)
+- `status` - Filter by status (sent, failed, pending)
+- `message_type` - Filter by type (manual, new_account, renewal, etc.)
+
+**Response:**
+```json
+{
+  "error": 0,
+  "logs": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "username": "admin",
+      "chat_id": "1301477515",
+      "message": "New account created...",
+      "message_type": "new_account",
+      "status": "sent",
+      "created_at": "2025-11-29 10:30:00"
+    }
+  ]
+}
+```
+
+---
+
+### Webhook Handler
+**Endpoint:** `POST /api/telegram/webhook.php`
+
+**Description:** Telegram webhook handler for bot commands (/start, /help).
+
+**Access:** Public (Telegram servers only)
+
+**Note:** Requires HTTPS. Not functional on servers without SSL or behind firewalls blocking Telegram.
+
+**Supported Commands:**
+- `/start` - Returns user's Chat ID
+- `/help` - Returns help information
+
+---
+
+### Notification Types
+
+| Type | Description | Recipients |
+|------|-------------|------------|
+| `notify_new_account` | New account created | Admin, Reseller Admin, Account Owner |
+| `notify_renewal` | Account renewed | Admin, Reseller Admin, Account Owner |
+| `notify_expiry` | Account expiring soon | Admin, Reseller Admin, Account Owner |
+| `notify_expired` | Account expired | Admin, Reseller Admin, Account Owner |
+| `notify_low_balance` | Reseller low balance | Admin, Reseller Admin |
+| `notify_new_payment` | Reseller payment received | Admin, Reseller Admin |
+| `notify_login` | User login detected | Individual user |
+| `notify_daily_report` | Daily summary | Individual user |
+
+---
+
+### Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{name}` | Account full name |
+| `{mac}` | Account MAC address |
+| `{expiry_date}` | Account expiration date |
+| `{plan_name}` | Plan name |
+| `{reseller_name}` | Reseller username |
+| `{amount}` | Payment amount |
+| `{currency}` | Currency code |
+| `{new_balance}` | New balance after payment |
 
 ---
 

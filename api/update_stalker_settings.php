@@ -55,6 +55,20 @@ if (empty($api_username)) {
     exit;
 }
 
+// Validate Server 1 URL format
+if (!filter_var($server_address, FILTER_VALIDATE_URL)) {
+    echo json_encode(['error' => 1, 'message' => 'Invalid Primary Server address format. Must be a valid URL (e.g., http://192.168.1.1)']);
+    exit;
+}
+
+// Validate Server 2 URL format if dual mode is enabled and different address provided
+if ($dual_server_mode_enabled && !empty($server_2_address) && $server_2_address !== $server_address) {
+    if (!filter_var($server_2_address, FILTER_VALIDATE_URL)) {
+        echo json_encode(['error' => 1, 'message' => 'Invalid Secondary Server address format. Must be a valid URL (e.g., http://192.168.1.2)']);
+        exit;
+    }
+}
+
 // Auto-generate base URLs if not provided
 if (empty($api_base_url)) {
     $api_base_url = rtrim($server_address, '/') . '/stalker_portal/api/';
@@ -101,6 +115,7 @@ try {
 
     // Test connection if requested
     if ($test_connection) {
+        // Test Server 1 connection
         $test_url = rtrim($api_base_url, '/') . '/accounts/';
 
         $curl = curl_init();
@@ -119,24 +134,66 @@ try {
         curl_close($curl);
 
         if ($error) {
-            echo json_encode(['error' => 1, 'message' => 'Connection failed: ' . $error]);
+            echo json_encode(['error' => 1, 'message' => 'Server 1 connection failed: ' . $error]);
             exit;
         }
 
         if ($httpCode === 401) {
-            echo json_encode(['error' => 1, 'message' => 'Authentication failed. Check username and password.']);
+            echo json_encode(['error' => 1, 'message' => 'Server 1 authentication failed. Check username and password.']);
             exit;
         }
 
         if ($httpCode !== 200) {
-            echo json_encode(['error' => 1, 'message' => 'Connection failed with HTTP code: ' . $httpCode]);
+            echo json_encode(['error' => 1, 'message' => 'Server 1 connection failed with HTTP code: ' . $httpCode]);
             exit;
         }
 
         $decoded = json_decode($result);
         if (!$decoded || !isset($decoded->status)) {
-            echo json_encode(['error' => 1, 'message' => 'Invalid response from Stalker Portal. Check the API URL.']);
+            echo json_encode(['error' => 1, 'message' => 'Invalid response from Server 1. Check the API URL.']);
             exit;
+        }
+
+        // Test Server 2 connection if dual mode enabled AND servers are different
+        $servers_are_different = !empty($server_2_address) && $server_2_address !== $server_address;
+        if ($dual_server_mode_enabled && $servers_are_different) {
+            $test_url_2 = rtrim($api_2_base_url, '/') . '/accounts/';
+
+            $curl2 = curl_init();
+            curl_setopt($curl2, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($curl2, CURLOPT_USERPWD, $api_username . ":" . $api_password);
+            curl_setopt($curl2, CURLOPT_URL, $test_url_2);
+            curl_setopt($curl2, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($curl2, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($curl2, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($curl2, CURLOPT_TIMEOUT, 10);
+            curl_setopt($curl2, CURLOPT_CONNECTTIMEOUT, 5);
+
+            $result2 = curl_exec($curl2);
+            $httpCode2 = curl_getinfo($curl2, CURLINFO_HTTP_CODE);
+            $error2 = curl_error($curl2);
+            curl_close($curl2);
+
+            if ($error2) {
+                echo json_encode(['error' => 1, 'message' => 'Server 2 connection failed: ' . $error2]);
+                exit;
+            }
+
+            if ($httpCode2 === 401) {
+                echo json_encode(['error' => 1, 'message' => 'Server 2 authentication failed. Check username and password.']);
+                exit;
+            }
+
+            if ($httpCode2 !== 200) {
+                echo json_encode(['error' => 1, 'message' => 'Server 2 connection failed with HTTP code: ' . $httpCode2]);
+                exit;
+            }
+
+            $decoded2 = json_decode($result2);
+            if (!$decoded2 || !isset($decoded2->status)) {
+                echo json_encode(['error' => 1, 'message' => 'Invalid response from Server 2. Check the API URL.']);
+                exit;
+            }
         }
     }
 
@@ -159,53 +216,84 @@ try {
         exit;
     }
 
-    // Update Stalker settings in config.php
+    // Store original content for comparison
+    $originalContent = $configContent;
+    $replacementCount = 0;
+
+    // Update Stalker settings in config.php (with replacement verification)
     $configContent = preg_replace(
         '/\$SERVER_1_ADDRESS\s*=\s*["\'].*?["\'];/',
         '$SERVER_1_ADDRESS = "' . addslashes($server_address) . '";',
-        $configContent
+        $configContent,
+        1,
+        $count
     );
+    $replacementCount += $count;
 
     $configContent = preg_replace(
         '/\$SERVER_2_ADDRESS\s*=\s*["\'].*?["\'];/',
         '$SERVER_2_ADDRESS = "' . addslashes($server_2_address) . '";',
-        $configContent
+        $configContent,
+        1,
+        $count
     );
+    $replacementCount += $count;
 
     $configContent = preg_replace(
         '/\$WEBSERVICE_USERNAME\s*=\s*["\'].*?["\'];/',
         '$WEBSERVICE_USERNAME = "' . addslashes($api_username) . '";',
-        $configContent
+        $configContent,
+        1,
+        $count
     );
+    $replacementCount += $count;
 
     // Only update password if it's not the placeholder
     if ($api_password !== '********' && !empty($api_password)) {
         $configContent = preg_replace(
             '/\$WEBSERVICE_PASSWORD\s*=\s*["\'].*?["\'];/',
             '$WEBSERVICE_PASSWORD = "' . addslashes($api_password) . '";',
-            $configContent
+            $configContent,
+            1,
+            $count
         );
+        $replacementCount += $count;
     }
 
     $configContent = preg_replace(
         '/\$WEBSERVICE_BASE_URL\s*=\s*["\'].*?["\'];/',
         '$WEBSERVICE_BASE_URL = "' . addslashes($api_base_url) . '";',
-        $configContent
+        $configContent,
+        1,
+        $count
     );
+    $replacementCount += $count;
 
     $configContent = preg_replace(
         '/\$WEBSERVICE_2_BASE_URL\s*=\s*["\'].*?["\'];/',
         '$WEBSERVICE_2_BASE_URL = "' . addslashes($api_2_base_url) . '";',
-        $configContent
+        $configContent,
+        1,
+        $count
     );
+    $replacementCount += $count;
 
     // Update dual server mode setting
     $dual_server_value = $dual_server_mode_enabled ? 'true' : 'false';
     $configContent = preg_replace(
         '/\$DUAL_SERVER_MODE_ENABLED\s*=\s*(true|false);/',
         '$DUAL_SERVER_MODE_ENABLED = ' . $dual_server_value . ';',
-        $configContent
+        $configContent,
+        1,
+        $count
     );
+    $replacementCount += $count;
+
+    // Verify at least some replacements occurred
+    if ($replacementCount === 0) {
+        echo json_encode(['error' => 1, 'message' => 'Failed to update config.php. The config file format may have changed. Please check the file manually.']);
+        exit;
+    }
 
     // Write updated config back
     if (file_put_contents($configPath, $configContent) === false) {

@@ -11,6 +11,8 @@ function api_send_request($url, $username, $password, $case, $op, $mac, $data)
     curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
     curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
 
     if($mac != null)
     {

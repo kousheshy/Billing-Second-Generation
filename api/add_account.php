@@ -29,7 +29,9 @@ try {
 include(__DIR__ . '/../config.php');
 include(__DIR__ . '/api.php');
 include(__DIR__ . '/sms_helper.php');
+include(__DIR__ . '/mail_helper.php');
 include(__DIR__ . '/audit_helper.php');
+include(__DIR__ . '/telegram_helper.php');
 
 // PHPMailer is optional - only load if available
 $phpmailer_path = __DIR__ . '/PHPMailer/src/PHPMailer.php';
@@ -80,6 +82,8 @@ function send_request($url, $op, $data)
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
     curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
     curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 
     $result = curl_exec($curl);
@@ -490,25 +494,7 @@ $op = "POST";
 // Check if both servers are the same (avoid duplicate operations)
 $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
 
-if($dual_server_mode)
-{
-    // Step 1: Create account on Server 2 first
-    error_log("Creating account on Server 2...");
-    $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
-    error_log("Server 2 Response: " . $res2);
-
-    $decoded2 = json_decode($res2);
-
-    if(!$decoded2 || $decoded2->status != 'OK')
-    {
-        $response['error'] = 1;
-        $response['err_msg'] = 'Failed to create account on Server 2. ' . ($decoded2 && isset($decoded2->error) ? $decoded2->error : 'Connection error');
-        echo json_encode($response);
-        exit();
-    }
-}
-
-// Step 2: Create account on Server 1 (primary)
+// Step 1: Create account on Server 1 (primary) FIRST
 error_log("Creating account on Server 1...");
 $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
 
@@ -517,22 +503,44 @@ error_log("Server 1 Response: " . $res);
 
 $decoded = json_decode($res);
 
-// If Server 1 fails, rollback Server 2 (only if dual server mode)
+// If Server 1 fails, stop here (no rollback needed since Server 2 wasn't touched)
 if(!$decoded || $decoded->status != 'OK')
 {
-    if($dual_server_mode)
-    {
-        // Delete from Server 2 to rollback
-        error_log("Server 1 failed, rolling back Server 2...");
-        $del_case = 'accounts';
-        $del_op = "DELETE";
-        api_send_request($WEBSERVICE_2_URLs[$del_case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $del_case, $del_op, $mac, null);
-    }
-
     $response['error'] = 1;
     $response['err_msg'] = 'Failed to create account on Server 1. ' . ($decoded && isset($decoded->error) ? $decoded->error : 'Connection error');
     echo json_encode($response);
     exit();
+}
+
+// Step 2: Create account on Server 2 (only if dual server mode and Server 1 succeeded)
+if($dual_server_mode)
+{
+    error_log("Creating account on Server 2...");
+    $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, null, $data);
+    error_log("Server 2 Response: " . $res2);
+
+    $decoded2 = json_decode($res2);
+
+    if(!$decoded2 || $decoded2->status != 'OK')
+    {
+        $server2_error = $decoded2 && isset($decoded2->error) ? $decoded2->error : 'Connection error';
+
+        // Rollback Server 1
+        error_log("Server 2 failed, rolling back Server 1...");
+        $del_case = 'accounts';
+        $del_op = "DELETE";
+        $rollback_res = api_send_request($WEBSERVICE_URLs[$del_case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $del_case, $del_op, $mac, null);
+        $rollback_decoded = json_decode($rollback_res);
+
+        if(!$rollback_decoded || $rollback_decoded->status != 'OK') {
+            error_log("CRITICAL: Server 1 rollback failed! Manual cleanup may be required for MAC: $mac");
+        }
+
+        $response['error'] = 1;
+        $response['err_msg'] = 'Failed to create account on Server 2. Server 1 has been rolled back. ' . $server2_error;
+        echo json_encode($response);
+        exit();
+    }
 }
 
 if($decoded->status == 'OK')
@@ -604,6 +612,12 @@ if($decoded->status == 'OK')
 
     $data = "key=f4H75Sgf53GH4dd&login=".$username."&theme=".$theme_to_apply;
 
+    // Update theme on Server 1 (primary) FIRST
+    $url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
+    error_log("Updating theme on Server 1: " . $url);
+    $res = send_request($url, "POST", $data);
+    error_log("Server 1 theme update response: " . $res);
+
     // Update theme on Server 2 (only if dual server mode)
     if($dual_server_mode)
     {
@@ -611,13 +625,10 @@ if($decoded->status == 'OK')
         error_log("Updating theme on Server 2: " . $url2);
         $res2 = send_request($url2, "POST", $data);
         error_log("Server 2 theme update response: " . $res2);
-    }
 
-    // Update theme on Server 1
-    $url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
-    error_log("Updating theme on Server 1: " . $url);
-    $res = send_request($url, "POST", $data);
-    error_log("Server 1 theme update response: " . $res);
+        if($res2 !== 'OK') {
+        }
+    }
     error_log("=== END THEME UPDATE DEBUG ===");
 
     if($res == 'OK')
@@ -675,13 +686,14 @@ if($decoded->status == 'OK')
         $case = 'stb_msg';
         $op = "POST";
 
+        // Send welcome message to Server 1 (primary) FIRST
+        $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+
         // Send welcome message to Server 2 (only if dual server mode)
         if($dual_server_mode)
         {
             api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
         }
-        // Send welcome message to Server 1
-        $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
 
         // Send welcome SMS if phone number is provided
         if (!empty($phone_number)) {
@@ -701,6 +713,24 @@ if($decoded->status == 'OK')
             }
         }
 
+        if (!empty($email) && function_exists('sendWelcomeMail')) {
+            try {
+                // Get the account ID if not already retrieved
+                if (!isset($account_id)) {
+                    $stmt = $pdo->prepare('SELECT id FROM _accounts WHERE mac = ? ORDER BY id DESC LIMIT 1');
+                    $stmt->execute([$mac]);
+                    $account_row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $account_id = $account_row ? $account_row['id'] : null;
+                }
+
+                // Send welcome email using the new mail system (non-blocking)
+                sendWelcomeMail($pdo, $reseller_info['id'], $name, $email, $mac, $plan_name, $expire_billing_date, $account_id, $username, $password);
+            } catch (Exception $e) {
+                // Silently fail - don't disrupt account creation
+                error_log("Welcome email failed: " . $e->getMessage());
+            }
+        }
+
         // Send push notification to admins, reseller admins, AND the actor (v1.11.66)
         // Notify for ALL account creations regardless of who creates them
         try {
@@ -712,6 +742,21 @@ if($decoded->status == 'OK')
         } catch (Exception $e) {
             // Silently fail - don't disrupt account creation
             error_log("Push notification failed: " . $e->getMessage());
+        }
+
+        try {
+            $reseller_username = $user_info['username'];
+            $account_data = [
+                'id' => $account_id ?? null,
+                'full_name' => $name ?: $username,
+                'mac' => $mac,
+                'end_date' => $expire_billing_date,
+                'plan_name' => $plan_name
+            ];
+            sendTelegramNewAccountNotification($pdo, $account_data, $reseller_username);
+        } catch (Exception $e) {
+            // Silently fail - don't disrupt account creation
+            error_log("Telegram notification failed: " . $e->getMessage());
         }
 
         $response['error']=0;

@@ -9,6 +9,7 @@ include(__DIR__ . '/../config.php');
 include('api.php');
 include('sms_helper.php'); // Include SMS helper functions
 include('audit_helper.php'); // Include audit log helper
+include('telegram_helper.php'); // Include Telegram notification helper
 
 if(!isset($_SESSION['login']) || $_SESSION['login'] != 1)
 {
@@ -197,9 +198,9 @@ try {
             $plan_days = (int)$plan['days'];
 
             if ($plan_days === 0) {
-                // Unlimited plan - set expiration to empty
-                $new_expiration_date = "";
-                error_log("edit_account.php: Unlimited plan (days=0), setting expiration to empty");
+                // Unlimited plan - set expiration to far future date (v1.17.5 fix)
+                $new_expiration_date = '2099-12-31 23:59:59';
+                error_log("edit_account.php: Unlimited plan (days=0), setting expiration to 2099-12-31");
             } else {
                 $current_expiration = $account['end_date'] ? strtotime($account['end_date']) : time();
                 $now = time();
@@ -294,28 +295,26 @@ try {
     // Check if both servers are the same (avoid duplicate operations)
     $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
 
-    // Update on Server 2 first (only if dual server mode)
-    if($dual_server_mode) {
-        $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-        $decoded2 = json_decode($res2);
-
-        if(!$decoded2 || $decoded2->status != 'OK') {
-            error_log("Warning: Server 2 update failed for $username_to_send: " . ($decoded2->error ?? 'Unknown error'));
-            // Continue to update Server 1 - don't fail the whole operation
-        }
-    }
-
-    // Send request to Stalker Portal (Server 1 - primary)
+    // Step 1: Send request to Stalker Portal (Server 1 - primary) FIRST
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
     $decoded = json_decode($res);
 
-    // Check if Stalker Portal update was successful
-    if(isset($decoded->status) && $decoded->status != 'OK') {
+    // Check if Server 1 update was successful
+    if(!$decoded || (isset($decoded->status) && $decoded->status != 'OK')) {
         $response['error'] = 1;
         $response['err_msg'] = 'Stalker Portal update failed: ' . ($decoded->error ?? 'Unknown error');
         header('Content-Type: application/json');
         echo json_encode($response);
         exit();
+    }
+
+    // Step 2: Update on Server 2 (only if dual server mode and Server 1 succeeded)
+    if($dual_server_mode) {
+        $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+        $decoded2 = json_decode($res2);
+
+        if(!$decoded2 || $decoded2->status != 'OK') {
+        }
     }
 
     // Update theme on Stalker Portal server (to ensure theme matches reseller's current theme)
@@ -328,23 +327,7 @@ try {
         // Use the custom server-side script to update theme
         $theme_data = "key=f4H75Sgf53GH4dd&login=".$username_to_send."&theme=".$reseller_info['theme'];
 
-        // Update theme on Server 2 (only if dual server mode)
-        if($dual_server_mode) {
-            $theme_url_2 = $SERVER_2_ADDRESS."/stalker_portal/update_account.php";
-            $curl2 = curl_init();
-            curl_setopt($curl2, CURLOPT_CUSTOMREQUEST, "POST");
-            curl_setopt($curl2, CURLOPT_POSTREDIR, 3);
-            curl_setopt($curl2, CURLOPT_POSTFIELDS, $theme_data);
-            curl_setopt($curl2, CURLOPT_SSL_VERIFYPEER, 0);
-            curl_setopt($curl2, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($curl2, CURLOPT_URL, $theme_url_2);
-            curl_setopt($curl2, CURLOPT_RETURNTRANSFER, 1);
-            $theme_result_2 = curl_exec($curl2);
-            curl_close($curl2);
-            error_log("edit_account.php: Server 2 theme update response: " . $theme_result_2);
-        }
-
-        // Update theme on Server 1 (primary)
+        // Update theme on Server 1 (primary) FIRST
         $theme_url = $SERVER_1_ADDRESS."/stalker_portal/update_account.php";
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
@@ -356,8 +339,28 @@ try {
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         $theme_result = curl_exec($curl);
         curl_close($curl);
-
         error_log("edit_account.php: Server 1 theme update response: " . $theme_result);
+
+        // Update theme on Server 2 (only if dual server mode)
+        if($dual_server_mode) {
+            $theme_url_2 = $SERVER_2_ADDRESS."/stalker_portal/update_account.php";
+            $curl2 = curl_init();
+            curl_setopt($curl2, CURLOPT_CUSTOMREQUEST, "POST");
+            curl_setopt($curl2, CURLOPT_POSTREDIR, 3);
+            curl_setopt($curl2, CURLOPT_POSTFIELDS, $theme_data);
+            curl_setopt($curl2, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($curl2, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($curl2, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($curl2, CURLOPT_TIMEOUT, 10);
+            curl_setopt($curl2, CURLOPT_URL, $theme_url_2);
+            curl_setopt($curl2, CURLOPT_RETURNTRANSFER, 1);
+            $theme_result_2 = curl_exec($curl2);
+            curl_close($curl2);
+            error_log("edit_account.php: Server 2 theme update response: " . $theme_result_2);
+
+            if($theme_result_2 !== 'OK') {
+            }
+        }
     }
 
     // Send renewal SMS if account was renewed (plan_id != 0) and phone number exists
@@ -381,6 +384,30 @@ try {
         }
     }
 
+    if($plan_id != 0 && !empty($email) && function_exists('sendRenewalMail')) {
+        try {
+            // Get the account owner's ID for mail settings
+            $account_owner_id = $account['reseller'] ?: $user_info['id'];
+
+            // Get the account ID if not already retrieved
+            if (!isset($account_id)) {
+                $stmt = $pdo->prepare('SELECT id FROM _accounts WHERE mac = ? LIMIT 1');
+                $stmt->execute([$mac]);
+                $account_row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $account_id = $account_row ? $account_row['id'] : null;
+            }
+
+            // Get plan name
+            $plan_name_for_email = isset($plan) && $plan ? $plan['name'] : 'Plan #' . $plan_id;
+
+            // Send renewal email (non-blocking - won't affect account update if it fails)
+            sendRenewalMail($pdo, $account_owner_id, $name, $email, $mac, $plan_name_for_email, $new_expiration_date, $account_id);
+        } catch (Exception $e) {
+            // Silently fail - don't disrupt account update
+            error_log("Renewal email failed: " . $e->getMessage());
+        }
+    }
+
     // Send push notification to admins, reseller admins, AND the actor (v1.11.66)
     // Notify for ALL renewals regardless of who renews them
     if($plan_id != 0) {
@@ -395,6 +422,24 @@ try {
         } catch (Exception $e) {
             // Silently fail - don't disrupt account update
             error_log("Push notification failed: " . $e->getMessage());
+        }
+    }
+
+    if($plan_id != 0) {
+        try {
+            $reseller_username = $user_info['username'];
+            $plan_name_for_telegram = isset($plan) && $plan ? $plan['name'] : 'Plan #' . $plan_id;
+            $account_data = [
+                'id' => $account_id ?? null,
+                'full_name' => $name ?: ($account['full_name'] ?? $original_username),
+                'mac' => $mac,
+                'end_date' => $new_expiration_date,
+                'plan_name' => $plan_name_for_telegram
+            ];
+            sendTelegramRenewalNotification($pdo, $account_data, $reseller_username);
+        } catch (Exception $e) {
+            // Silently fail - don't disrupt account update
+            error_log("Telegram notification failed: " . $e->getMessage());
         }
     }
 

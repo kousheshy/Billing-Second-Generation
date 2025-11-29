@@ -1,4 +1,4 @@
-const CACHE_NAME = 'showbox-billing-v1.17.5';
+const CACHE_NAME = 'showbox-billing-v1.18.2';
 const urlsToCache = [
   '/dashboard.php',
   '/index.html',

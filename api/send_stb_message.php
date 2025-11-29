@@ -122,15 +122,8 @@ try {
     // Check if both servers are the same (avoid duplicate operations)
     $dual_server_mode = isset($DUAL_SERVER_MODE_ENABLED) && $DUAL_SERVER_MODE_ENABLED && ($WEBSERVICE_BASE_URL !== $WEBSERVICE_2_BASE_URL);
 
-    // Send to Server 2 (only if dual server mode)
-    if($dual_server_mode) {
-        $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-        error_log("Server 2 Response: " . $res2);
-    }
-
-    // Send to Server 1 (primary)
+    // Step 1: Send to Server 1 (primary) FIRST
     $res = api_send_request($WEBSERVICE_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
-
     error_log("Server 1 Response: " . $res);
 
     $decoded = json_decode($res);
@@ -138,6 +131,16 @@ try {
     if(isset($decoded->status) && $decoded->status == 'OK') {
         $response['error'] = 0;
         $response['message'] = 'Message sent successfully to device ' . $mac;
+
+        // Step 2: Send to Server 2 (only if dual server mode and Server 1 succeeded)
+        if($dual_server_mode) {
+            $res2 = api_send_request($WEBSERVICE_2_URLs[$case], $WEBSERVICE_USERNAME, $WEBSERVICE_PASSWORD, $case, $op, $mac, $data);
+            error_log("Server 2 Response: " . $res2);
+            $decoded2 = json_decode($res2);
+
+            if(!$decoded2 || $decoded2->status != 'OK') {
+            }
+        }
 
         // Audit log: Message sent to STB (v1.13.0)
         auditStbMessage($pdo, $mac, $message);
